@@ -11,6 +11,7 @@
 | Skill | 用途 | 触发方式 |
 |---|---|---|
 | [explain-as-fool](skills/explain-as-fool/SKILL.md) | 面向对话题一无所知的人进行解释 | 仅手动触发 |
+| [review-rules](skills/review-rules/SKILL.md) | 为代码和设计评审、问题复核及修复方案提供判断准则 | 仅手动触发 |
 
 ### explain-as-fool
 
@@ -28,6 +29,19 @@ Explain like I'm someone who knows nothing about this topic
 Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: false` 限制自动调用；Claude Code 通过 `SKILL.md` 中的 `disable-model-invocation: true` 保留手动入口。普通解释请求不会自动触发这个 Skill。
 
 `disable-model-invocation` 是 [Claude Code 支持的扩展字段](https://code.claude.com/docs/en/skills#control-who-invokes-a-skill)。当前 Codex 附带的通用 `quick_validate.py` 会把它报告为未知字段；维护时保留这个手动开关，并分别检查两个客户端的原生加载结果。
+
+### review-rules
+
+将复用、必要改造、复杂度、扩展性和责任边界等准则应用于当前评审，也用它们检查 Reviewer 提出的修改建议。可以独立使用，或与现有 `code-review`、设计评审流程一起使用；评审范围、执行方式和是否修复由当前任务决定。
+
+调用示例：
+
+- Codex：`$review-rules review 这个 MR：<链接>`
+- Claude Code：`/review-rules review 这个 MR：<链接>`
+- 配合评审流程：`使用 code-review 评审这个 MR，并应用 review-rules。`
+- 复核结论：`按 review-rules 重新检查刚才的 findings，判断哪些问题成立、哪些修复方案可以更简单。`
+
+沿用上面的 Codex 和 Claude Code 手动触发设置。
 
 ## 添加 Skill
 
