@@ -1,0 +1,77 @@
+---
+name: design-for-review
+description: 将已有需求、设计讨论和技术材料整理成可独立阅读的技术评审文档。
+disable-model-invocation: true
+---
+
+将已有需求、设计讨论和技术材料整理成面向人评审的技术方案。
+
+目标：评审者只读这一篇，就能理解为什么要做、方案如何运转、需要改动什么，以及有哪些取舍需要决定。
+
+## 确认依据
+
+优先使用用户指定的权威来源，沿用已经确认的需求、边界和设计决定。
+
+- 方案评审：以已确认的需求和设计讨论为依据，结合代码核实当前能力与约束。
+- 实现说明：用户明确要求介绍已实现方案时，以指定版本的实际代码为依据。
+- 材料存在冲突时，区分当前事实、已确认决定和待讨论方案，说明冲突及其影响。
+- 可以从现有材料和代码确定的信息直接补足；影响方案选择的未知项明确列出。
+
+## 组织文档
+
+已有大纲时沿用并完善。用户要求先看大纲时，先交付大纲；否则直接完成评审稿。
+
+没有既定结构时，按以下理解顺序组织，并根据任务规模合并或裁剪章节：
+
+1. 问题、目标与范围
+   说明具体场景、当前问题、预期结果，以及本次解决到哪里。
+
+2. 现状与约束
+   说明已有能力、当前运行方式，以及限制方案选择的关键条件。
+
+3. 总体方案
+   给出总体架构和一条完整的业务流程，让读者先建立全局认识。
+
+4. 关键设计
+   展开影响方案理解和评审的接口、数据模型、状态变化与异常处理。
+
+5. 改动与复用
+   说明哪些能力沿用、哪些需要修改、哪些需要新增。
+   给出主要改动目录和模块职责，帮助读者建立实现范围的概念。
+
+6. 取舍与待决事项
+   说明为什么选择当前方案、付出的代价，以及仍需评审者决定的问题。
+   只比较与当前决策有关的备选方案。
+
+7. 验证方式
+   说明怎样验证关键行为，以及什么结果能够证明目标达成。
+
+## 写作要求
+
+Explain like I'm someone who knows nothing about this topic.
+
+Please remove all mannered prose.
+
+Mannered prose substitutes metaphor and flourish for direct statement. Instead of "a parameter worth varying," the mannered writer produces "a dial worth turning." Instead of "this point still matters," they write "this point earns its keep." The phrases exist to display the writer, not to convey the idea, and readers can tell. That is why mannered prose irritates: it makes the reader work harder so the writer can perform. It is also imprecise. Metaphors drag in connotations the writer did not choose and cannot control. The fix is to say what you mean. When a literal phrase is available, use it.
+
+- 从具体场景进入技术方案。术语首次出现时，在使用位置解释其职责和作用。
+- 正文围绕设计与行为组织。目录、类、函数和代码片段只用于说明关键机制或支持判断。
+- 用一条完整流程串起触发方、参与模块、数据与状态变化、最终结果；相关异常放回发生的位置说明。
+- 按表达需要选择架构图、流程图、时序图或状态图，默认使用 Mermaid。
+- 图中的模块名称、关系、方向和状态必须与正文一致；新增、修改和复用要能直接辨认。
+- 接口和数据模型给出理解交互所必需的字段、含义与约束，详细程度以能评审方案为准。
+- 关键事实和设计依据附来源，正文保留理解主方案所需的信息，使读者无需翻阅聊天记录才能理解。
+- 修改已有文档时，在相关章节内更新表述，使整篇呈现一致的当前方案。
+
+## 交付前检查
+
+独立阅读成稿，确认：
+
+- 能说明问题、目标、方案和改动范围。
+- 能沿着完整流程理解各模块如何协作。
+- 能分辨已有能力、必要改造和新增机制。
+- 图文、接口、数据模型和状态描述相互一致。
+- 已确认决定与待决问题清晰分开。
+- 关键取舍有理由，关键行为有验证方式。
+
+默认交付一份中文 Markdown 技术评审文档。

@@ -12,6 +12,7 @@
 |---|---|---|
 | [explain-as-fool](skills/explain-as-fool/SKILL.md) | 面向对话题一无所知的人进行解释 | 仅手动触发 |
 | [review-rules](skills/review-rules/SKILL.md) | 为代码和设计评审、问题复核及修复方案提供判断准则 | 仅手动触发 |
+| [design-for-review](skills/design-for-review/SKILL.md) | 将需求和设计材料整理成可独立阅读的技术评审文档 | 仅手动触发 |
 
 ### explain-as-fool
 
@@ -40,6 +41,19 @@ Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: fals
 - Claude Code：`/review-rules review 这个 MR：<链接>`
 - 配合评审流程：`使用 code-review 评审这个 MR，并应用 review-rules。`
 - 复核结论：`按 review-rules 重新检查刚才的 findings，判断哪些问题成立、哪些修复方案可以更简单。`
+
+沿用上面的 Codex 和 Claude Code 手动触发设置。
+
+### design-for-review
+
+将已有需求、设计讨论和技术材料整理成面向人评审的技术方案。读者只读这一篇，就能理解问题、完整流程、改动与复用范围，以及关键取舍。默认交付中文 Markdown，按需使用 Mermaid，并沿用已经确认的需求、设计决定和文档大纲。
+
+写作要求已完整包含 `explain-as-fool` 的原文规则：面向没有相关知识的读者解释，并直接、准确地表达。
+
+调用示例：
+
+- Codex：`$design-for-review 根据当前需求和已确认的设计讨论，整理一份可独立阅读的技术评审文档。`
+- Claude Code：`/design-for-review 根据当前需求和已确认的设计讨论，整理一份可独立阅读的技术评审文档。`
 
 沿用上面的 Codex 和 Claude Code 手动触发设置。
 
