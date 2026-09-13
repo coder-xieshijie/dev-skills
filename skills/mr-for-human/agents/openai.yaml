@@ -1,3 +1,3 @@
 interface:
-  display_name: "MR 阅读指南"
+  display_name: "MR for Human"
   short_description: "围绕契约、分层逻辑与运行约束，带人读懂 MR 的关键设计和代码"

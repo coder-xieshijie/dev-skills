@@ -13,7 +13,7 @@
 | [explain-as-fool](skills/explain-as-fool/SKILL.md) | 面向对话题一无所知的人进行解释 | 仅手动触发 |
 | [review-rules](skills/review-rules/SKILL.md) | 为代码和设计评审、问题复核及修复方案提供判断准则 | 仅手动触发 |
 | [design-for-review](skills/design-for-review/SKILL.md) | 将需求和设计材料整理成可独立阅读的技术评审文档 | 仅手动触发 |
-| [mr-reading-guide](skills/mr-reading-guide/SKILL.md) | 把 MR/PR 整理成金字塔式阅读指南：核心结论、功能与抽象设计、执行逻辑与伪代码、底层运行约束、代码定位 | 自动匹配或手动触发 |
+| [mr-for-human](skills/mr-for-human/SKILL.md) | 把 MR/PR 整理成面向人的金字塔式阅读指南：核心结论、功能与抽象设计、执行逻辑与伪代码、底层运行约束、代码定位 | 自动匹配或手动触发 |
 
 ### explain-as-fool
 
@@ -58,18 +58,18 @@ Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: fals
 
 沿用上面的 Codex 和 Claude Code 手动触发设置。
 
-### mr-reading-guide
+### mr-for-human
 
 面向“AI 写了很多代码，我想知道重点看哪里”的阅读任务。输出金字塔式指南：先给最多 5 条跨层核心结论，再展开顶层的功能与抽象设计、中间层的执行逻辑与核心伪代码，以及底层在资源、规模、并发、部分失败、信任和可观测六个维度上的实际实现，最后给代码定位与排查入口。
 
 调用示例：
 
-- Codex：`$mr-reading-guide 带我读懂这个 MR 的关键设计，并给出从主流程到源码的阅读路线：<链接>`
-- Claude Code：`/mr-reading-guide 解释 base..head 的变化，先看核心决定，再下钻到伪代码和证据。`
+- Codex：`$mr-for-human 带我读懂这个 MR 的关键设计，并给出从主流程到源码的阅读路线：<链接>`
+- Claude Code：`/mr-for-human 解释 base..head 的变化，先看核心决定，再下钻到伪代码和证据。`
 
 新 Skill 保持默认自动发现；单纯找 bug、编写未实现的设计或润色文本不属于自动触发范围。
 
-设计依据见[综述](docs/mr-reading-guide-design.md)，使用示例见[教学变更](skills/mr-reading-guide/references/worked-example.md)，检查结果见[验证记录](docs/mr-reading-guide-validation.md)。初始化状态：目录和配套资料已创建，并已按金字塔结构与底层六维度完成一轮修订；本工作树未注册客户端软链接，客户端发现与真实 MR 阅读效果待实际使用确认。
+设计依据见[综述](docs/mr-for-human-design.md)，使用示例见[教学变更](skills/mr-for-human/references/worked-example.md)，检查结果见[验证记录](docs/mr-for-human-validation.md)。初始化状态：目录和配套资料已创建，并已按金字塔结构与底层六维度完成一轮修订；本工作树未注册客户端软链接，客户端发现与真实 MR 阅读效果待实际使用确认。
 
 ## 添加 Skill
 
