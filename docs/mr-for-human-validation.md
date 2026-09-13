@@ -1,4 +1,4 @@
-# mr-reading-guide 验证记录
+# mr-for-human 验证记录
 
 日期：2026-09-11。对象为本工作树中的新 Skill、配套资料和综述。
 
@@ -23,12 +23,12 @@
 
 ## 2. 教学代码的实际执行
 
-输入是 [worked-example.md](../skills/mr-reading-guide/references/worked-example.md) 中完整的 before/after Python 代码块。验证时将它们原样提取到隔离临时 Git 仓库的 submit.py，分别提交并执行；依赖使用符合示例约定的 Store/Broker 测试替身。
+输入是 [worked-example.md](../skills/mr-for-human/references/worked-example.md) 中完整的 before/after Python 代码块。验证时将它们原样提取到隔离临时 Git 仓库的 submit.py，分别提交并执行；依赖使用符合示例约定的 Store/Broker 测试替身。
 
 - base：`2a7e489658e659723051281f405369bde697d3d3`
 - head：`787b27f034923523c0d0addaf52d2ace493136e9`
 - diff：unified=3，1 个 hunk，`@@ -1,6 +1,9 @@`，新增 3 行。
-- 临时仓库：`/var/folders/pm/2zy2y3rd3tdd5j7yzlgjppvr0000gp/T/mr-reading-guide-eval-a7j7dfbx`
+- 重命名前使用的临时仓库：`/var/folders/pm/2zy2y3rd3tdd5j7yzlgjppvr0000gp/T/mr-reading-guide-eval-a7j7dfbx`
 - 机器结果：`/tmp/mr-understanding-research/behavior-evaluation.json`。
 
 临时路径不是安装或运行 Skill 的依赖；下表保留核心观察，示例源码在仓库内可读。测试提交期间本机 hook 提示找不到 lefthook，但 Git 提交退出成功，两个 SHA、diff 与代码执行结果均已回读。未修改用户 hook 配置。
@@ -114,7 +114,7 @@ H=4、E=4、X=0、U=0；这里的对象是规则和配置变更，非“生产�
 
 ## 4. 结构与交付检查
 
-- `quick_validate.py skills/mr-reading-guide`：通过（Skill is valid）。
+- `quick_validate.py skills/mr-for-human`：通过（Skill is valid）。
 - 新 Skill 的 name 与目录一致；3 个 references 都有入口和读取条件。
 - 主文件保留默认自动发现；没有复制其他 Skill 的手动限制到新 Skill。
 - README 已更新导航和初始化状态；既有 Skill 内容未变。
@@ -138,7 +138,7 @@ H=4、E=4、X=0、U=0；这里的对象是规则和配置变更，非“生产�
 | `design-lenses.md` | 底层表重排为六行默认加触发式小节；顶层表补抽象判断行；加“本表非封闭清单”元规则；新增“时间与时钟”维度 |
 | `output-template.md` | 骨架换为 0–8 节；删除反向账本表与覆盖率公式段 |
 | `worked-example.md` | 代码不变；按第一屏格式与底层四句式重写，六项默认维度逐项走完 |
-| `mr-reading-guide-design.md` | §2、§4、§5.1、§6、§8、§9、§10、§12、§15、§16 同步 |
+| `mr-for-human-design.md` | §2、§4、§5.1、§6、§8、§9、§10、§12、§15、§16 同步 |
 
 ### 5.2 本次实际核验的内容
 
@@ -159,3 +159,13 @@ H=4、E=4、X=0、U=0；这里的对象是规则和配置变更，非“生产�
 - 第 2 节教学代码的五个行为场景结论仍然有效，因为示例代码本身未改动；但按四句式重写后的表达没有再次执行验证。
 
 本节没有新增脚本，没有执行新的代码测试，也没有注册客户端入口。
+
+## 6. 修订记录：更名为 mr-for-human
+
+日期：2026-09-13。本轮只调整 Skill 的名称和引用，不改变触发边界、分析流程、输出结构或自动发现策略。
+
+- 目录名、frontmatter `name`、客户端展示名、README 导航与调用示例已统一为 `mr-for-human`。
+- 综述和验证记录的文件名、相对链接及正文引用已同步。
+- `quick_validate.py skills/mr-for-human` 通过，Git 空白检查通过。
+- 七个相关 Markdown 文件的本地相对链接均能解析到现存文件。
+- 第 2 节的旧名称临时目录是初版测试的历史证据，不是当前入口，也不需要重跑行为测试。
