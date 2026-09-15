@@ -60,7 +60,7 @@ Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: fals
 
 ### mr-for-human
 
-面向“AI 写了很多代码，我想知道重点看哪里”的阅读任务。输出金字塔式指南：先给最多 5 条跨层核心结论，再展开顶层的功能与抽象设计、中间层的执行逻辑与核心伪代码，以及底层在资源、规模、并发、部分失败、信任和可观测六个维度上的实际实现，最后给代码定位与排查入口。
+面向“AI 写了很多代码，我想知道重点看哪里”的阅读任务。金字塔原则贯穿全文，只把最重要的事项交给读者决策；按目录核对每个文件的具体变化及其与目标的关系；沿主流程解释边界、失败降级与恢复。默认交付简短指南，复杂逻辑、源码证据和完整文件清单按需下钻。
 
 调用示例：
 
@@ -69,7 +69,7 @@ Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: fals
 
 新 Skill 保持默认自动发现；单纯找 bug、编写未实现的设计或润色文本不属于自动触发范围。
 
-设计依据见[综述](docs/mr-for-human-design.md)，使用示例见[教学变更](skills/mr-for-human/references/worked-example.md)，检查结果见[验证记录](docs/mr-for-human-validation.md)。初始化状态：目录和配套资料已创建，并已按金字塔结构与底层六维度完成一轮修订；本工作树未注册客户端软链接，客户端发现与真实 MR 阅读效果待实际使用确认。
+设计依据与历史取舍见[综述](docs/mr-for-human-design.md)，失败窗口与正常降级的写法见[教学示例](skills/mr-for-human/references/worked-example.md)，检查结果见[验证记录](docs/mr-for-human-validation.md)。目录与配套资料已创建，保持默认自动发现；当前修订在本工作树，客户端同步与真实 MR 阅读效果需另行验证。
 
 ## 添加 Skill
 
