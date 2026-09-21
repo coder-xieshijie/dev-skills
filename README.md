@@ -13,6 +13,7 @@
 | [explain-as-fool](skills/explain-as-fool/SKILL.md) | 面向对话题一无所知的人进行解释 | 仅手动触发 |
 | [review-rules](skills/review-rules/SKILL.md) | 为代码和设计评审、问题复核及修复方案提供判断准则 | 仅手动触发 |
 | [design-for-review](skills/design-for-review/SKILL.md) | 将需求和设计材料整理成可独立阅读的技术评审文档 | 仅手动触发 |
+| [core-spec](skills/core-spec/SKILL.md) | 讨论结束后，将多轮澄清与多份材料收敛为单份核心决策 spec，先突出重点，再完整展开约束 | 自动匹配或手动触发 |
 | [mr-for-human](skills/mr-for-human/SKILL.md) | 把 MR/PR 整理成面向人的金字塔式阅读指南：核心结论、功能与抽象设计、执行逻辑与伪代码、底层运行约束、代码定位 | 自动匹配或手动触发 |
 
 ### explain-as-fool
@@ -57,6 +58,19 @@ Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: fals
 - Claude Code：`/design-for-review 根据当前需求和已确认的设计讨论，整理一份可独立阅读的技术评审文档。`
 
 沿用上面的 Codex 和 Claude Code 手动触发设置。
+
+### core-spec
+
+用于多轮讨论、grill 和需求澄清结束后的定稿。产出一份《核心决策与约束》：开头通常选 3–5 个最重要的决定，后文完整保留已确认的规则、边界和取舍，供 agent 在 plan、implement、review 阶段使用，也供人核对和汇报。
+
+调用示例：
+
+- Codex：`$core-spec 将当前讨论和相关文档收敛成一份 spec，保存到 docs/feature-spec.md。`
+- Claude Code：`/core-spec 根据这个 session 和需求、ADR 文件，只保留最终核心决策与约束。`
+
+`core-spec` 固化“已经选定什么、必须满足什么”；`design-for-review` 展开技术方案如何运转。前者不自动开始新一轮 grill、产品实现或远端发布。
+
+目录与脱敏示例已创建，保持默认自动发现。尚未注册新的客户端软链接。来源分析与验证边界见[设计与验证记录](docs/core-spec-design.md)。
 
 ### mr-for-human
 
