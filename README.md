@@ -63,6 +63,8 @@ Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: fals
 
 用于多轮讨论、grill 和需求澄清结束后的定稿。产出一份《核心决策与约束》：开头通常选 3–5 个最重要的决定，后文完整保留已确认的规则、边界和取舍，供 agent 在 plan、implement、review 阶段使用，也供人核对和汇报。
 
+交付前对照原始约定与最终确认检查遗漏、无依据新增、冲突和歧义；只补影响判断的内容。材料或关键决定有缺口时交付待确认稿，并简述检查范围与结果。
+
 调用示例：
 
 - Codex：`$core-spec 将当前讨论和相关文档收敛成一份 spec，保存到 docs/feature-spec.md。`
