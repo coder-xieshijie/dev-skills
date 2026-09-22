@@ -13,9 +13,9 @@
 | [explain-as-fool](skills/explain-as-fool/SKILL.md) | 面向对话题一无所知的人进行解释 | 仅手动触发 |
 | [review-rules](skills/review-rules/SKILL.md) | 为代码和设计评审、问题复核及修复方案提供判断准则 | 仅手动触发 |
 | [design-for-review](skills/design-for-review/SKILL.md) | 将需求和设计材料整理成可独立阅读的技术评审文档 | 仅手动触发 |
-| [core-spec](skills/core-spec/SKILL.md) | 讨论结束后，将多轮澄清与多份材料收敛为单份核心决策 spec，先突出重点，再完整展开约束 | 自动匹配或手动触发 |
-| [plan-for-agents](skills/plan-for-agents/SKILL.md) | 创建、修订或检查供 agent 执行的完整计划，覆盖方案、步骤、边界、产物与验收 | 自动匹配或手动触发 |
-| [mr-for-human](skills/mr-for-human/SKILL.md) | 把 MR/PR 整理成面向人的金字塔式阅读指南：核心结论、功能与抽象设计、执行逻辑与伪代码、底层运行约束、代码定位 | 自动匹配或手动触发 |
+| [core-spec](skills/core-spec/SKILL.md) | 讨论结束后，将多轮澄清与多份材料收敛为单份核心决策 spec，先突出重点，再完整展开约束 | 仅手动触发 |
+| [plan-for-agents](skills/plan-for-agents/SKILL.md) | 创建、修订或检查供 agent 执行的完整计划，覆盖方案、步骤、边界、产物与验收 | 仅手动触发 |
+| [mr-for-human](skills/mr-for-human/SKILL.md) | 把 MR/PR 整理成面向人的金字塔式阅读指南：核心结论、功能与抽象设计、执行逻辑与伪代码、底层运行约束、代码定位 | 仅手动触发 |
 
 ### explain-as-fool
 
@@ -73,7 +73,7 @@ Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: fals
 
 `core-spec` 固化“已经选定什么、必须满足什么”；`design-for-review` 展开技术方案如何运转。前者不自动开始新一轮 grill、产品实现或远端发布。
 
-目录与脱敏示例已创建，保持默认自动发现。尚未注册新的客户端软链接。来源分析与验证边界见[设计与验证记录](docs/core-spec-design.md)。
+目录与脱敏示例已创建，沿用上面的 Codex 和 Claude Code 手动触发设置。来源分析与验证边界见[设计与验证记录](docs/core-spec-design.md)。
 
 ### plan-for-agents
 
@@ -89,7 +89,7 @@ Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: fals
 
 `core-spec` 固化要求与决定，`plan-for-agents` 将其展开为执行计划，`design-for-review` 服务于人的方案评审。各 Skill 可独立使用，无须串行调用。
 
-目录与入口已创建，保持默认自动发现；未注册新的客户端软链接，客户端发现与实际执行效果待验证。
+目录与入口已创建，沿用上面的 Codex 和 Claude Code 手动触发设置。实际执行效果仍需在使用中验证。
 
 ### mr-for-human
 
@@ -100,9 +100,9 @@ Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: fals
 - Codex：`$mr-for-human 带我读懂这个 MR 的关键设计，并给出从主流程到源码的阅读路线：<链接>`
 - Claude Code：`/mr-for-human 解释 base..head 的变化，先看核心决定，再下钻到伪代码和证据。`
 
-新 Skill 保持默认自动发现；单纯找 bug、编写未实现的设计或润色文本不属于自动触发范围。
+沿用上面的 Codex 和 Claude Code 手动触发设置。
 
-设计依据与历史取舍见[综述](docs/mr-for-human-design.md)，失败窗口与正常降级的写法见[教学示例](skills/mr-for-human/references/worked-example.md)，检查结果见[验证记录](docs/mr-for-human-validation.md)。目录与配套资料已创建，保持默认自动发现；当前修订在本工作树，客户端同步与真实 MR 阅读效果需另行验证。
+设计依据与历史取舍见[综述](docs/mr-for-human-design.md)，失败窗口与正常降级的写法见[教学示例](skills/mr-for-human/references/worked-example.md)，检查结果见[验证记录](docs/mr-for-human-validation.md)。目录与配套资料已创建；真实 MR 阅读效果需在使用中验证。
 
 ## 添加 Skill
 
@@ -114,7 +114,7 @@ Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: fals
 
 ## 本地使用
 
-本仓库是这些 Skill 的唯一维护源。选择需要启用的 Skill，链接到共享入口；兼容 Claude Code 的 Skill 再通过 CC 入口引用同一份源文件。
+本仓库是这些 Skill 的唯一维护源。当前六个 Skill 均设为仅手动触发，Codex 使用 `$skill-name`，Claude Code 使用 `/skill-name`。安装时链接到共享入口，再通过 CC 入口引用同一份源文件；入口注册不改变手动触发策略。
 
 共享入口使用 `~/.agents/skills/<skill-name>`，指向本仓库的 `skills/<skill-name>`；CC 入口使用 `~/.claude/skills/<skill-name>`，指向前面的共享入口。注册前检查同名入口的来源，保留已有安装；仅依赖 Codex 能力的 Skill 只注册共享入口。
 

@@ -1,6 +1,7 @@
 ---
 name: plan-for-agents
-description: 创建、修订或检查供 agent 执行的完整 plan，将需求和已确认决策落实为方案、步骤、产物与验收证据。适用于实施、调研、创作、数据处理等任务的执行计划；单纯总结讨论或解释现有方案时不自动触发。
+description: 创建、修订或检查供 agent 执行的完整 plan，将需求和已确认决策落实为方案、步骤、产物与验收证据，适用于实施、调研、创作、数据处理等任务。
+disable-model-invocation: true
 ---
 
 # 面向 agent 的完整 plan
