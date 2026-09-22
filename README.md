@@ -14,6 +14,7 @@
 | [review-rules](skills/review-rules/SKILL.md) | 为代码和设计评审、问题复核及修复方案提供判断准则 | 仅手动触发 |
 | [design-for-review](skills/design-for-review/SKILL.md) | 将需求和设计材料整理成可独立阅读的技术评审文档 | 仅手动触发 |
 | [core-spec](skills/core-spec/SKILL.md) | 讨论结束后，将多轮澄清与多份材料收敛为单份核心决策 spec，先突出重点，再完整展开约束 | 自动匹配或手动触发 |
+| [plan-for-agents](skills/plan-for-agents/SKILL.md) | 创建、修订或检查供 agent 执行的完整计划，覆盖方案、步骤、边界、产物与验收 | 自动匹配或手动触发 |
 | [mr-for-human](skills/mr-for-human/SKILL.md) | 把 MR/PR 整理成面向人的金字塔式阅读指南：核心结论、功能与抽象设计、执行逻辑与伪代码、底层运行约束、代码定位 | 自动匹配或手动触发 |
 
 ### explain-as-fool
@@ -73,6 +74,22 @@ Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: fals
 `core-spec` 固化“已经选定什么、必须满足什么”；`design-for-review` 展开技术方案如何运转。前者不自动开始新一轮 grill、产品实现或远端发布。
 
 目录与脱敏示例已创建，保持默认自动发现。尚未注册新的客户端软链接。来源分析与验证边界见[设计与验证记录](docs/core-spec-design.md)。
+
+### plan-for-agents
+
+将需求和已确认决策落实为可由 agent 独立执行的计划，适用于开发、调研、创作、数据处理等任务。核心内容通用，专业细节按需展开；沿用用户决策，并核对每项要求到执行步骤、产物和验收证据的对应关系。
+
+修订已有 plan 时保留有效细节，说明实质删除或替换的依据；摘要不能替代完整正文。编写计划本身不授权实施、发布或启动其他 agent。
+
+调用示例：
+
+- Codex：`$plan-for-agents 根据当前需求和已确认的 spec，编写一份可独立执行的完整 plan。`
+- Claude Code：`/plan-for-agents 按刚才的裁决修订现有 plan，保留有效细节并核对覆盖。`
+- 完整性检查：`按 plan-for-agents 检查这份调研计划，只报告缺口与依据，不修改文件。`
+
+`core-spec` 固化要求与决定，`plan-for-agents` 将其展开为执行计划，`design-for-review` 服务于人的方案评审。各 Skill 可独立使用，无须串行调用。
+
+目录与入口已创建，保持默认自动发现；未注册新的客户端软链接，客户端发现与实际执行效果待验证。
 
 ### mr-for-human
 
