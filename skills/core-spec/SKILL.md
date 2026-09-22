@@ -1,5 +1,6 @@
 ---
 name: core-spec
+disable-model-invocation: true
 description: 在多轮讨论、grill 和需求澄清结束后，将会话与多份材料收敛成单份核心决策 spec，供方案设计、实现、审查和人工汇报使用。适用于“把讨论定稿为 spec”“只保留最终决策与约束”；完整技术方案使用 design-for-review。
 ---
 
