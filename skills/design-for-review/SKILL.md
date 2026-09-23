@@ -48,11 +48,7 @@ disable-model-invocation: true
 
 ## 写作要求
 
-Explain like I'm someone who knows nothing about this topic.
-
-Please remove all mannered prose.
-
-Mannered prose substitutes metaphor and flourish for direct statement. Instead of "a parameter worth varying," the mannered writer produces "a dial worth turning." Instead of "this point still matters," they write "this point earns its keep." The phrases exist to display the writer, not to convey the idea, and readers can tell. That is why mannered prose irritates: it makes the reader work harder so the writer can perform. It is also imprecise. Metaphors drag in connotations the writer did not choose and cannot control. The fix is to say what you mean. When a literal phrase is available, use it.
+写作前读取并应用 [explain-as-fool 的正文规则](../explain-as-fool/SKILL.md)，作为表达要求的唯一维护源。这里直接读取同仓库文件，不改变两个 Skill 的手动触发设置；安装时保留该相邻目录。
 
 - 从具体场景进入技术方案。术语首次出现时，在使用位置解释其职责和作用。
 - 正文围绕设计与行为组织。目录、类、函数和代码片段只用于说明关键机制或支持判断。

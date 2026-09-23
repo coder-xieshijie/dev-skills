@@ -51,7 +51,7 @@ Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: fals
 
 将已有需求、设计讨论和技术材料整理成面向人评审的技术方案。读者只读这一篇，就能理解问题、完整流程、改动与复用范围，以及关键取舍。默认交付中文 Markdown，按需使用 Mermaid，并沿用已经确认的需求、设计决定和文档大纲。
 
-写作要求已完整包含 `explain-as-fool` 的原文规则：面向没有相关知识的读者解释，并直接、准确地表达。
+写作前直接读取同仓库 `explain-as-fool/SKILL.md` 的正文规则，统一维护表达要求，不再复制原文。使用完整仓库或保留相邻的 `explain-as-fool` 目录；两个 Skill 的手动触发设置保持不变。
 
 调用示例：
 
