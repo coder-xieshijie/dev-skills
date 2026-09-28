@@ -14,6 +14,7 @@
 | [review-rules](skills/review-rules/SKILL.md) | 为代码和设计评审、问题复核及修复方案提供判断准则 | 仅手动触发 |
 | [design-for-review](skills/design-for-review/SKILL.md) | 将需求和设计材料整理成可独立阅读的技术评审文档 | 仅手动触发 |
 | [core-spec](skills/core-spec/SKILL.md) | 讨论结束后，将多轮澄清与多份材料收敛为单份核心决策 spec，先突出重点，再完整展开约束 | 仅手动触发 |
+| [core-verify](skills/core-verify/SKILL.md) | spec 定稿后，依据 spec 产出验收文档：以用户可观察的端到端场景为单位，写明每项约定怎样算做对、用什么证据证明，并列出验证工具缺口和覆盖盲区 | 仅手动触发 |
 | [plan-for-agents](skills/plan-for-agents/SKILL.md) | 创建、修订或检查供 agent 执行的完整计划，覆盖方案、步骤、边界、产物与验收 | 仅手动触发 |
 | [mr-for-human](skills/mr-for-human/SKILL.md) | 把 MR/PR 整理成面向人的金字塔式阅读指南：核心结论、功能与抽象设计、执行逻辑与伪代码、底层运行约束、代码定位 | 仅手动触发 |
 | [agent-prompt-rules](skills/agent-prompt-rules/SKILL.md) | 依据 Anthropic 与 OpenAI 官方原文，设计和修改写给 agent 的 prompt、多 agent pipeline 与 SKILL.md | 仅手动触发 |
@@ -76,6 +77,19 @@ Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: fals
 
 目录与脱敏示例已创建，沿用上面的 Codex 和 Claude Code 手动触发设置。来源分析与验证边界见[设计与验证记录](docs/core-spec-design.md)。
 
+### core-verify
+
+在 spec 定稿后、写 plan 和代码之前使用。以 spec 为唯一需求来源，产出一份 `verify.md`：冒烟集、要求表（每条约定对应的证明方式：场景、机械检查或已有检查）、场景、回归范围、验证工具缺口和覆盖盲区。场景是用户在一个入口上完成的一次完整操作及其结果，默认从真实入口驱动，由实现 agent 自己运行；每个场景写字面检查点、在改动前代码上的基线预期和会被拒绝的错误实现。结果不同就拆开，同一入口、同一前提、同一流程的合并；看不到的内部规则先补日志、指标或只读查询。启动和驱动应用引用项目已有的验证能力（控制命令、功能地图），缺口补成可复用的能力。
+
+没有 spec，或写验收时发现 spec 缺少会改变判定的行为，按同仓库 `core-spec/SKILL.md` 的规则生成或更新 spec，不自行补语义。单元测试属于实现；本 Skill 不编写测试代码，也不执行验证。
+
+调用示例：
+
+- Codex：`$core-verify 根据 docs/feature/spec.md 产出验收文档，保存为同目录的 verify.md。`
+- Claude Code：`/core-verify 依据刚定稿的 spec 写 verify.md。`
+
+沿用上面的 Codex 和 Claude Code 手动触发设置；安装时保留相邻的 `core-spec` 目录。来源与验证边界见[设计与验证记录](docs/core-verify-design.md)。
+
 ### plan-for-agents
 
 将需求和已确认决策落实为可由 agent 独立执行的计划，适用于开发、调研、创作、数据处理等任务。核心内容通用，专业细节按需展开；沿用用户决策，并核对每项要求到执行步骤、产物和验收证据的对应关系。
@@ -128,7 +142,7 @@ Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: fals
 
 ## 本地使用
 
-本仓库是这些 Skill 的唯一维护源。当前七个 Skill 均设为仅手动触发，Codex 使用 `$skill-name`，Claude Code 使用 `/skill-name`。安装时链接到共享入口，再通过 CC 入口引用同一份源文件；入口注册不改变手动触发策略。
+本仓库是这些 Skill 的唯一维护源。当前八个 Skill 均设为仅手动触发，Codex 使用 `$skill-name`，Claude Code 使用 `/skill-name`。安装时链接到共享入口，再通过 CC 入口引用同一份源文件；入口注册不改变手动触发策略。
 
 共享入口使用 `~/.agents/skills/<skill-name>`，指向本仓库的 `skills/<skill-name>`；CC 入口使用 `~/.claude/skills/<skill-name>`，指向前面的共享入口。注册前检查同名入口的来源，保留已有安装；仅依赖 Codex 能力的 Skill 只注册共享入口。
 
