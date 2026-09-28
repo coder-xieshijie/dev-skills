@@ -16,6 +16,7 @@
 | [core-spec](skills/core-spec/SKILL.md) | 讨论结束后，将多轮澄清与多份材料收敛为单份核心决策 spec，先突出重点，再完整展开约束 | 仅手动触发 |
 | [plan-for-agents](skills/plan-for-agents/SKILL.md) | 创建、修订或检查供 agent 执行的完整计划，覆盖方案、步骤、边界、产物与验收 | 仅手动触发 |
 | [mr-for-human](skills/mr-for-human/SKILL.md) | 把 MR/PR 整理成面向人的金字塔式阅读指南：核心结论、功能与抽象设计、执行逻辑与伪代码、底层运行约束、代码定位 | 仅手动触发 |
+| [agent-prompt-rules](skills/agent-prompt-rules/SKILL.md) | 依据 Anthropic 与 OpenAI 官方原文，设计和修改写给 agent 的 prompt、多 agent pipeline 与 SKILL.md | 仅手动触发 |
 
 ### explain-as-fool
 
@@ -104,6 +105,19 @@ Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: fals
 
 设计依据与历史取舍见[综述](docs/mr-for-human-design.md)，失败窗口与正常降级的写法见[教学示例](skills/mr-for-human/references/worked-example.md)，检查结果见[验证记录](docs/mr-for-human-validation.md)。目录与配套资料已创建；真实 MR 阅读效果需在使用中验证。
 
+### agent-prompt-rules
+
+编写、修改或审查三类内容时逐条对照：调度方写给执行端（子 agent、外部 agent）的 prompt，多 agent pipeline，以及 `SKILL.md` 和它的 `description`。每条规则都链接到 Skill 内存档的 Anthropic、OpenAI 官方原文章节，改动按 Skill 第四节的流程记录依据。
+
+调用示例：
+
+- Codex：`$agent-prompt-rules 审一下这个 pipeline 给 reviewer 的 prompt，列出不符合的条目和依据。`
+- Claude Code：`/agent-prompt-rules 按规范修改这个 SKILL.md，每条改动对应到规范条目。`
+
+厂商发布新模型或新的提示词指南时，按[原文清单](skills/agent-prompt-rules/references/sources/README.md#更新原文)的步骤更新原文和规则；CI 会检查规则指向原文的每个锚点是否仍然存在。[agent-lord](https://github.com/coder-xieshijie/agent-lord) 修改 Skill 和 pipeline 时使用这套规则。
+
+沿用上面的 Codex 和 Claude Code 手动触发设置。
+
 ## 添加 Skill
 
 1. 选一个真实、重复出现的开发任务，说明它应在什么请求下触发，以及完成后交付什么。
@@ -114,7 +128,7 @@ Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: fals
 
 ## 本地使用
 
-本仓库是这些 Skill 的唯一维护源。当前六个 Skill 均设为仅手动触发，Codex 使用 `$skill-name`，Claude Code 使用 `/skill-name`。安装时链接到共享入口，再通过 CC 入口引用同一份源文件；入口注册不改变手动触发策略。
+本仓库是这些 Skill 的唯一维护源。当前七个 Skill 均设为仅手动触发，Codex 使用 `$skill-name`，Claude Code 使用 `/skill-name`。安装时链接到共享入口，再通过 CC 入口引用同一份源文件；入口注册不改变手动触发策略。
 
 共享入口使用 `~/.agents/skills/<skill-name>`，指向本仓库的 `skills/<skill-name>`；CC 入口使用 `~/.claude/skills/<skill-name>`，指向前面的共享入口。注册前检查同名入口的来源，保留已有安装；仅依赖 Codex 能力的 Skill 只注册共享入口。
 
