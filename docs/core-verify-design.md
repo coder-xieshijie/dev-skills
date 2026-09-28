@@ -29,15 +29,30 @@ core-spec 负责 spec，plan-for-agents 负责 plan，中间的验收文档此�
 | spec 是唯一需求来源，在 plan 和代码之前写 | 从实现或计划反推验收，与实现共享遗漏 | 用户流程决定；Factory 在实现前定义断言并分配到功能切片（[演讲](https://www.youtube.com/watch?v=ow1we5PzK-o&t=394s)，06:34–08:06） |
 | 逐条列出默认值、例外、不得发生的事、接受的代价 | 合并条款时丢掉条件，只核对主题 | [core-spec](../skills/core-spec/SKILL.md) 第 4 步；[plan-for-agents](../skills/plan-for-agents/SKILL.md) 第 5 步正向覆盖 |
 | 未定行为按 core-spec 更新 spec，不自行补 | 模型用看似合理的默认值补齐语义，验收与 spec 分叉 | grilling 的“决定由用户做”；agent-prompt-rules 二-9 |
-| 证明方式分场景、评审或静态检查、已有检查 | 结构性约束被硬写成运行场景，或者没人验 | 按成本与风险分配验证：pstack `orchestrate` 区分便宜的命令验证与昂贵的独立判断（[cursor/plugins pstack](https://github.com/cursor/plugins/tree/ecc249f1e306fc64ddf83c7bed16cacf7c2239db/pstack)） |
+| 证明方式分场景、机械检查、已有检查；结构性约束写成 lint 或结构测试，一个约束一条规则 | 结构性约束被硬写成运行场景，或者没人验 | OpenAI Harness engineering：用自定义 lint 和结构测试机械地守住分层与品味规则，“enforcing invariants, not micromanaging implementations”（[原文](https://openai.com/index/harness-engineering/)） |
 | 观察实际参数、持久状态、默认装配和最终副作用 | 只看界面显示或内部调用，漏掉真正的结果 | 上文过往问题；pstack `create-verification-skill` 要求记录动作、结果与副作用 |
-| 每个必需场景写一个错误实现 | 断言太松，错误实现照样通过 | SWE-Bench Pro 审计发现测试漏测（[OpenAI](https://openai.com/index/separating-signal-from-noise-coding-evaluations/)）；Anthropic 观察到评估者倾向浅层测试、放过问题（[Harness design](../skills/agent-prompt-rules/references/sources/anthropic/harness-design-long-running-apps.md#running-the-harness)） |
+| 每个场景写一个错误实现 | 断言太松，错误实现照样通过 | SWE-Bench Pro 审计发现测试漏测（[OpenAI](https://openai.com/index/separating-signal-from-noise-coding-evaluations/)）；Anthropic 观察到评估者倾向浅层测试、放过问题（[Harness design](../skills/agent-prompt-rules/references/sources/anthropic/harness-design-long-running-apps.md#running-the-harness)） |
 | 断言只约束 spec 约定的内容 | 断言太窄，误拒其他正确实现 | SWE-Bench Pro 审计发现过窄测试（同上；[修订论文](https://arxiv.org/html/2609.08149v2)） |
-| 按风险选最少且足够的层次 | 每条要求铺满各层测试，或者全推给昂贵的端到端测试 | agent-prompt-rules 一-2 所引 [Opus 5 过度验证](../skills/agent-prompt-rules/references/sources/anthropic/prompting-claude-opus-5.md#task-scope-and-over-verification) |
 | mock 只证明它边界内的行为 | mock 通过被当作真实验证 | 上文过往问题 |
 | 定位入口，列出验证工具缺口 | 到验收时才发现无法操作或观察；配置写了验证步骤，脚本却不存在 | pstack `create-verification-skill`（启动、真实驱动、保留证据）；Anthropic 长任务文章要求先准备启动与验证入口（[Effective harnesses](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents)） |
 | 执行状态如实标注 | 占位命令被当成可执行 | 同上 |
 | 交付前双向核对，作为完成条件 | 与 core-spec、plan-for-agents 一致；独立校验由交叉评审承担，不另设作者复查轮次 | agent-prompt-rules 一-2、二-5 |
+
+### 以端到端场景为验收单位：Anthropic 与 OpenAI 的长任务 harness
+
+早期版本按风险把场景分成单元、集成、真实入口三层。“风险”没有可操作的判定标准，力度只能靠模型当次判断；三家的做法都把验收放在用户可观察的端到端结果上。据此改为下列规则。
+
+| 规则 | 不写时容易出的问题 | 依据 |
+|---|---|---|
+| 场景是用户在一个入口上完成的一次完整操作及其结果，默认从真实入口驱动，由实现 agent 自己运行；单元测试属于实现，不写进 verify | 单测和接口调用通过，端到端却不通 | Anthropic [Effective harnesses](../skills/agent-prompt-rules/references/sources/anthropic/effective-harnesses-for-long-running-agents.md#testing)：Claude 会用单测或 `curl` 测试，却没发现功能端到端不通，改用浏览器自动化“像真实用户一样”测试后显著改善；功能清单每项是用户能完成的一件事（[Feature list](../skills/agent-prompt-rules/references/sources/anthropic/effective-harnesses-for-long-running-agents.md#feature-list)）；OpenAI：agent 通过驱动应用验证修复（[原文](../skills/agent-prompt-rules/references/sources/openai/harness-engineering.md#increasing-levels-of-autonomy)） |
+| 拆与合：结果不同就拆；同一入口、同一前提、能在一次流程里依次检查的合成一个场景，每个结果一个检查点；不按实现步骤拆 | 按实现步骤拆导致重复和过细；只列主题导致漏掉例外 | Anthropic 功能清单：一项下列多个验证步骤（新建对话同时检查创建、欢迎状态、侧边栏）；Harness design 的 sprint 合同以可测行为为单位，游戏编辑器一个 sprint 有 27 条（[Running the harness](../skills/agent-prompt-rules/references/sources/anthropic/harness-design-long-running-apps.md#running-the-harness)） |
+| 从入口看不到的内部规则先补可观察性（日志、指标、链路追踪、只读查询），外部依赖的失败用对接层替身触发 | 看不到的内部规则被降成单测，或者没人验 | OpenAI：日志、指标、链路追踪对 agent 可查，使“服务启动在 800ms 内”这类要求可以验证（[Increasing application legibility](../skills/agent-prompt-rules/references/sources/openai/harness-engineering.md#increasing-application-legibility)） |
+| 冒烟集：每个实现会话开始时先跑 2–5 条核心旅程 | 上一次留下的坏状态在新功能开发中被放大 | Anthropic：开始新功能前先跑一遍基本端到端测试（[Getting up to speed](../skills/agent-prompt-rules/references/sources/anthropic/effective-harnesses-for-long-running-agents.md#getting-up-to-speed)） |
+| 覆盖盲区单列，盲区内的检查点不能标为已验证 | 工具看不到的地方被当作通过 | Anthropic：Puppeteer 看不到浏览器原生弹窗，依赖它的功能 bug 更多（[Testing](../skills/agent-prompt-rules/references/sources/anthropic/effective-harnesses-for-long-running-agents.md#testing)） |
+| 检查点断言交互效果，空壳功能必须失败 | 只能显示、不能交互的功能被判通过 | Harness design：QA 发现 DAW 的片段不能拖动、录音只是按钮样子（[Results from the updated harness](../skills/agent-prompt-rules/references/sources/anthropic/harness-design-long-running-apps.md#results-from-the-updated-harness)） |
+| 实现 agent 实际运行通过才算通过；冻结后不修改场景和检查点 | 为变绿改测试，或未运行就标完成 | Anthropic：“It is unacceptable to remove or edit tests”，只在仔细测试后标记通过（[Feature list](../skills/agent-prompt-rules/references/sources/anthropic/effective-harnesses-for-long-running-agents.md#feature-list)） |
+
+三家都没有给出场景数量或粒度的上限；Anthropic 的 200 多项、27 条是单个例子。Anthropic 所说的“过重”指 harness 组件和轮次，原文随后逐个拆除组件、模型变强后取消 sprint；本 Skill 因此不加独立评估轮次，是否需要独立评估由流程按任务是否超出模型单独可靠完成的范围决定（[Removing the sprint construct](../skills/agent-prompt-rules/references/sources/anthropic/harness-design-long-running-apps.md#removing-the-sprint-construct)）。
 
 ### 吸收 Lauren Tan 的 pstack 验证实践
 
@@ -66,10 +81,12 @@ Lauren Tan 公开的 pstack（固定到 `ecc249f`）把“让 agent 自己证明
 | 每个场景的环境、数据隔离、清理和超时 | 功能尚未实现，多数只能在验收时绑定 |
 | JSON 格式 | 人和 agent 读同一份 Markdown；需要机器判定时再定 |
 | 独立核查轮次 | 由交叉评审按 spec 校验 verify |
+| 单元测试 | 属于实现；验收从入口证明结果 |
+| 按风险把场景分成单元、集成、真实入口三层 | 早期版本做法；“风险”没有可操作的判定标准，改为以端到端场景为单位，见上文 |
 | 性能、权限、并发等专项清单 | spec 有要求时自然进入要求表，Skill 不额外添加没有依据的标准 |
 
 ## 验证记录
 
-- 脱敏示例沿用 core-spec 示例中的“执行额度改造”spec，逐项走查了要求拆分、证明方式选择、错误实现、基线预期、入口覆盖和十三个检查案例。这是静态案例走查。
+- 脱敏示例沿用 core-spec 示例中的“执行额度改造”spec，逐项走查了要求拆分、场景拆与合、证明方式选择、错误实现、基线预期、入口覆盖、冒烟集、覆盖盲区和十七个检查案例。这是静态案例走查。
 - 建议按 pstack [PR #419](https://github.com/cursor/plugins/pull/419) 的做法评估本 Skill：固定一组带已知遗漏的历史 spec 作为种子缺陷，比较产出的 verify.md 能拦住多少遗漏，同时统计无依据的场景（噪声）；一次只改一处规则。
 - 尚未在真实 spec 上调用本 Skill，也没有用独立 agent 测试触发和产出；需要在第一次真实使用后核对：场景能否覆盖当时实际发生的遗漏、工具缺口是否在实现前被补上、交叉评审是否还要大量补场景。
