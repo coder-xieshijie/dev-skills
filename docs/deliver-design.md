@@ -4,7 +4,7 @@
 
 用户 2026-09-29 确认的交付流程：
 
-- 用户只在开头的定义阶段做决定，用 core-spec 和 core-verify 定下 spec.md 和 verify.md，并由另一家模型查漏。
+- 用户只在开头的定义阶段做决定，用 core-spec 定下 spec.md 和 verify.md，并由另一家模型查漏。
 - 用户确认一次之后全自动，交付物是一个 MR/PR。
 - 交付中每个里程碑都在应用里跑它涉及的场景，效果优先于速度。
 
@@ -17,7 +17,7 @@ deliver 把“从冻结的 spec、verify 到可合入的 MR”交给一个连续
 
 ## 与现有 Skill 的边界
 
-- `core-spec`、`core-verify` 属于定义阶段。deliver 只读它们的产物，不修改。
+- `core-spec` 属于定义阶段。deliver 只读它的产物，不修改。
 - `plan-for-agents` 是通用计划 Skill。deliver 的 plan 由 owner 按 ExecPlan 格式自己写，不经人或评审确认。
 - `review-rules` 在独立验证者审代码时使用；`mr-for-human` 用于写 MR 的阅读路线；`explain-as-fool` 规定给用户的汇报怎样表达。
 - deliver 不依赖编排器。会话中断后的检测、多个需求并行，留到试跑之后再决定是否由 Agent Lord 承担。
@@ -56,6 +56,6 @@ deliver 把“从冻结的 spec、verify 到可合入的 MR”交给一个连续
 ## 验证记录
 
 - `scripts/check-delivery.mjs` 在临时 git 仓库上跑了 9 个用例，结果都符合预期：通过（默认 head 和显式 `--head`）、head 不一致、有 FAIL、缺少场景行、spec 被改动、plan.md 缺冻结行，这些返回 1；缺参数、`--head` 不是 40 位，这些返回 2。场景 ID 取自脱敏示例的 verify.md（S01–S05）。
-- 跨模型调用：`codex exec -s read-only` 能读文件、运行 git，写文件被拒绝；按查漏说明的实际运行见 [core-verify 的验证记录](core-verify-design.md#验证记录)。需要运行应用的 `workspace-write` 加网络的调用、`claude -p` 路径都还没有测试，后者在本次会话的 shell 里显示未登录。
+- 跨模型调用：`codex exec -s read-only` 能读文件、运行 git，写文件被拒绝；按查漏说明的实际运行见 [core-spec 的验证记录](core-spec-design.md#verify-部分的验证记录)。需要运行应用的 `workspace-write` 加网络的调用、`claude -p` 路径都还没有测试，后者在本次会话的 shell 里显示未登录。
 - SKILL.md 和两份 references 的相对链接都能解析。
-- 尚未在真实需求上使用。计划先拿一个有已知漏洞的历史需求校准 core-verify，再用 1–2 个新需求完整走一遍 deliver。每个需求记录：定义之后用户介入的次数和原因、独立验证首轮 FAIL 的场景数、MR 之后用户自己发现的问题、总时长与费用、会话是否中断。
+- 尚未在真实需求上使用。计划先拿一个有已知漏洞的历史需求校准 core-spec 的验收部分，再用 1–2 个新需求完整走一遍 deliver。每个需求记录：定义之后用户介入的次数和原因、独立验证首轮 FAIL 的场景数、MR 之后用户自己发现的问题、总时长与费用、会话是否中断。
