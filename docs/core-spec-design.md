@@ -48,3 +48,17 @@
 已用脱敏检查案例静态走查八种情境：中间摘要遗漏、收尾额度歧义、接受代价缺失、已有范围覆盖、规范引用、建议冒充约定、摘要与正文矛盾、缺少最终确认。各例明确依据、候选表述和预期处置，覆盖补写、不补、引用、移除及保留待确认。尚未进行独立新会话行为测试，不将案例走查视为自动化测试通过。
 
 文件结构和格式通过 `quick_validate.py` 与 `git diff --check` 检查。未新增脚本；客户端入口尚未安装。新会话中的自动选择、实际生成效果与客户端发现仍待实际使用验证。
+
+## 为自动交付补充的四项（2026-09-29）
+
+用户的交付流程改为：用户只在定义阶段做决定，之后由 [deliver](../skills/deliver/SKILL.md) 全自动交付到 MR 可合入。交付中的 agent 只能按 spec 自行判断，因此 spec 需要多写四项。
+
+| 规则 | 不写时容易出的问题 | 依据 |
+|---|---|---|
+| 开头用一两句写目的：完成后用户能做什么，怎样看到它生效 | 实现只满足条款字面，做出能运行却没有用的东西 | OpenAI ExecPlan：“Purpose and intent come first”（[原文](https://cookbook.openai.com/articles/codex_exec_plans)）；OpenAI 长任务实践中 Prompt.md 的用途是“Freeze the target so the agent doesn’t build something impressive but wrong”（[Durable project memory](../skills/agent-prompt-rules/references/sources/openai/run-long-horizon-tasks-with-codex.md#the-key-idea-durable-project-memory)） |
+| 必须有非目标 | 自主执行时范围扩大，改动没人要求的行为 | Prompt.md 的“Goals + non-goals”（同上）；Claude Code 建议好的 spec “state what is out of scope”（[Let Claude interview you](../skills/agent-prompt-rules/references/sources/anthropic/claude-code-best-practices.md#let-claude-interview-you)） |
+| 适用时逐类检查硬约束 | 必须满足的条件被当作可以取舍的偏好 | Prompt.md 的“Hard constraints (perf, determinism, UX, platform)”（同上） |
+| 用于自动交付时写交付与授权：目标仓库与分支、能否推送并开 MR、能否合入、允许的不可逆操作 | 交付做到一半停下等人，或做了没被授权的操作 | Prompt.md 的“Deliverables”（同上）；pstack `autopilot-full`：操作者的完全授权加独立验证的通过结论才构成合入授权，操作者点名的条目停在可合入（[原文](https://github.com/cursor/plugins/blob/ecc249f1e306fc64ddf83c7bed16cacf7c2239db/pstack/skills/poteto-mode/playbooks/autopilot-full.md)）；`principle-never-block-on-the-human`：不可逆操作仍需确认（[原文](https://github.com/cursor/plugins/blob/ecc249f1e306fc64ddf83c7bed16cacf7c2239db/pstack/skills/principle-never-block-on-the-human/SKILL.md)） |
+| 非目标和授权只由用户决定，没有定下时作为问题提出 | 助手推断的非目标限制了实现范围；授权被自行放宽 | 本 Skill 第 1 步“助手建议不升级为约定”；[agent-prompt-rules](../skills/agent-prompt-rules/SKILL.md) 二-9 |
+
+脱敏示例补了目的、非目标和交付与授权，检查案例补了两条：只有“交给 agent 做完”时不能写成可以合入；讨论没有谈到不做什么时，不替用户列非目标。这是静态案例走查。

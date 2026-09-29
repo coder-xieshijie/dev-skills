@@ -13,8 +13,9 @@
 | [explain-as-fool](skills/explain-as-fool/SKILL.md) | 面向对话题一无所知的人进行解释 | 仅手动触发 |
 | [review-rules](skills/review-rules/SKILL.md) | 为代码和设计评审、问题复核及修复方案提供判断准则 | 仅手动触发 |
 | [design-for-review](skills/design-for-review/SKILL.md) | 将需求和设计材料整理成可独立阅读的技术评审文档 | 仅手动触发 |
-| [core-spec](skills/core-spec/SKILL.md) | 讨论结束后，将多轮澄清与多份材料收敛为单份核心决策 spec，先突出重点，再完整展开约束 | 仅手动触发 |
-| [core-verify](skills/core-verify/SKILL.md) | spec 定稿后，依据 spec 产出验收文档：以用户可观察的端到端场景为单位，写明每项约定怎样算做对、用什么证据证明，并列出验证工具缺口和覆盖盲区 | 仅手动触发 |
+| [core-spec](skills/core-spec/SKILL.md) | 讨论结束后，将多轮澄清与多份材料收敛为单份核心决策 spec，先突出重点，再完整展开约束；写明目的、非目标、硬约束和交付授权 | 仅手动触发 |
+| [core-verify](skills/core-verify/SKILL.md) | spec 定稿后，依据 spec 产出验收文档：以用户可观察的端到端场景为单位，写明每项约定怎样算做对、用什么证据证明，并列出验证工具缺口和覆盖盲区；完成前由另一家模型在新 session 中查漏 | 仅手动触发 |
+| [deliver](skills/deliver/SKILL.md) | 依据冻结的 spec 和 verify，由一个 owner session 连续完成实现、逐里程碑在应用里验证、另一家模型的独立验证、MR/PR 与 CI，直到可合入 | 仅手动触发 |
 | [plan-for-agents](skills/plan-for-agents/SKILL.md) | 创建、修订或检查供 agent 执行的完整计划，覆盖方案、步骤、边界、产物与验收 | 仅手动触发 |
 | [mr-for-human](skills/mr-for-human/SKILL.md) | 把 MR/PR 整理成面向人的金字塔式阅读指南：核心结论、功能与抽象设计、执行逻辑与伪代码、底层运行约束、代码定位 | 仅手动触发 |
 | [agent-prompt-rules](skills/agent-prompt-rules/SKILL.md) | 依据 Anthropic 与 OpenAI 官方原文，设计和修改写给 agent 的 prompt、多 agent pipeline 与 SKILL.md | 仅手动触发 |
@@ -68,6 +69,8 @@ Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: fals
 
 交付前对照原始约定与最终确认检查遗漏、无依据新增、冲突和歧义；只补影响判断的内容。材料或关键决定有缺口时交付待确认稿，并简述检查范围与结果。
 
+用于自动交付的 spec 另外写明目的、非目标、硬约束和交付与授权（目标仓库与分支、能否推送并开 MR、能否合入）。非目标和授权只由用户决定，讨论中没有定下时作为问题提出。
+
 调用示例：
 
 - Codex：`$core-spec 将当前讨论和相关文档收敛成一份 spec，保存到 docs/feature-spec.md。`
@@ -83,12 +86,33 @@ Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: fals
 
 没有 spec，或写验收时发现 spec 缺少会改变判定的行为，按同仓库 `core-spec/SKILL.md` 的规则生成或更新 spec，不自行补语义。单元测试属于实现；本 Skill 不编写测试代码，也不执行验证。
 
+写完后，用与写文档的模型不同家族的 CLI（在 Claude Code 里用 `codex exec`，在 Codex 里用 `claude -p`）开一个新 session 查漏：它只读 spec、verify 和仓库，按固定的[查漏说明](skills/core-verify/references/gap-check.md)报告问题；verify 的问题直接改，spec 的问题转成给用户的问题，最多两轮。最终回复给出两份文件的 sha256，请用户一次确认，确认后两份冻结。
+
 调用示例：
 
 - Codex：`$core-verify 根据 docs/feature/spec.md 产出验收文档，保存为同目录的 verify.md。`
 - Claude Code：`/core-verify 依据刚定稿的 spec 写 verify.md。`
 
 沿用上面的 Codex 和 Claude Code 手动触发设置；安装时保留相邻的 `core-spec` 目录。来源与验证边界见[设计与验证记录](docs/core-verify-design.md)。
+
+### deliver
+
+用户确认并冻结 spec.md 和 verify.md 之后使用。一个 owner session 从读 spec 连续做到 MR/PR 可合入，中途不找人：
+
+- 按 OpenAI ExecPlan 的格式写 `plan.md`，边做边更新进度、意外与发现、决策日志和复盘；中断后新 session 只读 plan.md 和 git 历史就能接着做。
+- 逐个里程碑实现，每个里程碑在运行中的应用上跑通它对应的 verify 场景，失败先修；全部完成后自己跑一遍全部场景。
+- 请另一家模型在新 session 中按固定的验证说明验证最终 head，最多 3 轮修复与复验。
+- 开 MR/PR，处理 CI 和评审意见，直到可合入；spec 授权合入时合入。
+- 合入前运行 `scripts/check-delivery.mjs`：spec、verify 与开工时的 sha256 一致，验证报告对应 MR 的最终 head，每个场景都有结果且没有 FAIL。
+
+只在三种情况下停下找用户：spec 自相矛盾或缺少会改变判定的决定；缺少 agent 拿不到的权限、凭据或环境；授权以外的不可逆操作。
+
+调用示例：
+
+- Codex：`$deliver 按 .harness/docs/specs/<需求>/ 下的 spec.md 和 verify.md 交付。`（可在 `/goal` 中使用，让同一个对话持续到完成）
+- Claude Code：`/deliver 按 .harness/docs/specs/<需求>/ 下的 spec.md 和 verify.md 交付。`
+
+沿用上面的 Codex 和 Claude Code 手动触发设置；安装时保留相邻的 `core-verify`、`mr-for-human` 和 `explain-as-fool` 目录。来源与验证边界见[设计与验证记录](docs/deliver-design.md)。
 
 ### plan-for-agents
 
@@ -142,7 +166,7 @@ Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: fals
 
 ## 本地使用
 
-本仓库是这些 Skill 的唯一维护源。当前八个 Skill 均设为仅手动触发，Codex 使用 `$skill-name`，Claude Code 使用 `/skill-name`。安装时链接到共享入口，再通过 CC 入口引用同一份源文件；入口注册不改变手动触发策略。
+本仓库是这些 Skill 的唯一维护源。当前九个 Skill 均设为仅手动触发，Codex 使用 `$skill-name`，Claude Code 使用 `/skill-name`。安装时链接到共享入口，再通过 CC 入口引用同一份源文件；入口注册不改变手动触发策略。
 
 共享入口使用 `~/.agents/skills/<skill-name>`，指向本仓库的 `skills/<skill-name>`；CC 入口使用 `~/.claude/skills/<skill-name>`，指向前面的共享入口。注册前检查同名入口的来源，保留已有安装；仅依赖 Codex 能力的 Skill 只注册共享入口。
 
