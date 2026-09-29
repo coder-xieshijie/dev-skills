@@ -14,13 +14,16 @@
 
 ### 冻结输入
 
-格式固定，`scripts/check-delivery.mjs` 读取前两行；路径相对于 plan.md 所在目录：
+格式固定，`scripts/check-delivery.mjs` 读取 spec、verify、owner 三行，以及可能有的 cross-family 一行；路径相对于 plan.md 所在目录。两个 sha256 原样抄用户确认时的值，不自己重算：
 
 ```text
 - spec: spec.md sha256=<64 位十六进制>
 - verify: verify.md sha256=<64 位十六进制>
 - 基线: <分支> @ <commit>
+- owner: family=<模型家族，例如 anthropic、openai、minimax> model=<模型 ID>
 ```
+
+只有用户明确放宽跨模型验证时，才加一行 `- cross-family: waived <用户原话与日期>`。
 
 ### 目的
 
@@ -31,7 +34,7 @@
 带时间的勾选列表，每步一行：时间、做了什么、跑通了哪些场景、commit。每次停下都要记；没做完的写成“已完成 X；剩余 Y”。
 
 ```text
-- [x] (2026-09-29 14:05+08:00) M1 补额度只读查询；S01 跑通；a1b2c3d
+- [x] (2026-09-29 14:05+08:00) M1 补额度只读查询；S01 跑通；里程碑检查（claude-opus-5-5，推理强度 40）未发现问题；a1b2c3d
 - [ ] M2 用尽边界（已完成：界面入口 S02；剩余：命令行入口 S03）
 ```
 
