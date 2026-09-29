@@ -1,7 +1,7 @@
 ---
 name: core-spec
 disable-model-invocation: true
-description: 将讨论和材料收敛为核心决策 spec.md，并为自动交付写出验收要求 verify.md；也可以只产出 spec。
+description: 讨论和澄清结束后，把会话与材料收敛为核心决策 spec.md；需要自动交付时，再写验收要求 verify.md。
 ---
 
 # 将讨论收敛为 spec，并写出验收要求
