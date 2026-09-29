@@ -13,8 +13,7 @@
 | [explain-as-fool](skills/explain-as-fool/SKILL.md) | 面向对话题一无所知的人进行解释 | 仅手动触发 |
 | [review-rules](skills/review-rules/SKILL.md) | 为代码和设计评审、问题复核及修复方案提供判断准则 | 仅手动触发 |
 | [design-for-review](skills/design-for-review/SKILL.md) | 将需求和设计材料整理成可独立阅读的技术评审文档 | 仅手动触发 |
-| [core-spec](skills/core-spec/SKILL.md) | 讨论结束后，将多轮澄清与多份材料收敛为单份核心决策 spec，先突出重点，再完整展开约束；写明目的、非目标、硬约束和交付授权 | 仅手动触发 |
-| [core-verify](skills/core-verify/SKILL.md) | spec 定稿后，依据 spec 产出验收文档：以用户可观察的端到端场景为单位，写明每项约定怎样算做对、用什么证据证明，并列出验证工具缺口和覆盖盲区；完成前由另一家模型在新 session 中查漏 | 仅手动触发 |
+| [core-spec](skills/core-spec/SKILL.md) | 讨论结束后，把多轮澄清与多份材料收敛为核心决策 spec，再依据 spec 写验收文档 verify：以用户可观察的端到端场景为单位，写明每项约定怎样算做对、用什么证据证明；另一家模型在新 session 中查漏后，用户一次确认，两份冻结。只要 spec 时只产出 spec | 仅手动触发 |
 | [deliver](skills/deliver/SKILL.md) | 依据冻结的 spec 和 verify，由一个 owner session 连续完成实现、逐里程碑在应用里验证、另一家模型的独立验证、MR/PR 与 CI，直到可合入 | 仅手动触发 |
 | [plan-for-agents](skills/plan-for-agents/SKILL.md) | 创建、修订或检查供 agent 执行的完整计划，覆盖方案、步骤、边界、产物与验收 | 仅手动触发 |
 | [mr-for-human](skills/mr-for-human/SKILL.md) | 把 MR/PR 整理成面向人的金字塔式阅读指南：核心结论、功能与抽象设计、执行逻辑与伪代码、底层运行约束、代码定位 | 仅手动触发 |
@@ -65,35 +64,25 @@ Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: fals
 
 ### core-spec
 
-用于多轮讨论、grill 和需求澄清结束后的定稿。产出一份《核心决策与约束》：开头通常选 3–5 个最重要的决定，后文完整保留已确认的规则、边界和取舍，供 agent 在 plan、implement、review 阶段使用，也供人核对和汇报。
+用于多轮讨论、grill 和需求澄清结束后的定稿。默认产出两份文件，一起查漏、一起确认、一起冻结：
 
-交付前对照原始约定与最终确认检查遗漏、无依据新增、冲突和歧义；只补影响判断的内容。材料或关键决定有缺口时交付待确认稿，并简述检查范围与结果。
+- `spec.md`《核心决策与约束》：开头通常选 3–5 个最重要的决定，后文完整保留已确认的规则、边界和取舍，供 agent 在 plan、implement、review 阶段使用，也供人核对和汇报。交付前对照原始约定与最终确认检查遗漏、无依据新增、冲突和歧义。用于自动交付时另外写明目的、非目标、硬约束和交付与授权（目标仓库与分支、能否推送并开 MR、能否合入）；非目标和授权只由用户决定，讨论中没有定下时作为问题提出。
+- `verify.md`《验收要求》：以 spec 为唯一需求来源，写冒烟集、要求表（每条约定对应的证明方式：场景、机械检查或已有检查）、场景、回归范围、验证工具缺口和覆盖盲区。场景是用户在一个入口上完成的一次完整操作及其结果，默认从真实入口驱动，由实现 agent 自己运行；每个场景写字面检查点、在改动前代码上的基线预期和会被拒绝的错误实现。启动和驱动应用引用项目已有的验证能力（控制命令、功能地图），缺口补成可复用的能力。
 
-用于自动交付的 spec 另外写明目的、非目标、硬约束和交付与授权（目标仓库与分支、能否推送并开 MR、能否合入）。非目标和授权只由用户决定，讨论中没有定下时作为问题提出。
+写 verify 之前，先按每个功能的用户入口和状态找 spec 没有定下的行为，会改变判定的回写 spec。写完后，用与写文档的模型不同家族的 CLI（在 Claude Code 里用 `codex exec`，在 Codex 里用 `claude -p`）开一个新 session 查漏：它只读 spec、verify 和仓库，按固定的[查漏说明](skills/core-spec/references/gap-check.md)报告问题；verify 的问题直接改，spec 的问题转成给用户的问题，最多两轮。最终回复给出两份文件的 sha256，请用户一次确认，确认后两份冻结。
 
-调用示例：
-
-- Codex：`$core-spec 将当前讨论和相关文档收敛成一份 spec，保存到 docs/feature-spec.md。`
-- Claude Code：`/core-spec 根据这个 session 和需求、ADR 文件，只保留最终核心决策与约束。`
-
-`core-spec` 固化“已经选定什么、必须满足什么”；`design-for-review` 展开技术方案如何运转。前者不自动开始新一轮 grill、产品实现或远端发布。
-
-目录与脱敏示例已创建，沿用上面的 Codex 和 Claude Code 手动触发设置。来源分析与验证边界见[设计与验证记录](docs/core-spec-design.md)。
-
-### core-verify
-
-在 spec 定稿后、写 plan 和代码之前使用。以 spec 为唯一需求来源，产出一份 `verify.md`：冒烟集、要求表（每条约定对应的证明方式：场景、机械检查或已有检查）、场景、回归范围、验证工具缺口和覆盖盲区。场景是用户在一个入口上完成的一次完整操作及其结果，默认从真实入口驱动，由实现 agent 自己运行；每个场景写字面检查点、在改动前代码上的基线预期和会被拒绝的错误实现。结果不同就拆开，同一入口、同一前提、同一流程的合并；看不到的内部规则先补日志、指标或只读查询。启动和驱动应用引用项目已有的验证能力（控制命令、功能地图），缺口补成可复用的能力。
-
-没有 spec，或写验收时发现 spec 缺少会改变判定的行为，按同仓库 `core-spec/SKILL.md` 的规则生成或更新 spec，不自行补语义。单元测试属于实现；本 Skill 不编写测试代码，也不执行验证。
-
-写完后，用与写文档的模型不同家族的 CLI（在 Claude Code 里用 `codex exec`，在 Codex 里用 `claude -p`）开一个新 session 查漏：它只读 spec、verify 和仓库，按固定的[查漏说明](skills/core-verify/references/gap-check.md)报告问题；verify 的问题直接改，spec 的问题转成给用户的问题，最多两轮。最终回复给出两份文件的 sha256，请用户一次确认，确认后两份冻结。
+只要 spec（用于方案设计、design-for-review、plan-for-agents 或汇报）时，写完并核对 spec 即交付，不写 verify、不查漏。已有定稿 spec、只需要验收时，从找 spec 缺口开始，不重新收敛 spec。
 
 调用示例：
 
-- Codex：`$core-verify 根据 docs/feature/spec.md 产出验收文档，保存为同目录的 verify.md。`
-- Claude Code：`/core-verify 依据刚定稿的 spec 写 verify.md。`
+- Codex：`$core-spec 将当前讨论收敛成 spec 并写出验收，保存到 docs/<需求>/。`
+- Claude Code：`/core-spec 根据这个 session 和需求、ADR 文件写 spec.md 和 verify.md。`
+- 只要 spec：`/core-spec 只保留最终核心决策与约束，保存到 docs/feature-spec.md，不写验收。`
+- 已有 spec：`/core-spec 依据 docs/feature/spec.md 写 verify.md。`
 
-沿用上面的 Codex 和 Claude Code 手动触发设置；安装时保留相邻的 `core-spec` 目录。来源与验证边界见[设计与验证记录](docs/core-verify-design.md)。
+`core-spec` 固化“已经选定什么、必须满足什么、怎样算做对”；`design-for-review` 展开技术方案如何运转。本 Skill 不实现产品、不编写测试代码、不执行验证，也不发布到远端。2026-09-29 起合并了原 `core-verify`，原因见设计记录。
+
+沿用上面的 Codex 和 Claude Code 手动触发设置。来源分析与验证边界见[设计与验证记录](docs/core-spec-design.md)。
 
 ### deliver
 
@@ -112,7 +101,7 @@ Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: fals
 - Codex：`$deliver 按 .harness/docs/specs/<需求>/ 下的 spec.md 和 verify.md 交付。`（可在 `/goal` 中使用，让同一个对话持续到完成）
 - Claude Code：`/deliver 按 .harness/docs/specs/<需求>/ 下的 spec.md 和 verify.md 交付。`
 
-沿用上面的 Codex 和 Claude Code 手动触发设置；安装时保留相邻的 `core-verify`、`mr-for-human` 和 `explain-as-fool` 目录。来源与验证边界见[设计与验证记录](docs/deliver-design.md)。
+沿用上面的 Codex 和 Claude Code 手动触发设置；安装时保留相邻的 `core-spec`、`mr-for-human` 和 `explain-as-fool` 目录。来源与验证边界见[设计与验证记录](docs/deliver-design.md)。
 
 ### plan-for-agents
 
@@ -166,7 +155,7 @@ Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: fals
 
 ## 本地使用
 
-本仓库是这些 Skill 的唯一维护源。当前九个 Skill 均设为仅手动触发，Codex 使用 `$skill-name`，Claude Code 使用 `/skill-name`。安装时链接到共享入口，再通过 CC 入口引用同一份源文件；入口注册不改变手动触发策略。
+本仓库是这些 Skill 的唯一维护源。当前八个 Skill 均设为仅手动触发，Codex 使用 `$skill-name`，Claude Code 使用 `/skill-name`。安装时链接到共享入口，再通过 CC 入口引用同一份源文件；入口注册不改变手动触发策略。
 
 共享入口使用 `~/.agents/skills/<skill-name>`，指向本仓库的 `skills/<skill-name>`；CC 入口使用 `~/.claude/skills/<skill-name>`，指向前面的共享入口。注册前检查同名入口的来源，保留已有安装；仅依赖 Codex 能力的 Skill 只注册共享入口。
 

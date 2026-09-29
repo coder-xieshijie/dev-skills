@@ -1,7 +1,7 @@
 ---
 name: deliver
 disable-model-invocation: true
-description: 依据用户确认并冻结的 spec.md 和 verify.md，由一个 owner session 连续完成实现、逐里程碑在应用里验证、另一家模型的独立验证、MR/PR 与 CI，直到可合入。适用于“按 spec 和 verify 交付”“做到 MR 可合入”；spec 用 core-spec，verify 用 core-verify。
+description: 依据用户确认并冻结的 spec.md 和 verify.md，由一个 owner session 连续完成实现、逐里程碑在应用里验证、另一家模型的独立验证、MR/PR 与 CI，直到可合入。适用于“按 spec 和 verify 交付”“做到 MR 可合入”；spec 和 verify 用 core-spec 产出。
 ---
 
 # 依据冻结的 spec 和 verify 交付到可合入的 MR
@@ -50,7 +50,7 @@ description: 依据用户确认并冻结的 spec.md 和 verify.md，由一个 ow
 
 **自主决定。** spec 没有规定、也不影响任何场景判定的问题，你自己决定，写进 plan.md 的决策日志，在 MR 里汇总。
 
-**独立验证。** 全部场景自验通过后，按[跨模型调用](../core-verify/references/cross-model.md)请另一家模型验证当前 head，调用时引用验证说明，不另写。验证者只报告，由你修改；改完请它复验受影响的场景和回归范围。修复加复验最多 3 轮，之后仍有 FAIL 就停下汇报，不宣称通过。开 MR 后，代码再有改动（CI 修复、评审意见）时，对新 head 复验受影响的场景，保证最终的验证报告对应 MR 的最终 head。
+**独立验证。** 全部场景自验通过后，按[跨模型调用](../core-spec/references/cross-model.md)请另一家模型验证当前 head，调用时引用验证说明，不另写。验证者只报告，由你修改；改完请它复验受影响的场景和回归范围。修复加复验最多 3 轮，之后仍有 FAIL 就停下汇报，不宣称通过。开 MR 后，代码再有改动（CI 修复、评审意见）时，对新 head 复验受影响的场景，保证最终的验证报告对应 MR 的最终 head。
 
 **MR 与 CI。** 用仓库所在平台的已认证 CLI：GitHub 用 `gh`，GitLab 用 `glab`。CI 失败时先判断是否由本次改动引起；同一个失败修了 3 次仍不过，停下汇报。评审意见如果要求改变 spec 规定的行为，不照改，按“停下”一节处理。
 
@@ -62,7 +62,7 @@ description: 依据用户确认并冻结的 spec.md 和 verify.md，由一个 ow
 2. 需要你自己拿不到的权限、凭据或环境。
 3. 需要授权范围以外的不可逆操作，例如合入、删除共享数据、对外发消息、改动共享环境。
 
-停下之前，先把不受影响的部分做完；在 plan.md 的进度里记下卡在哪里；给用户的问题写清楚可选项、各自的影响和你的建议。spec 和 verify 在交付中不修改：用户做出决定后，由用户用 core-spec、core-verify 更新并重新确认，你再继续。
+停下之前，先把不受影响的部分做完；在 plan.md 的进度里记下卡在哪里；给用户的问题写清楚可选项、各自的影响和你的建议。spec 和 verify 在交付中不修改：用户做出决定后，由用户用 core-spec 更新并重新确认，你再继续。
 
 ## MR
 
