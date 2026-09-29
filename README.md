@@ -18,6 +18,7 @@
 | [plan-for-agents](skills/plan-for-agents/SKILL.md) | 创建、修订或检查供 agent 执行的完整计划，覆盖方案、步骤、边界、产物与验收 | 仅手动触发 |
 | [mr-for-human](skills/mr-for-human/SKILL.md) | 把 MR/PR 整理成面向人的金字塔式阅读指南：核心结论、功能与抽象设计、执行逻辑与伪代码、底层运行约束、代码定位 | 仅手动触发 |
 | [agent-prompt-rules](skills/agent-prompt-rules/SKILL.md) | 依据 Anthropic 与 OpenAI 官方原文，设计和修改写给 agent 的 prompt、多 agent pipeline 与 SKILL.md | 仅手动触发 |
+| [recon-to-contract](skills/recon-to-contract/SKILL.md) | 将多个外部参照物的对标调研收敛为有证据、有决策、有验收的可执行契约 | 仅手动触发 |
 
 ### explain-as-fool
 
@@ -145,6 +146,17 @@ Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: fals
 
 沿用上面的 Codex 和 Claude Code 手动触发设置。
 
+### recon-to-contract
+
+用于至少两个外部参照物的横向对比，并将结果交给后续执行者落实。以差集表、命题账本和接缝笔记保留事实与关系，结合已确认的决策，产出包含目标、改动范围、约束和验收标准的契约；纯探索、缺陷定位和普通增量开发不适用。
+
+调用示例：
+
+- Codex：`$recon-to-contract 根据两个参考实现、当前代码和已确认的取舍，整理迁移方案的可执行契约。`
+- Claude Code：`/recon-to-contract 将这份多方对标调研收敛为后续实现可以直接使用的契约。`
+
+从已有本地 Skill 原样迁入，保留正文及 Claude Code 手动触发设置，并补充 Codex 手动触发配置。目录和导航已建立；本次核对内容一致性、结构及客户端发现，未重新执行完整调研工作流。
+
 ## 添加 Skill
 
 1. 选一个真实、重复出现的开发任务，说明它应在什么请求下触发，以及完成后交付什么。
@@ -155,7 +167,7 @@ Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: fals
 
 ## 本地使用
 
-本仓库是这些 Skill 的唯一维护源。当前八个 Skill 均设为仅手动触发，Codex 使用 `$skill-name`，Claude Code 使用 `/skill-name`。安装时链接到共享入口，再通过 CC 入口引用同一份源文件；入口注册不改变手动触发策略。
+本仓库是这些 Skill 的唯一维护源。当前九个 Skill 均设为仅手动触发，Codex 使用 `$skill-name`，Claude Code 使用 `/skill-name`。安装时链接到共享入口，再通过 CC 入口引用同一份源文件；入口注册不改变手动触发策略。
 
 共享入口使用 `~/.agents/skills/<skill-name>`，指向本仓库的 `skills/<skill-name>`；CC 入口使用 `~/.claude/skills/<skill-name>`，指向前面的共享入口。注册前检查同名入口的来源，保留已有安装；仅依赖 Codex 能力的 Skill 只注册共享入口。
 
