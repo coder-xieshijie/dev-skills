@@ -1,6 +1,6 @@
 ---
 name: design-for-review
-description: 将已有需求、设计讨论和技术材料整理成可独立阅读的技术评审文档。
+description: 将已有需求、设计讨论和技术材料整理成可独立阅读的技术评审文档，用于技术方案交给人评审时。
 disable-model-invocation: true
 ---
 
