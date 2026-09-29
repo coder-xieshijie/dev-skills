@@ -258,6 +258,7 @@ Lauren Tan 公开的 pstack（固定到 `ecc249f`）把“让 agent 自己证明
 | 验证工具缺口：交付时优先复用已有能力，只补最小缺口，按仓库规则保留；不再规定"排在功能实现之前" | 一-6 | 原写法规定了顺序 | — |
 | 冒烟集按风险选，不再写"每个实现会话开始时先跑一遍"；什么时候跑由 deliver 决定 | 一-2；GPT-6 [Testing and verification](../skills/agent-prompt-rules/references/sources/openai/using-gpt-6.md#testing-and-verification) | 通用的验证步骤 | — |
 | verify.md 完成条件：除覆盖盲区里的检查点外全部通过，盲区标 UNVERIFIED 并单列 | — | 原写法要求"全部场景通过"，与允许盲区的规定冲突，会卡住交付 | — |
+| 覆盖盲区每个写成列表项或表格行，写明影响的场景 ID 和检查点 | 二-10 | deliver 的门禁只放行 verify 列出的盲区；样本中盲区有写成段落、顺带提到其他场景编号的，无法可靠识别 | — |
 
 没有改的：
 - 金字塔写法：用户的决定，三轮审查都同意保留；
