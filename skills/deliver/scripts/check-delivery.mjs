@@ -13,9 +13,13 @@
 //    by editing the acceptance docs.
 // 2. The verification report names the same head as the MR. Without --head,
 //    the HEAD of the git repository that contains plan.md is used.
-// 3. Every scenario ID in verify.md (S01, S02, ...) has a row in the report,
-//    no row is FAIL, and the report names its model. UNVERIFIED rows pass the
-//    gate but are listed, because the MR must declare them.
+// 3. The report is complete (report-format.mjs): a row for every scenario and
+//    every requirement proven by a mechanical or existing check, the verdict,
+//    smoke-regression and code-issues lines, the model line and the closing
+//    sections. The verdict and smoke-regression are PASS, code-issues is 0,
+//    no row is FAIL, and a row may be UNVERIFIED only when its reason starts
+//    with 覆盖盲区 and verify.md lists the ID as a blind-spot entry; such rows
+//    are listed, because the MR must declare them.
 // 4. The report came from run-verifier.mjs: its run record
 //    (<report>.run.json) is valid, names the same head, holds the report's
 //    sha256, and the family of its model (recomputed from the model ID)
@@ -30,6 +34,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { familyOf } from "./model-family.mjs";
+import { isDeclaredBlindSpot, parseReport, parseVerify, reportProblems } from "./report-format.mjs";
 
 const USAGE =
   "usage: check-delivery.mjs --plan <plan.md> --frozen-only\n" +
@@ -122,42 +127,34 @@ if (head === undefined) {
   }
 }
 if (!/^[0-9a-f]{40}$/.test(head)) usage(`--head must be a 40-hex SHA: ${head}`);
-const reportHead = report.match(/^head:[ \t]*([0-9a-f]{40})[ \t]*$/m)?.[1];
-if (!reportHead) errors.push("report has no `head: <40-hex SHA>` line");
-else if (reportHead !== head)
-  errors.push(
-    `report verifies ${reportHead.slice(0, 12)}, but the MR head is ${head.slice(0, 12)}`,
-  );
 
-// 3. Every scenario has a row; none FAIL; the report names its model.
-const verify = frozen.has("verify") && existsSync(frozen.get("verify").file)
+// 3. Complete report, PASS verdict, no FAIL, UNVERIFIED only for blind spots.
+const verifyText = frozen.has("verify") && existsSync(frozen.get("verify").file)
   ? readFileSync(frozen.get("verify").file, "utf8")
   : "";
-const scenarios = [...new Set(verify.match(/\bS\d{2,}\b/g) ?? [])].sort();
-if (verify && scenarios.length === 0)
+const verifyInfo = parseVerify(verifyText);
+if (verifyText && verifyInfo.scenarios.length === 0)
   errors.push("verify.md has no scenario IDs (S01, S02, ...)");
-
-const rows = new Map();
-for (const m of report.matchAll(
-  /^\|[ \t]*(S\d{2,})[ \t]*\|[ \t]*(PASS|FAIL|UNVERIFIED)[ \t]*\|[^|\n]*\|[^|\n]*\|[ \t]*$/gm,
-)) {
-  if (!rows.has(m[1])) rows.set(m[1], new Set());
-  rows.get(m[1]).add(m[2]);
+const parsed = parseReport(report);
+errors.push(...reportProblems(parsed, verifyInfo, head));
+if (parsed.verdict && parsed.verdict !== "PASS")
+  errors.push(`report verdict is ${parsed.verdict}`);
+if (parsed.smoke && parsed.smoke !== "PASS")
+  errors.push(`smoke-regression is ${parsed.smoke}`);
+if (parsed.codeIssues) errors.push(`report lists ${parsed.codeIssues} code issue(s)`);
+const required = [...verifyInfo.scenarios, ...verifyInfo.requirements];
+for (const id of required) {
+  const rows = parsed.rows.get(id) ?? [];
+  if (rows.some((r) => r.result === "FAIL")) errors.push(`${id} is FAIL`);
+  else if (rows.some((r) => r.result === "UNVERIFIED")) {
+    if (rows.every((r) => r.result !== "UNVERIFIED" || isDeclaredBlindSpot(id, r, verifyInfo)))
+      notes.push(`${id} is UNVERIFIED (declared blind spot)`);
+    else errors.push(`${id} is UNVERIFIED and not a declared blind spot; resolve the environment and re-verify`);
+  }
 }
-for (const id of scenarios) {
-  const results = rows.get(id);
-  if (!results) errors.push(`${id} has no row in the report`);
-  else if (results.has("FAIL")) errors.push(`${id} is FAIL`);
-  else if (results.has("UNVERIFIED")) notes.push(`${id} is UNVERIFIED`);
-}
-for (const id of rows.keys())
-  if (verify && !scenarios.includes(id))
-    notes.push(`${id} is in the report but not in verify.md`);
-if (!/^验证模型[:：][ \t]*\S[^\n]*$/m.test(report))
-  errors.push("report has no `验证模型：` line with a value");
-for (const section of ["冒烟集与回归范围", "代码问题"])
-  if (!report.includes(section))
-    errors.push(`report has no \`${section}\` section (it may be truncated)`);
+for (const id of parsed.rows.keys())
+  if (verifyText && !required.includes(id))
+    notes.push(`${id} is in the report but not required by verify.md`);
 
 // 4. Run record from run-verifier.mjs.
 const recordPath = reportPath.replace(/\.md$/, ".run.json");
@@ -201,6 +198,7 @@ if (record) {
 
 finish(
   `spec and verify unchanged; report head ${head.slice(0, 12)}; ` +
-    `${scenarios.length} scenarios, ${notes.filter((n) => n.endsWith("UNVERIFIED")).length} UNVERIFIED; ` +
+    `${verifyInfo.scenarios.length} scenarios, ${verifyInfo.requirements.length} checked requirements, ` +
+    `${notes.filter((n) => n.includes("UNVERIFIED")).length} UNVERIFIED; ` +
     `verifier ${record?.family}/${record?.model} session ${record?.session_id}`,
 );
