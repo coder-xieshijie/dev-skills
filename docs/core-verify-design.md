@@ -2,9 +2,9 @@
 
 ## 从真实流程中提炼的任务
 
-用户的复杂需求交付流程是：在一个 grill 会话里多轮澄清，依次产出 `spec.md`、`verify.md`、`plan.md`；随后新开会话做交叉评审，只以 spec 为依据校验并修改 verify 和 plan，通过后两份冻结，再进入实现。spec 产出即视为需求冻结，是后续校验的唯一依据。
+用户的复杂需求交付流程（2026-09-29 版）是：在一个定义 session 里多轮澄清，依次产出 `spec.md`、`verify.md`；另一家模型在新 session 中查漏，用户确认一次，两份文件冻结；之后一个 owner session 用 [deliver](../skills/deliver/SKILL.md) 全自动交付到 MR 可合入，plan 由 owner 边做边写。spec 是需求的唯一依据，verify 是判定的唯一依据。
 
-core-spec 负责 spec，plan-for-agents 负责 plan，中间的验收文档此前没有对应 Skill。过往任务中，多次在交付后才由人发现问题：
+最初的流程是 grill 会话依次产出 spec、verify、plan，再新开会话做交叉评审。core-spec 负责 spec，中间的验收文档此前没有对应 Skill。过往任务中，多次在交付后才由人发现问题：
 
 - 设置页面显示了新值，实际发出的请求仍用旧值；
 - 各模块分别完成，默认启动路径却没有接上新能力；
@@ -16,9 +16,9 @@ core-spec 负责 spec，plan-for-agents 负责 plan，中间的验收文档此�
 ## 与现有 Skill 的边界
 
 - `core-spec` 固化已选定的决定与约束，明确不含详细测试清单；`core-verify` 把这些约定转成可判断的要求和场景。没有 spec 或 spec 缺少会改变判定的行为时，core-verify 按 core-spec 生成或更新 spec，不自行补语义。
-- `plan-for-agents` 规定怎样实施，其中的验证部分引用 verify 的场景，并把验证工具缺口排进计划；`core-verify` 只规定验什么、怎样判定。
-- `review-rules` 用于评审代码和设计；core-verify 的产物由后续交叉评审按 spec 校验。
-- core-verify 不写测试代码、不执行验证。执行结果、状态判定和证据留给实现后的验收步骤。
+- `deliver` 的 owner 写 plan 并实施：里程碑对应 verify 的场景，验证工具缺口排在最前面；`core-verify` 只规定验什么、怎样判定。
+- `review-rules` 用于评审代码和设计；core-verify 的产物由另一家模型在新 session 中查漏（第 6 步），再由用户确认。
+- core-verify 不写测试代码、不执行验证。执行结果、状态判定和证据留给 deliver 的自验和独立验证。
 
 ## 规则与依据
 
@@ -36,7 +36,7 @@ core-spec 负责 spec，plan-for-agents 负责 plan，中间的验收文档此�
 | mock 只证明它边界内的行为 | mock 通过被当作真实验证 | 上文过往问题 |
 | 定位入口，列出验证工具缺口 | 到验收时才发现无法操作或观察；配置写了验证步骤，脚本却不存在 | pstack `create-verification-skill`（启动、真实驱动、保留证据）；Anthropic 长任务文章要求先准备启动与验证入口（[Effective harnesses](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents)） |
 | 执行状态如实标注 | 占位命令被当成可执行 | 同上 |
-| 交付前双向核对，作为完成条件 | 与 core-spec、plan-for-agents 一致；独立校验由交叉评审承担，不另设作者复查轮次 | agent-prompt-rules 一-2、二-5 |
+| 交付前双向核对，作为完成条件 | 与 core-spec、plan-for-agents 一致；独立检查由第 6 步的跨模型查漏承担，不另设作者复查轮次 | agent-prompt-rules 一-2、二-5 |
 
 ### 以端到端场景为验收单位：Anthropic 与 OpenAI 的长任务 harness
 
@@ -52,7 +52,7 @@ core-spec 负责 spec，plan-for-agents 负责 plan，中间的验收文档此�
 | 检查点断言交互效果，空壳功能必须失败 | 只能显示、不能交互的功能被判通过 | Harness design：QA 发现 DAW 的片段不能拖动、录音只是按钮样子（[Results from the updated harness](../skills/agent-prompt-rules/references/sources/anthropic/harness-design-long-running-apps.md#results-from-the-updated-harness)） |
 | 实现 agent 实际运行通过才算通过；冻结后不修改场景和检查点 | 为变绿改测试，或未运行就标完成 | Anthropic：“It is unacceptable to remove or edit tests”，只在仔细测试后标记通过（[Feature list](../skills/agent-prompt-rules/references/sources/anthropic/effective-harnesses-for-long-running-agents.md#feature-list)） |
 
-三家都没有给出场景数量或粒度的上限；Anthropic 的 200 多项、27 条是单个例子。Anthropic 所说的“过重”指 harness 组件和轮次，原文随后逐个拆除组件、模型变强后取消 sprint；本 Skill 因此不加独立评估轮次，是否需要独立评估由流程按任务是否超出模型单独可靠完成的范围决定（[Removing the sprint construct](../skills/agent-prompt-rules/references/sources/anthropic/harness-design-long-running-apps.md#removing-the-sprint-construct)）。
+三家都没有给出场景数量或粒度的上限；Anthropic 的 200 多项、27 条是单个例子。Anthropic 所说的“过重”指 harness 组件和轮次，原文随后逐个拆除组件、模型变强后取消 sprint；本 Skill 因此只设第 6 步的一次跨模型查漏（最多两轮），不另加作者复查；理由见下文“换一家模型查漏”。是否需要更多独立评估，按任务是否超出模型单独可靠完成的范围决定（[Removing the sprint construct](../skills/agent-prompt-rules/references/sources/anthropic/harness-design-long-running-apps.md#removing-the-sprint-construct)）。
 
 ### 吸收 Lauren Tan 的 pstack 验证实践
 
@@ -73,6 +73,23 @@ Lauren Tan 公开的 pstack（固定到 `ecc249f`）把“让 agent 自己证明
 
 没有照搬的部分：每个 PR 十条实时验证通道、swarm 多 agent 裁决、Graphite 和特定模型配置。这些属于执行与合入阶段，也是 pstack 自身的重型模板，不适合放进产出 verify.md 的步骤。
 
+## 换一家模型查漏（2026-09-29）
+
+用户把流程改为“人只在定义阶段做决定，之后全自动交付”，并决定查漏开新 session、用与写文档不同家族的模型。交付阶段只按 spec 和 verify 判定，定义阶段漏掉的问题没有人再拦，所以查漏放在用户确认之前。
+
+| 规则 | 不写时容易出的问题 | 依据 |
+|---|---|---|
+| 查漏在新 session 里做，只给 spec、verify 和仓库，不给会话 | 作者自查容易放行；看过讨论的查漏方会沿用同样的假设 | [agent-prompt-rules](../skills/agent-prompt-rules/SKILL.md) 二-3；Claude Code 的对抗式复查（[Add an adversarial review step](../skills/agent-prompt-rules/references/sources/anthropic/claude-code-best-practices.md#add-an-adversarial-review-step)） |
+| 用不同家族的模型 | 同一模型、相近上下文会犯同样的错 | agent-prompt-rules 二-7；pstack `orchestrate`：“Run a unit's verifier on a different model family from its worker”（[原文](https://github.com/cursor/plugins/blob/ecc249f1e306fc64ddf83c7bed16cacf7c2239db/pstack/skills/poteto-mode/playbooks/orchestrate.md)）；用户 2026-09-29 的决定 |
+| 查什么写死在 `references/gap-check.md`，调用时引用，不由作者临时写 | 作者临时写的说明会不自觉地缩小检查范围，只写“检查一下”会看几眼就放行 | agent-prompt-rules 二-4 |
+| 只报告会让交付做错或无法判定的问题，其他建议最多三条、标为可选 | 让它“找缺口”，它总会报出一些，逐条追改导致过度设计 | agent-prompt-rules 二-4 |
+| 查漏方只报告；verify 的问题作者直接改，spec 的问题转成给用户的问题 | 查漏方或作者替用户补定语义 | agent-prompt-rules 二-3、二-9；本 Skill 第 1 步 |
+| 最多两轮，第二轮仍有的问题交给用户 | 循环不收敛 | agent-prompt-rules 二-8 |
+| 最终回复给出两份文件的 sha256，用户确认后冻结 | 交付中改 verify 让结果变绿 | deliver 的机械检查；Anthropic：“It is unacceptable to remove or edit tests”（[Feature list](../skills/agent-prompt-rules/references/sources/anthropic/effective-harnesses-for-long-running-agents.md#feature-list)） |
+| 非目标列为规范性内容，涉及的现有行为进入回归范围 | 违反非目标的实现照样通过验收 | 2026-09-29 查漏试运行报出的问题，见验证记录 |
+
+跨模型的调用方式写在 `references/cross-model.md`，由查漏和 deliver 的独立验证共用。
+
 ## 有意不放进 Skill 的内容
 
 | 内容 | 原因 |
@@ -80,7 +97,6 @@ Lauren Tan 公开的 pstack（固定到 `ecc249f`）把“让 agent 自己证明
 | 执行状态与聚合规则（通过、失败、受阻、未运行、证据过期） | 属于实现后的验收执行，写 verify 时还没有执行 |
 | 每个场景的环境、数据隔离、清理和超时 | 功能尚未实现，多数只能在验收时绑定 |
 | JSON 格式 | 人和 agent 读同一份 Markdown；需要机器判定时再定 |
-| 独立核查轮次 | 由交叉评审按 spec 校验 verify |
 | 单元测试 | 属于实现；验收从入口证明结果 |
 | 按风险把场景分成单元、集成、真实入口三层 | 早期版本做法；“风险”没有可操作的判定标准，改为以端到端场景为单位，见上文 |
 | 性能、权限、并发等专项清单 | spec 有要求时自然进入要求表，Skill 不额外添加没有依据的标准 |
@@ -89,4 +105,9 @@ Lauren Tan 公开的 pstack（固定到 `ecc249f`）把“让 agent 自己证明
 
 - 脱敏示例沿用 core-spec 示例中的“执行额度改造”spec，逐项走查了要求拆分、场景拆与合、证明方式选择、错误实现、基线预期、入口覆盖、冒烟集、覆盖盲区和十七个检查案例。这是静态案例走查。
 - 建议按 pstack [PR #419](https://github.com/cursor/plugins/pull/419) 的做法评估本 Skill：固定一组带已知遗漏的历史 spec 作为种子缺陷，比较产出的 verify.md 能拦住多少遗漏，同时统计无依据的场景（噪声）；一次只改一处规则。
+- 2026-09-29 用 Codex（codex-cli 0.158.0-alpha.2.1，`gpt-5.6-sol`，xhigh，`-s read-only`）按 `references/gap-check.md` 对脱敏示例拼成的 spec、verify 做查漏：用时约 1 分钟，约 4.1 万 token，报告格式符合说明。共报出 10 条问题：
+  - 3 条来自示例仓库本身：没有应用代码，没有 `main` 分支，S03–S05 在示例里被省略。这在预期之内。
+  - 2 条是示例的真实缺陷，已修正：S02 用的任务本来只请求一次，不检查额度的实现也能通过；非目标没有对应的要求。第二条同时在第 1 步的规范性内容里加入了非目标。
+  - 5 条指出示例 spec 为了简短省掉的定义，例如“逻辑请求”的边界、各种停止状态下是否收尾。
+- 查漏过程中，Codex 没有写入文件，只读沙箱生效。`claude -p` 路径没有测试：在本次会话的 shell 里，`claude auth status` 显示未登录。
 - 尚未在真实 spec 上调用本 Skill，也没有用独立 agent 测试触发和产出；需要在第一次真实使用后核对：场景能否覆盖当时实际发生的遗漏、工具缺口是否在实现前被补上、交叉评审是否还要大量补场景。
