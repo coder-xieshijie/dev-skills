@@ -18,11 +18,11 @@
 **只读：查漏。**
 
 ```bash
-codex exec -C <仓库> -s read-only -o <报告文件> "按 <gap-check.md 的绝对路径> 查漏。spec：<路径>；verify：<路径>；仓库：<路径>。" < /dev/null
+codex exec -C <仓库> -s read-only -o <报告文件> "按 <gap-check.md 的绝对路径> 查漏。spec：<路径>，sha256 <值>；verify：<路径>，sha256 <值>；原始约定：<路径>；仓库：<路径>。" < /dev/null
 ```
 
 ```bash
-claude -p "按 <gap-check.md 的绝对路径> 查漏。spec：<路径>；verify：<路径>；仓库：<路径>。" --permission-mode dontAsk --allowedTools Read Grep Glob "Bash(git log:*)" "Bash(git show:*)" "Bash(ls:*)" > <报告文件>
+claude -p "按 <gap-check.md 的绝对路径> 查漏。spec：<路径>，sha256 <值>；verify：<路径>，sha256 <值>；原始约定：<路径>；仓库：<路径>。" --permission-mode dontAsk --allowedTools Read Grep Glob "Bash(git log:*)" "Bash(git show:*)" "Bash(ls:*)" > <报告文件>
 ```
 
 `dontAsk` 拒绝所有未列出的工具，因此不能写文件。`--allowedTools`、`--add-dir` 会把后面的参数都当成自己的值，所以提示词紧跟在 `-p` 后面。
