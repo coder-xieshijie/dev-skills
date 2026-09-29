@@ -1,7 +1,7 @@
 ---
 name: deliver
 disable-model-invocation: true
-description: 依据已确认并冻结的 spec.md、verify.md 实现需求，交付可合入的 MR/PR。
+description: spec.md 和 verify.md 确认并冻结后，由一个 owner 实现需求，交付可合入的 MR/PR。
 ---
 
 # 依据冻结的 spec 和 verify 交付到可合入的 MR
