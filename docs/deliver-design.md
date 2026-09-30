@@ -215,3 +215,49 @@ core-spec 把用户确认的 sha256 记进交接提交，原因见 [core-spec �
 此前第一版的用例（配套检查失败时不输出两行、文件不在 git 仓库时返回 2 且不输出 OK 等）同样通过。三个脚本通过 `node --check`；全仓库链接检查通过。
 
 尚未验证：deliver 在真实需求中只凭 MR 链接开工的完整过程。
+
+## 里程碑检查记录与报告沿用（2026-09-30）
+
+来源：首个真实需求（matrix/agent-archon!7576）的复盘，见 super-auto `research/goal-final-delivery-trace-2026-09-30/README.md` 第 5.3、5.4 节与第 6 节的 B1–B3、C4。用户确认后改。
+
+### 试跑中的问题
+
+- owner 提交 M1 后没做里程碑检查就开始 M2，两个检查到 M2 和文档都写完才一起开。M1 的问题（生产装配里的钩子顺序、证据不在最终措辞的版本上、集成测试缺两类用例）晚了约 30 分钟才发现，三个入口全部重跑。推理记录里 16:15–16:51 没有提到这一步；它不在 owner 自己写的 plan.md 里，也没有脚本核对。
+- 独立验证第一轮报出一个问题后，修复只改了 UI 去重，复验者仍重跑三个入口、重读全部代码。验证说明原来让复验者“自己判断哪些场景受影响”，沿用与否取决于验证者的推理。
+
+### 改动
+
+- 新增 `scripts/record-milestone-check.mjs`：把里程碑检查的报告存为 `evidence/milestone-<编号>-r<轮次>.md`，头部写检查的 commit 范围（完整 SHA）、保存时间和报告的 sha256；拒绝不在 plan.md 里的编号、反向或空的范围、不在当前 HEAD 上的范围、空报告。
+- `check-delivery.mjs` 新增第 5 项检查和 `--milestones-only`（`scripts/milestones.mjs`）：
+  - plan.md“里程碑”一节写了场景 ID 的里程碑，都要有检查记录；没有场景的（例如文档）不要求。
+  - 从交接提交（没有时取基线）到被检查的最后一个提交，需求分支的提交都在某条记录的范围里。
+  - 每条记录早于它范围之后的第一个提交（按 author 时间，rebase 和 cherry-pick 不改变它）。晚了无法事后补救，用户同意时在冻结输入加 `- milestone-order: waived <原话与日期>` 放行。
+  - rebase 之后，记录里的旧 SHA 按 `git patch-id --stable` 对应到新提交。
+  - 代码仓库取 `--repo`，否则取 spec.md 所在的 git 仓库。
+- 报告沿用（`scripts/report-reuse.mjs`）：验证报告对应的 head 是 MR head 的祖先，并且之后改的文件都是测试、文档或 lint 配置时，报告对 MR head 仍然有效，逐个列出这些文件；否则按原规则要求对 MR head 重新验证。
+- 验证说明的“复验”一节改为：复验和首次验证做同样的事，上次报告只用来确定要重点确认的问题；沿用与否由脚本判断。
+- deliver：检查在后台进行时可以接着做下一个里程碑，下一个里程碑的第一个提交要等检查结果处理完；每一轮报告用 `record-milestone-check.mjs` 存下。“失败先修，再进入下一个里程碑”限定为场景和质量命令的失败，避免与前一句冲突。复验改为完整验证，只改测试、文档、lint 配置时由 `check-delivery.mjs` 沿用。
+- 计划格式：里程碑以编号开头并写场景 ID；冻结输入可有 `milestone-order` 放行行。里程碑一节不加勾选项：OpenAI ExecPlan 规定勾选清单只放在进度一节（“Checklists are permitted only in the `Progress` section”），用户确认的 B1 由脚本核对代替。
+
+### 依据
+
+- 规则进结构，不写成 prompt：OpenAI “When documentation falls short, we promote the rule into code”（harness-engineering）；Anthropic “Use hooks for actions that must happen every time with zero exceptions”（claude-code-best-practices）；Lauren “If the fix is structural, only use the structural fix. The instruction is the symptom.”（pstack principle-encode-lessons-in-structure）。agent-prompt-rules 二-10。
+- 检查可以与下一步并行，但要由机制保证先处理：Anthropic “On coding tasks, letting the lead continue while subagents run lowers average time to completion”，同时 “The model still often chooses to wait”（prompting-claude-fable-5-1）；Lauren 审计与下一波并行，失败时停下一次补充（pstack orchestrate）；OpenAI 里程碑之后先修再继续（run-long-horizon-tasks-with-codex）。
+- 按 SHA 记账、缺记录的结果不算：Lauren “A new head SHA voids the row”（orchestrate）、“Drop a result that does not record the SHAs”（swarm）。
+- 报告沿用：Lauren 的 patch-id 规则，差异只在测试、文档、lint 配置时沿用，“Re-verify anything else when the patch changed.”（pstack playbooks/shipping.md）；Anthropic 提醒验证者会走捷径（building-multi-agent-systems-when-and-how）。与 pstack 的不同：不做两次构建比对，因为 deliver 已要求质量命令和 CI 在最终 head 上通过；也没有实现“patch-id 不变时沿用”，rebase 后报告仍要对新 head 重新验证。
+
+### 验证
+
+在临时 git 仓库实跑，工作目录含空格，37 个用例都符合预期：
+
+- 两个里程碑按时检查、全覆盖：返回 0；M1 的记录晚于 M2 的第一个提交：返回 1，写明两个时间和放行方法；加上 `milestone-order` 放行行：返回 0，列为说明。
+- 有场景的 M2 没有记录：返回 1；没有场景的 M3 不要求。
+- 两条记录之间漏了一个提交：返回 1，列出该提交；记录保存后被改：返回 1；第二轮记录覆盖之后的修复提交：返回 0。
+- 里程碑没有编号：返回 1，提示按编号写。
+- 需求分支 rebase 到新基线后，记录里的旧 SHA 按 patch-id 对应：返回 0。
+- `record-milestone-check.mjs`：正常保存与第二轮自动编号、从 stdin 读报告：返回 0；不在 plan 里的编号、反向范围、范围不在 HEAD 上、空报告：返回 1；编号格式不对：返回 2。
+- 完整检查：报告就在 MR head 上：返回 0；报告在前一个提交、之后只加了测试文件：返回 0 并列出文件；之后改了产品文件：返回 1 并列出文件；报告的 head 不是祖先：返回 1；缺里程碑记录时完整检查也失败；`--frozen-only` 行为不变。
+
+用试跑的真实数据回放：按两个检查子代理实际返回的时间构造四条记录（M1、M2 各两轮），在 !7576 的需求分支上运行 `--milestones-only`：返回 1，报出 M1 第一轮晚于 M2 的第一个提交 `e4742a609d`、M2 第一轮晚于 `4abb95d974`；M3（文档）不要求记录。
+
+尚未验证：owner 在真实交付中按新说明后台检查、保存记录的完整过程。
