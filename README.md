@@ -89,17 +89,17 @@ Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: fals
 用户确认并冻结 spec.md 和 verify.md 之后使用。一个 owner session 从读 spec 连续做到 MR/PR 可合入，中途不找人：
 
 - 按 OpenAI ExecPlan 的格式写 `plan.md`，边做边更新进度、意外与发现、决策日志和复盘；中断后新 session 只读 plan.md 和 git 历史就能接着做。
-- 逐个里程碑实现，每个里程碑在运行中的应用上跑通它对应的 verify 场景，失败先修；全部完成后自己跑一遍全部场景。
-- 请另一家模型在新 session 中按固定的验证说明验证最终 head，最多 3 轮修复与复验。
+- 逐个里程碑实现，每个里程碑在运行中的应用上跑通它对应的 verify 场景，失败先修；再由一个继承 owner 模型和推理强度的 subagent 按固定说明检查；全部完成后自己跑一遍全部场景。
+- 请另一家模型在单独的 session 中按固定的验证说明验证最终 head，最多 3 轮修复与复验。验证通过 `scripts/run-verifier.mjs` 启动，它记下模型家族、模型、session id 和报告的 sha256；另一家模型都不可用时停下，不用同家族代替。
 - 开 MR/PR，处理 CI 和评审意见，直到可合入；spec 授权合入时合入。
-- 合入前运行 `scripts/check-delivery.mjs`：spec、verify 与开工时的 sha256 一致，验证报告对应 MR 的最终 head，每个场景都有结果且没有 FAIL。
+- 开工时用 `scripts/check-delivery.mjs --frozen-only` 核对 spec、verify 与用户确认的 sha256；合入前运行完整检查：两份文件未变，验证报告对应 MR 的最终 head，每个场景都有结果且没有 FAIL，报告来自 `run-verifier.mjs` 的调用、之后没被改过，验证者与 owner 不是同一家模型。
 
 只在三种情况下停下找用户：spec 自相矛盾或缺少会改变判定的决定；缺少 agent 拿不到的权限、凭据或环境；授权以外的不可逆操作。
 
 调用示例：
 
-- Codex：`$deliver 按 .harness/docs/specs/<需求>/ 下的 spec.md 和 verify.md 交付。`（可在 `/goal` 中使用，让同一个对话持续到完成）
-- Claude Code：`/deliver 按 .harness/docs/specs/<需求>/ 下的 spec.md 和 verify.md 交付。`
+- Codex：`$deliver 按 .harness/docs/spec/<需求>/ 下的 spec.md（sha256 <确认值>）和 verify.md（sha256 <确认值>）交付。`（可在 `/goal` 中使用，让同一个对话持续到完成）
+- Claude Code：`/deliver 按 .harness/docs/spec/<需求>/ 下的 spec.md（sha256 <确认值>）和 verify.md（sha256 <确认值>）交付。`
 
 沿用上面的 Codex 和 Claude Code 手动触发设置；安装时保留相邻的 `core-spec`、`mr-for-human` 和 `explain-as-fool` 目录。来源与验证边界见[设计与验证记录](docs/deliver-design.md)。
 
