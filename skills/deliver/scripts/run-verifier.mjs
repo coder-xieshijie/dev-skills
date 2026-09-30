@@ -14,14 +14,18 @@
 // its report as the final message; this script writes that message to
 // --report, so the report hash in the run record is what the verifier said.
 // Next to the report it writes <report>.run.json and <report>.log. The log
-// grows while the CLI runs, and <report>.status.json says what the run is
-// doing and when it last wrote evidence.
+// grows while the CLI runs (claude and mcode print stream-json events), and
+// <report>.status.json says what the run is doing and when its evidence last
+// changed.
 //
 // A run ends by itself: after --timeout minutes (default 90), or after
 // --stall minutes (default 20) in which no file under the --add-dir
-// directories changed. Only evidence counts as progress, not the CLI's own
-// output. The run record names the terminal reason: completed, cli_failed,
-// invalid_report, stalled, timed_out or checkout_changed.
+// directories was added, changed or removed (symlinks are not followed, and
+// this script's own files do not count). Only evidence counts as progress,
+// not the CLI's own output. The CLI runs in its own process group, which is
+// killed when the call ends, when it is stopped, or when this script gets
+// SIGINT or SIGTERM. The run record names the terminal reason: completed,
+// cli_failed, invalid_report, stalled, timed_out or checkout_changed.
 //
 // --preflight makes one short call with the same CLI, model, effort and
 // sandbox, and checks that the CLI answers, reports its model and session,
@@ -51,7 +55,7 @@
 // Zero dependencies.
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { appendFileSync, existsSync, mkdtempSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, lstatSync, mkdtempSync, readdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -138,11 +142,11 @@ function command(prompt, cwd, out, addDirs, scratch = false) {
     cmd.push(prompt);
   } else if (args.cli === "claude") {
     cmd = ["claude", "-p", prompt, "--permission-mode", "bypassPermissions",
-      "--output-format", "json", ...addDirs.flatMap((d) => ["--add-dir", d])];
+      "--output-format", "stream-json", "--verbose", ...addDirs.flatMap((d) => ["--add-dir", d])];
     if (args.model) cmd.push("--model", args.model);
     if (args.effort) cmd.push("--effort", args.effort);
   } else {
-    cmd = ["mcode", "exec", "--cwd", cwd, "--permission", "full", "--output-format", "json", "-o", out];
+    cmd = ["mcode", "exec", "--cwd", cwd, "--permission", "full", "--output-format", "stream-json", "-o", out];
     if (args.model) cmd.push("--model", args.model);
     if (args.effort) cmd.push("--effort", args.effort);
     cmd.push(prompt);
@@ -151,6 +155,8 @@ function command(prompt, cwd, out, addDirs, scratch = false) {
 }
 
 // Read the final message, model, provider and session from a finished call.
+// claude and mcode print stream-json events; a single JSON object (the older
+// --output-format json) is read the same way.
 function parseCall(stdout, stderr, out, status) {
   const result = { status, text: "", model: null, provider: null, session: null };
   const both = `${stdout}\n${stderr}`;
@@ -161,31 +167,47 @@ function parseCall(stdout, stderr, out, status) {
     result.session = both.match(/^session id:\s*(\S+)\s*$/m)?.[1] ?? null;
     return result;
   }
-  let json = null;
-  try {
-    json = JSON.parse(stdout);
-  } catch {}
-  if (args.cli === "claude" && json) {
-    result.text = typeof json.result === "string" ? json.result : "";
-    result.session = json.session_id ?? null;
-    result.model = json.model ?? Object.keys(json.modelUsage ?? {})[0] ?? null;
-    result.provider = "anthropic";
-    if (json.is_error) result.status = result.status || 1;
-  } else if (args.cli === "mcode" && json) {
-    result.text = existsSync(out) ? readFileSync(out, "utf8") : (json.output ?? "");
-    result.session = json.sessionId ?? null;
-    result.model = json.model?.modelId ?? null;
-    result.provider = json.model?.providerId ?? null;
-    if (json.status !== "succeeded") result.status = result.status || 1;
+  const events = [];
+  for (const line of stdout.split("\n")) {
+    try {
+      const event = JSON.parse(line);
+      if (event && typeof event === "object") events.push(event);
+    } catch {}
+  }
+  if (events.length === 0) {
+    try {
+      events.push(JSON.parse(stdout));
+    } catch {}
+  }
+  const last = (test) => [...events].reverse().find(test);
+  if (args.cli === "claude") {
+    const init = events.find((e) => e.type === "system" && e.subtype === "init");
+    const done = last((e) => e.type === "result" || "result" in e);
+    if (done) {
+      result.text = typeof done.result === "string" ? done.result : "";
+      result.session = done.session_id ?? init?.session_id ?? null;
+      result.model = init?.model ?? done.model ?? Object.keys(done.modelUsage ?? {})[0] ?? null;
+      result.provider = "anthropic";
+      if (done.is_error) result.status = result.status || 1;
+    }
+  } else {
+    const done = last((e) => e.type === "exec.completed")?.result ?? last((e) => e.type === "exec.result");
+    if (done) {
+      result.text = existsSync(out) ? readFileSync(out, "utf8") : (done.output ?? "");
+      result.session = done.sessionId ?? null;
+      result.model = done.model?.modelId ?? null;
+      result.provider = done.model?.providerId ?? null;
+      if (done.status !== "succeeded") result.status = result.status || 1;
+    }
   }
   return result;
 }
 
-// Newest modification time under the watched directories, ignoring the
-// files this script writes itself.
-function newestEvidence(dirs, own) {
-  let newest = 0;
-  const walk = (dir, depth) => {
+// Every file under the watched directories as path -> "mtime:size", ignoring
+// the files this script writes itself. Symlinks are not followed.
+function snapshotEvidence(dirs, own) {
+  const seen = new Map();
+  const walk = (dir) => {
     let entries = [];
     try {
       entries = readdirSync(dir, { withFileTypes: true });
@@ -196,69 +218,138 @@ function newestEvidence(dirs, own) {
       const file = path.join(dir, entry.name);
       if (own.has(file)) continue;
       try {
-        const stat = statSync(file);
-        if (stat.mtimeMs > newest) newest = stat.mtimeMs;
-        if (entry.isDirectory() && depth < 8) walk(file, depth + 1);
+        const stat = lstatSync(file);
+        seen.set(file, `${stat.mtimeMs}:${stat.size}`);
+        if (stat.isDirectory()) walk(file);
       } catch {}
     }
   };
-  for (const dir of dirs) walk(dir, 0);
-  return newest;
+  for (const dir of dirs) walk(dir);
+  return seen;
 }
+function sameSnapshot(a, b) {
+  if (a.size !== b.size) return false;
+  for (const [file, stamp] of a) if (b.get(file) !== stamp) return false;
+  return true;
+}
+const realFile = (file) => {
+  try {
+    return path.join(realpathSync(path.dirname(file)), path.basename(file));
+  } catch {
+    return file;
+  }
+};
+const realDir = (dir) => {
+  try {
+    return realpathSync(dir);
+  } catch {
+    return dir;
+  }
+};
 
-// Run one call, streaming its output to logPath. Resolves with the parsed
-// call plus terminal: "exited", "stalled" or "timed_out".
+// The call in progress, so a signal to this script also ends the verifier.
+let current = null;
+for (const [signal, code] of [["SIGINT", 130], ["SIGTERM", 143]])
+  process.on(signal, () => {
+    if (!current) process.exit(code);
+    current.kill("SIGTERM");
+    setTimeout(() => {
+      current?.kill("SIGKILL");
+      process.exit(code);
+    }, 2_000);
+  });
+
+// Run one call in its own process group, streaming its output to logPath.
+// Resolves once with the parsed call plus terminal: "exited", "stalled" or
+// "timed_out". Whatever is left of the process group is killed at the end,
+// and a group that will not close its pipes cannot hold the result back.
 function run(cmd, cwd, out, { logPath, statusPath, watch, own, limitMs, stallAfterMs }) {
   return new Promise((resolve) => {
-    const started = Date.now();
-    let lastEvidence = Math.max(started, newestEvidence(watch, own));
+    const startedAt = new Date();
+    const startMono = performance.now();
+    const roots = watch.map(realDir);
+    const ownReal = new Set([...own].map(realFile));
+    let snapshot = snapshotEvidence(roots, ownReal);
+    let lastChangeMono = startMono;
+    let lastChangeAt = startedAt;
     let stdout = "";
     let stderr = "";
     let terminal = "exited";
+    let exitCode = null;
+    let settled = false;
+    const timers = [];
     const child = spawn(cmd[0], cmd.slice(1), { cwd, stdio: ["ignore", "pipe", "pipe"], detached: true });
+    const killGroup = (signal) => {
+      try {
+        process.kill(-child.pid, signal);
+      } catch {}
+    };
+    current = { kill: killGroup };
     const log = (text) => logPath && appendFileSync(logPath, text);
-    child.stdout.on("data", (chunk) => {
-      stdout += chunk;
-      log(chunk);
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (text) => {
+      stdout += text;
+      log(text);
     });
-    child.stderr.on("data", (chunk) => {
-      stderr += chunk;
-      log(chunk);
+    child.stderr.on("data", (text) => {
+      stderr += text;
+      log(text);
     });
     const status = (state) =>
       statusPath &&
       writeFileSync(statusPath, `${JSON.stringify({
-        state, pid: child.pid, cli: args.cli, started_at: new Date(started).toISOString(),
-        last_evidence_at: new Date(lastEvidence).toISOString(), elapsed_s: Math.round((Date.now() - started) / 1000),
+        state, pid: child.pid, cli: args.cli, started_at: startedAt.toISOString(),
+        last_evidence_change_at: lastChangeAt.toISOString(),
+        elapsed_s: Math.round((performance.now() - startMono) / 1000),
       }, null, 2)}\n`);
-    const stop = (why) => {
-      terminal = why;
-      log(`\n--- run-verifier: stopping (${why})\n`);
-      try {
-        process.kill(-child.pid, "SIGTERM");
-      } catch {}
-      setTimeout(() => {
-        try {
-          process.kill(-child.pid, "SIGKILL");
-        } catch {}
-      }, 10_000).unref();
+    const settle = () => {
+      if (settled) return;
+      settled = true;
+      for (const t of timers) clearTimeout(t);
+      clearInterval(poll);
+      killGroup("SIGKILL");
+      current = null;
+      child.stdout.destroy();
+      child.stderr.destroy();
+      status(terminal === "exited" ? "finished" : terminal);
+      resolve({ ...parseCall(stdout, stderr, out, exitCode ?? 1), terminal });
     };
-    const timer = setInterval(() => {
-      const newest = newestEvidence(watch, own);
-      if (newest > lastEvidence) lastEvidence = newest;
+    const stop = (why) => {
+      if (terminal !== "exited" || settled) return;
+      terminal = why;
+      clearInterval(poll);
+      log(`\n--- run-verifier: stopping (${why})\n`);
+      killGroup("SIGTERM");
+      timers.push(setTimeout(() => {
+        killGroup("SIGKILL");
+        timers.push(setTimeout(settle, 5_000));
+      }, 10_000));
+    };
+    const poll = setInterval(() => {
+      const now = performance.now();
+      if (now - startMono > limitMs) return stop("timed_out");
+      const next = snapshotEvidence(roots, ownReal);
+      if (!sameSnapshot(next, snapshot)) {
+        snapshot = next;
+        lastChangeMono = now;
+        lastChangeAt = new Date();
+      }
       status("running");
-      if (Date.now() - started > limitMs) stop("timed_out");
-      else if (stallAfterMs && Date.now() - lastEvidence > stallAfterMs) stop("stalled");
+      if (stallAfterMs && now - lastChangeMono > stallAfterMs) stop("stalled");
     }, Math.max(1_000, Math.min(30_000, limitMs / 4, stallAfterMs ? stallAfterMs / 4 : 30_000)));
     status("running");
+    child.on("exit", (code) => {
+      exitCode = code;
+      timers.push(setTimeout(settle, 5_000));
+    });
     child.on("close", (code) => {
-      clearInterval(timer);
-      status(terminal === "exited" ? "finished" : terminal);
-      resolve({ ...parseCall(stdout, stderr, out, code ?? 1), terminal });
+      if (exitCode === null) exitCode = code;
+      settle();
     });
     child.on("error", () => {
-      clearInterval(timer);
-      resolve({ status: 1, text: "", model: null, provider: null, session: null, terminal: "exited" });
+      exitCode = 1;
+      settle();
     });
   });
 }

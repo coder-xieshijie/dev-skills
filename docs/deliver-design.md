@@ -320,6 +320,24 @@ core-spec 把用户确认的 sha256 记进交接提交，原因见 [core-spec �
 - 用假 codex CLI 在临时仓库实跑 24 个断言，都符合预期：参数错误返回 2；codex 加 `--needs-gui` 不加 `--unsandboxed` 返回 3；预检通过并写明沙箱、推理强度；预检拒绝与 owner 同家族；正常运行的调用记录含 `completed`、`effort`、`sandbox`，codex 收到 `model_reasoning_effort`；`--unsandboxed` 用 `danger-full-access`；只打印输出、不写证据的运行在停滞上限后被结束，记录为 `stalled`，进程已被杀掉，状态文件为 `stalled`；运行中日志已有输出、状态为 `running`；持续写证据的慢运行正常完成；超过总时长记录为 `timed_out`。
 - 真实 CLI 的预检：codex 默认、codex `--unsandboxed --needs-gui --effort high` 都在 8 秒内通过；mcode `custom_provider:mafia/gpt-6-astra --effort high` 9 秒通过；mcode `mafia/gpt-6-astra`（试跑中写错的引用）3 秒内返回 3；本机 claude 未登录，返回 3。
 
+### Codex 审查
+
+修改后由 Codex（`gpt-6-astra`，只读，session `01a0f272-a5e7-7e90-be8b-e88cf587b3ff`）审查 diff，报出 11 条（3 条 P1），都成立并已修正：
+
+- P1：验证者退出后，忽略 SIGTERM 的后代可能留下，脚本随即退出、SIGKILL 不再执行 → 调用结束时无论怎样结束，都对整个进程组发 SIGKILL；
+- P1：脱离进程组的后代继续占着输出管道时，`close` 不来，结果一直不结算 → 进程退出后最多等 5 秒，停止后 SIGKILL 再等 5 秒，到时关掉管道结算，只结算一次；
+- P1：脚本收到 SIGINT、SIGTERM 时，独立进程组里的验证者不会跟着结束 → 捕获这两个信号，先结束验证者再退出（130、143）；
+- P2：输出按块解码，跨块的中文变成替换字符，报告里“验证模型”被破坏 → 用 `setEncoding("utf8")` 按流解码；
+- P2：claude、mcode 用 `--output-format json`，结束前没有日志 → 改用 `stream-json`（claude 加 `--verbose`），从最后的结果事件读报告、模型和 session；
+- P2：停止不是幂等的，停滞之后又超时会改写终止原因 → 首次停止时锁定原因、停止轮询；
+- P2：未来时间戳的文件会让“最近一次变化”停在未来，停滞永远不触发 → 用快照比较是否有变化，时长用单调时钟；
+- P2：只看最大 mtime，会漏掉深层、软链接目录里的改写和删除 → 按路径比较完整快照（新增、修改、删除），不限深度、不跟随软链接；
+- P2：证据目录经软链接或 `/var` 与 `/private/var` 等不同路径给出时，脚本自己的日志、状态文件被当成进展 → 统一成真实路径再排除；
+- P2：deliver 里预检写成“参数同下文”，照抄会带上预检不接受的参数 → 写出完整的预检命令；
+- P2：强制带 `--owner-family` 与用户放宽跨模型要求的例外冲突 → 放宽时不加。
+
+补了 16 个用例（忽略 SIGTERM 的后代被清掉；脱离进程组的后代占着管道时 20 秒内结束；给脚本发 SIGTERM 后验证者被结束、返回 143；未来时间戳、经软链接给出的证据目录、深层改动、删除；claude、mcode 的 stream-json，跨块的中文不损坏），与前面 24 个都符合预期；真实 CLI 的预检结果不变（mcode 改用 stream-json 后仍通过）。修改后没有再送审。
+
 实际使用的佐证：试跑最后一次复验在用户同意下没有经本脚本，直接用 `codex exec --dangerously-bypass-approvals-and-sandbox`、`model_reasoning_effort=high` 运行（session `01a0f244-6650-73a0-b71f-5a5aff6e6df1`）：Electron 20:27 启动成功，20:21–20:32 用 11 分钟完成全部场景和代码审查，结论 PASS；同一个模型经 mcode 的那次跑了 2 小时 3 分钟没有报告。
 
 尚未验证：经本脚本、以 `-s danger-full-access` 运行的完整验证（与上面的无沙箱调用在沙箱上等价，审批策略沿用 `codex exec` 的默认值）。
