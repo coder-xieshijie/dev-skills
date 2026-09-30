@@ -160,9 +160,9 @@ description: 讨论和澄清结束后，把会话与材料收敛为核心决策 
 
 最终回复给出 spec 与 verify 的文件链接和 sha256、要求数与场景数、冒烟集、工具缺口、覆盖盲区、查漏结果（查漏用的模型、问题数与处置）和仍待确认的问题，请用户一次确认；sha256 用脚本的输出，交付时原样交给 deliver。跨模型查漏未完成时写明原因，不请用户冻结。用户确认后两份文件冻结，交付阶段不再修改，接着做第 9 步；需要改变时回到本 Skill，重新查漏和确认。
 
-## 9. 提交到需求分支，开 Draft MR 交给 deliver
+## 9. 提交到需求分支，开 Draft MR/PR 交给 deliver
 
-deliver 从需求分支和 MR 开工，可以在任何 worktree 或机器上检出，不依赖本 session 的工作目录。用户确认后：
+本步的MR 同时指 GitHub 的 PR，Draft 对应 GitHub 的 draft PR 和 GitLab 的 Draft MR。deliver 从需求分支和 MR 开工，可以在任何 worktree 或机器上检出，不依赖本 session 的工作目录。用户确认后：
 
 1. 在目标仓库的需求分支上单独提交 spec.md 和 verify.md，只 add 这两个文件，下称交接提交。还没有需求分支时，按仓库规则命名，从 spec 交付与授权里的基线新建。本 session 在这个仓库留下的其他改动（例如 grill 写入的术语、ADR）另行提交，留在工作区的改动 deliver 看不到。
 2. 推送需求分支，开一个 Draft MR/PR，目标分支取 spec 的交付与授权；平台要求的属性（例如合并方式）按仓库规则设置并读回。描述写明：这是本需求的交付 MR；spec、verify 已冻结，附两个 sha256；代码由 deliver 在同一个 MR 上提交。

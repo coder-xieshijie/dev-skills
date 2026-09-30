@@ -289,6 +289,8 @@ Lauren Tan 公开的 pstack（固定到 `ecc249f`）把“让 agent 自己证明
 | spec 不允许推送或开 MR，或仓库规则不允许提交这两份文件时，只交本地路径；deliver 是否推送、开 MR 仍按 spec 的授权 | 为了交接越过授权，或违反仓库规则；换一个 Skill 就多出发布授权 | 交付与授权只由用户决定；Agent-Archon 的 `AGENTS.md` 只要求临时计划、命令和验证记录不提交，仓库里 `.harness/docs/specs/` 已有行为 spec，其他仓库可能不同 |
 | 交接后要改 spec：deliver 停下；core-spec 更新、重新确认后按原来的交接方式交回（分支交接的提交并推送，本地路径的交回新路径和 sha256）；deliver 拉取或读取后更新冻结输入 | 两个 session 同时写一个分支；deliver 按旧哈希继续；本地交接的需求被迫推送 | deliver 的“分支只有 owner 写入”和冻结输入的核对 |
 
+第 9 步和 deliver 各写一句“MR 同时指 GitHub 的 PR”：用户追问 GitHub 仓库怎么办，正文原本多处只写 MR，在 GitHub 上执行的 agent 可能以为这一步只适用于 GitLab。两个平台都能开 draft 并取消（`gh pr create --draft`、`gh pr ready`；`glab mr create --draft`、`glab mr update --ready`），具体命令留给平台 CLI 的帮助，不写进 Skill。
+
 另一个效果：评审者能在 MR 里直接读到 spec。此前 spec 放在没有远端的个人仓库时，评审者看不到，只能靠 MR 描述里的摘要。
 
 修改后由 Codex（`gpt-6-astra`，只读）在新 session 审查 diff，报出 3 条，都已修正：

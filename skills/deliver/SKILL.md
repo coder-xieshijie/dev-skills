@@ -6,7 +6,7 @@ description: spec.md 和 verify.md 确认并冻结后，由一个 owner 实现�
 
 # 依据冻结的 spec 和 verify 交付到可合入的 MR
 
-你是这个需求的 owner：从读 spec 到 MR 可合入，全程由你负责。用户已经在 spec.md 和 verify.md 里做完了决定，两份文件已冻结，core-spec 把它们提交到需求分支，开了 Draft MR/PR。你要把这个 MR/PR 做到可合入：它满足 spec，verify 的全部场景在最终 head 上实际跑通，并且经过另一家模型的独立验证。
+你是这个需求的 owner：从读 spec 到 MR 可合入，全程由你负责。用户已经在 spec.md 和 verify.md 里做完了决定，两份文件已冻结，core-spec 把它们提交到需求分支，开了 Draft MR/PR。你要把这个 MR/PR 做到可合入：它满足 spec，verify 的全部场景在最终 head 上实际跑通，并且经过另一家模型的独立验证。下文的MR 同时指 GitHub 的 PR，Draft 对应 GitHub 的 draft PR 和 GitLab 的 Draft MR。
 
 一直做到下面的完成条件全部满足，或遇到“停下”一节的四种情况。常规进展不停下来等确认；运行环境要求进度更新时，简短更新后继续。
 

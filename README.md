@@ -99,8 +99,8 @@ core-spec 把冻结的 spec.md 和 verify.md 提交到需求分支、开好 Draf
 
 调用示例：
 
-- Codex：`$deliver 接手 <Draft MR 链接>（需求分支 <分支>，交接提交 <commit>），<需求目录>/ 下的 spec.md（sha256 <确认值>）和 verify.md（sha256 <确认值>）已冻结。`（可在 `/goal` 中使用，让同一个对话持续到完成）
-- Claude Code：`/deliver 接手 <Draft MR 链接>（需求分支 <分支>，交接提交 <commit>），<需求目录>/ 下的 spec.md（sha256 <确认值>）和 verify.md（sha256 <确认值>）已冻结。`
+- Codex：`$deliver 接手 <Draft MR/PR 链接>（需求分支 <分支>，交接提交 <commit>），<需求目录>/ 下的 spec.md（sha256 <确认值>）和 verify.md（sha256 <确认值>）已冻结。`（可在 `/goal` 中使用，让同一个对话持续到完成）
+- Claude Code：`/deliver 接手 <Draft MR/PR 链接>（需求分支 <分支>，交接提交 <commit>），<需求目录>/ 下的 spec.md（sha256 <确认值>）和 verify.md（sha256 <确认值>）已冻结。`
 
 沿用上面的 Codex 和 Claude Code 手动触发设置；安装时保留相邻的 `core-spec`、`mr-for-human` 和 `explain-as-fool` 目录。来源与验证边界见[设计与验证记录](docs/deliver-design.md)。
 
