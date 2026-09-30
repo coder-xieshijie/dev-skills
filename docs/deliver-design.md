@@ -303,7 +303,7 @@ core-spec 把用户确认的 sha256 记进交接提交，原因见 [core-spec �
 - 调用改为异步：CLI 的输出边运行边写进 `.log`；`.status.json` 记着状态、开始时间和最近一次写证据的时间。
 - 两个上限：`--timeout`（默认 90 分钟）和 `--stall`（默认 20 分钟内 `--add-dir` 下没有任何文件变化）。到了就结束验证者的整个进程组，调用记录写明终止原因（`completed`、`cli_failed`、`invalid_report`、`stalled`、`timed_out`、`checkout_changed`），返回 3，owner 换另一个 CLI。停滞只看证据文件，不看 CLI 自己的输出。
 - `--preflight`：用同样的 CLI、模型、推理强度和沙箱发一次最短的调用，确认能答、能读出模型和 session id、模型家族可识别；给了 `--owner-family` 时还要求与 owner 不同家族。deliver 开工时就跑一次。codex 的预检在临时目录里运行，加 `--skip-git-repo-check`。
-- `--needs-gui` 与 `--unsandboxed`：verify 要驱动图形界面时，codex 必须同时加 `--unsandboxed`（改用 `-s danger-full-access`），否则直接返回 3；claude 和 mcode 本来就不在沙箱里。调用记录写明 `sandbox`。
+- 验证时三个 CLI 都不带沙箱：codex 改用 `-s danger-full-access` 并关掉审批（`approval_policy=never`），claude 仍用 `bypassPermissions`，mcode 仍用 `--permission full`。调用记录写明 `sandbox`。最初的版本让 codex 默认带沙箱、要图形界面时再加 `--needs-gui --unsandboxed`；用户 2026-09-30 追加要求验证环节默认去掉沙箱，这两个选项随之删除。查漏（core-spec）只读代码，仍用 `-s read-only`。
 - `--effort`：显式设对方的推理强度（codex `model_reasoning_effort`、claude `--effort`、mcode `--effort`），写进调用记录。
 - codex 调用前先查 `codex login status`。
 - deliver 与跨模型调用说明相应改写；原先“沙箱挡住应用时不改用无沙箱”的写法按用户 2026-09-30 的决定取消。
@@ -317,8 +317,8 @@ core-spec 把用户确认的 sha256 记进交接提交，原因见 [core-spec �
 
 ### 验证
 
-- 用假 codex CLI 在临时仓库实跑 24 个断言，都符合预期：参数错误返回 2；codex 加 `--needs-gui` 不加 `--unsandboxed` 返回 3；预检通过并写明沙箱、推理强度；预检拒绝与 owner 同家族；正常运行的调用记录含 `completed`、`effort`、`sandbox`，codex 收到 `model_reasoning_effort`；`--unsandboxed` 用 `danger-full-access`；只打印输出、不写证据的运行在停滞上限后被结束，记录为 `stalled`，进程已被杀掉，状态文件为 `stalled`；运行中日志已有输出、状态为 `running`；持续写证据的慢运行正常完成；超过总时长记录为 `timed_out`。
-- 真实 CLI 的预检：codex 默认、codex `--unsandboxed --needs-gui --effort high` 都在 8 秒内通过；mcode `custom_provider:mafia/gpt-6-astra --effort high` 9 秒通过；mcode `mafia/gpt-6-astra`（试跑中写错的引用）3 秒内返回 3；本机 claude 未登录，返回 3。
+- 用假 codex CLI 在临时仓库实跑 24 个断言，都符合预期：参数错误返回 2；预检通过并写明沙箱、推理强度；预检拒绝与 owner 同家族；正常运行的调用记录含 `completed`、`effort`、`sandbox`，codex 收到 `model_reasoning_effort`，并以 `danger-full-access`、`approval_policy=never` 运行；只打印输出、不写证据的运行在停滞上限后被结束，记录为 `stalled`，进程已被杀掉，状态文件为 `stalled`；运行中日志已有输出、状态为 `running`；持续写证据的慢运行正常完成；超过总时长记录为 `timed_out`。
+- 真实 CLI 的预检：codex 默认、codex `--effort high` 都在 10 秒左右通过；mcode `custom_provider:mafia/gpt-6-astra --effort high` 9 秒通过；mcode `mafia/gpt-6-astra`（试跑中写错的引用）3 秒内返回 3；本机 claude 未登录，返回 3。
 
 ### Codex 审查
 
@@ -340,4 +340,6 @@ core-spec 把用户确认的 sha256 记进交接提交，原因见 [core-spec �
 
 实际使用的佐证：试跑最后一次复验在用户同意下没有经本脚本，直接用 `codex exec --dangerously-bypass-approvals-and-sandbox`、`model_reasoning_effort=high` 运行（session `01a0f244-6650-73a0-b71f-5a5aff6e6df1`）：Electron 20:27 启动成功，20:21–20:32 用 11 分钟完成全部场景和代码审查，结论 PASS；同一个模型经 mcode 的那次跑了 2 小时 3 分钟没有报告。
 
-尚未验证：经本脚本、以 `-s danger-full-access` 运行的完整验证（与上面的无沙箱调用在沙箱上等价，审批策略沿用 `codex exec` 的默认值）。
+去掉沙箱后的实测：codex 以本脚本使用的 `-s danger-full-access -c approval_policy=never` 在验证检出目录运行 verify-archon 的 `electron up`，成功启动（`mainUrl` 为 `app://./archon`），随后 `electron down` 成功，检出目录保持干净（session `01a0f28e-233b-7c70-8387-c259f080f8dd`）。
+
+尚未验证：经本脚本跑完一次完整的图形界面验证。

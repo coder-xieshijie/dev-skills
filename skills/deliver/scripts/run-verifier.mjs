@@ -5,10 +5,9 @@
 //   node run-verifier.mjs --cli <codex|claude|mcode> --checkout <dir> --head <sha>
 //                         --inputs <inputs.md> --verify <verify.md> --report <report.md>
 //                         [--model <provider/model>] [--effort <level>] [--add-dir <dir>]...
-//                         [--needs-gui] [--unsandboxed] [--timeout <min>] [--stall <min>]
-//                         [--brief <verifier-brief.md>]
+//                         [--timeout <min>] [--stall <min>] [--brief <verifier-brief.md>]
 //   node run-verifier.mjs --preflight --cli <codex|claude|mcode> [--model <provider/model>]
-//                         [--effort <level>] [--needs-gui] [--unsandboxed] [--owner-family <family>]
+//                         [--effort <level>] [--owner-family <family>]
 //
 // The verifier reads the fixed brief and the caller's inputs file and returns
 // its report as the final message; this script writes that message to
@@ -32,12 +31,11 @@
 // and that the model's family is known and differs from --owner-family. Run
 // it when starting a delivery, so an unusable verifier shows up at once.
 //
-// --needs-gui says verify.md drives a desktop or other GUI entry. Codex runs
-// its commands in a sandbox (workspace-write) that cannot launch such apps
-// (Playwright: "Process failed to launch!", 2026-09-30), so codex with
-// --needs-gui requires --unsandboxed, which switches it to
-// danger-full-access, the same trust level as claude's bypassPermissions and
-// mcode's --permission full. --effort sets the reasoning effort explicitly
+// The verifier runs the application, so no CLI runs it in a sandbox: codex
+// gets danger-full-access with approvals off (its workspace-write sandbox
+// cannot launch desktop apps: Playwright "Process failed to launch!",
+// 2026-09-30), claude bypassPermissions, mcode --permission full. The run
+// record names the mode. --effort sets the reasoning effort explicitly
 // (codex model_reasoning_effort, claude --effort, mcode --effort).
 //
 // The model family is derived from the model ID (claude -> anthropic, gpt/o*
@@ -49,9 +47,9 @@
 // Exit 1: the CLI call succeeded but the report or the run record is invalid
 //         after one retry, or the verifier changed the checkout.
 // Exit 2: usage error or the checkout is not at --head / not clean.
-// Exit 3: the CLI is unusable here: missing, not logged in, the model or
-//         sandbox cannot serve the verification, the call failed twice, or
-//         the run stalled or timed out. Try another family's CLI.
+// Exit 3: the CLI is unusable here: missing, not logged in, the model
+//         cannot serve the verification, the call failed twice, or the run
+//         stalled or timed out. Try another family's CLI.
 // Zero dependencies.
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -65,9 +63,9 @@ import { parseReport, parseVerify, reportProblems } from "./report-format.mjs";
 const USAGE =
   "usage: run-verifier.mjs --cli <codex|claude|mcode> --checkout <dir> --head <sha> " +
   "--inputs <inputs.md> --verify <verify.md> --report <report.md> [--model <provider/model>] " +
-  "[--effort <level>] [--add-dir <dir>]... [--needs-gui] [--unsandboxed] [--timeout <min>] [--stall <min>] [--brief <path>]\n" +
+  "[--effort <level>] [--add-dir <dir>]... [--timeout <min>] [--stall <min>] [--brief <path>]\n" +
   "       run-verifier.mjs --preflight --cli <codex|claude|mcode> [--model <provider/model>] [--effort <level>] " +
-  "[--needs-gui] [--unsandboxed] [--owner-family <family>]";
+  "[--owner-family <family>]";
 
 function fail(code, message) {
   console.error(`run-verifier: ${message}`);
@@ -75,7 +73,7 @@ function fail(code, message) {
   process.exit(code);
 }
 
-const FLAGS = ["preflight", "needs-gui", "unsandboxed"];
+const FLAGS = ["preflight"];
 const KEYS = ["cli", "checkout", "head", "inputs", "verify", "report", "model", "effort", "add-dir", "brief",
   "timeout", "stall", "owner-family"];
 const args = { "add-dir": [] };
@@ -103,13 +101,7 @@ const minutes = (key, fallback) => {
 };
 const timeoutMs = minutes("timeout", 90) * 60_000;
 const stallMs = minutes("stall", 20) * 60_000;
-const sandbox = args.cli === "codex"
-  ? (args.unsandboxed ? "danger-full-access" : "workspace-write")
-  : args.cli === "claude" ? "none (bypassPermissions)" : "none (--permission full)";
-
-if (args["needs-gui"] && args.cli === "codex" && !args.unsandboxed)
-  fail(3, "codex's workspace-write sandbox cannot launch GUI apps (Playwright: Process failed to launch!); " +
-    "add --unsandboxed, or use claude or mcode");
+const sandbox = { codex: "none (danger-full-access)", claude: "none (bypassPermissions)", mcode: "none (--permission full)" }[args.cli];
 
 function onPath(cmd) {
   return spawnSync("sh", ["-c", `command -v ${cmd}`], { encoding: "utf8" }).status === 0;
@@ -133,9 +125,8 @@ if (args.cli === "codex") {
 function command(prompt, cwd, out, addDirs, scratch = false) {
   let cmd;
   if (args.cli === "codex") {
-    cmd = ["codex", "exec", "-C", cwd, "-s", sandbox];
+    cmd = ["codex", "exec", "-C", cwd, "-s", "danger-full-access", "-c", "approval_policy=never"];
     if (scratch) cmd.push("--skip-git-repo-check");
-    if (sandbox === "workspace-write") cmd.push("-c", "sandbox_workspace_write.network_access=true");
     cmd.push(...addDirs.flatMap((d) => ["--add-dir", d]), "-o", out);
     if (args.model) cmd.push("-m", args.model);
     if (args.effort) cmd.push("-c", `model_reasoning_effort=${args.effort}`);
@@ -372,7 +363,7 @@ if (args.preflight) {
   if (args["owner-family"] && family === args["owner-family"].toLowerCase())
     fail(3, `${call.model} is ${family}, the owner's own family; pick another family's model`);
   console.log(`run-verifier: preflight OK (${args.cli}, ${family}/${call.model}, sandbox ${sandbox}` +
-    `${args.effort ? `, effort ${args.effort}` : ""}${args["needs-gui"] ? ", GUI allowed" : ""})`);
+    `${args.effort ? `, effort ${args.effort}` : ""})`);
   process.exit(0);
 }
 
