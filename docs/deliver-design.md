@@ -152,3 +152,21 @@ deliver 把“从冻结的 spec、verify 到可合入的 MR”交给一个连续
 - 三个脚本通过 `node --check`；全仓库相对链接检查通过。
 
 尚未验证：真实 CLI 下的独立验证、"卡住"规则在真实交付中的表现。
+
+## 从交接的 Draft MR 开工（2026-09-30）
+
+core-spec 新增第 9 步，把冻结的 spec.md、verify.md 提交到需求分支并开 Draft MR/PR，原因和依据见 [core-spec 的来源与验证](core-spec-design.md#五随需求分支交接2026-09-30)。deliver 相应修改：
+
+- 输入改为交接信息：MR/PR 链接、需求分支、交接提交、两份文件在仓库内的路径，以及两个 sha256。只拿到本地路径时，照旧在读得到文件的 worktree 开工，是否推送、开 MR 按 spec 的交付与授权。
+- owner 在自己的 worktree 里检出需求分支，新建的 worktree 也可以；从交接提交往后只有 owner 写入。
+- 交接的 Draft MR 就是交付的 MR，完成条件 1–3 满足后更新描述、取消 Draft；“MR 可合入”增加“已取消 Draft”。
+- 停下前提交需求分支，授权允许时推送；spec 重新确认后，core-spec 按原来的交接方式交回，owner 拉取或读取后把新的 sha256 写进冻结输入。
+- plan.md 默认仍与 spec 同目录；用户指定了位置时放在那里，冻结输入可以写绝对路径。计划格式的冻结输入增加一行“交接”，记 MR 链接、需求分支和交接提交，供中断后接手的 session 找到 MR；`check-delivery.mjs` 不读这一行。
+- 复验的触发从“开 MR 后代码有改动”改为“独立验证通过后代码有改动”，因为 MR 从开工起就存在。
+
+验证：`check-delivery.mjs` 未修改。在临时目录构造 plan.md，放在 spec 目录以外，跑 `--frozen-only` 三个用例，都符合预期：
+- 冻结输入写绝对路径，另有“交接”一行：返回 0；
+- 冻结后改动 verify.md：返回 1，报出变动的文件和前后哈希；
+- 冻结输入写相对 plan.md 的 `../` 路径：返回 0。
+
+尚未验证：owner 在新建的 worktree 里检出需求分支、接手已有 Draft MR 并取消 Draft 的完整过程。
