@@ -86,7 +86,7 @@ mkdirSync(evidence, { recursive: true });
 const round = readRecords(evidence).filter((r) => r.milestone === args.milestone).length + 1;
 const file = path.join(evidence, recordName(args.milestone, round));
 if (existsSync(file)) fail(1, `${file} already exists`);
-const recordedAt = new Date().toISOString();
+const recordedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
 const header = [
   "---",
   `milestone: ${args.milestone}`,

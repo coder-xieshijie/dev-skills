@@ -17,8 +17,9 @@
 // 2. The verification report names the same head as the MR. Without --head,
 //    the HEAD of the git repository that contains plan.md is used. A report
 //    for an earlier head still holds when that head is an ancestor of the MR
-//    head and every file changed since is a test, a doc or lint config
-//    (report-reuse.mjs); the files are listed.
+//    head and every file changed since is a test, a doc or lint config, and
+//    neither spec.md nor verify.md changed (report-reuse.mjs); the files are
+//    listed.
 // 3. The report is complete (report-format.mjs): a row for every scenario and
 //    every requirement proven by a mechanical or existing check, the verdict,
 //    smoke-regression and code-issues lines, the model line and the closing
@@ -43,7 +44,7 @@
 // Zero dependencies.
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { checkMilestones, codeRepo } from "./milestones.mjs";
 import { familyOf } from "./model-family.mjs";
@@ -171,7 +172,15 @@ let verifiedHead = head;
 if (parsed.head && parsed.head !== head) {
   if (!repo) errors.push("cannot find the code repository to compare the report's head; pass --repo");
   else {
-    const reuse = reuseCheck({ repo, verifiedHead: parsed.head, head });
+    const inRepo = (file) => {
+      try {
+        return path.relative(realpathSync(repo), realpathSync(file)).split(path.sep).join("/");
+      } catch {
+        return null;
+      }
+    };
+    const frozenInRepo = [...frozen.values()].map((f) => inRepo(f.file)).filter((f) => f && !f.startsWith(".."));
+    const reuse = reuseCheck({ repo, verifiedHead: parsed.head, head, frozen: frozenInRepo });
     if (reuse.ok) {
       verifiedHead = parsed.head;
       notes.push(
