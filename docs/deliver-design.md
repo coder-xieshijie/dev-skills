@@ -287,3 +287,59 @@ core-spec 把用户确认的 sha256 记进交接提交，原因见 [core-spec �
 为这 4 条补了用例，与前面的用例一起：37 个、23 个断言都符合预期，真实数据回放的结论不变。第二轮的修改没有再送审。
 
 尚未验证：owner 在真实交付中按新说明后台检查、保存记录的完整过程。
+
+## 验证调用限时、预检与图形入口（2026-09-30）
+
+来源：首个真实需求（matrix/agent-archon!7576）的复盘，见 super-auto `research/goal-final-delivery-trace-2026-09-30/README.md` 第 5.1、5.2 节与第 6 节的 C1–C3、N2。用户确认后改。
+
+### 试跑中的问题
+
+- 第一轮用 Codex 验证，`-s workspace-write` 沙箱里 Playwright 启动 Electron 报 “Process failed to launch!”，核心场景 S01 和 Electron 冒烟只能标“环境受阻”，到交付第 2 小时才暴露。
+- 改用 mcode 时模型引用写成 `mafia/gpt-6-astra`，调用被拒；正确写法是 `custom_provider:mafia/gpt-6-astra`。
+- mcode 复验跑了 2 小时 3 分钟没有报告：三个入口的场景 23 分钟就跑完，之后一直在读文件。`run-verifier.mjs` 用 `spawnSync` 同步等待，没有超时，运行中不写日志，owner 只能翻 mcode 的 runtime 日志判断它在做什么，用户来问了五次进度，最后手动取消。
+
+### 改动
+
+- 调用改为异步：CLI 的输出边运行边写进 `.log`；`.status.json` 记着状态、开始时间和最近一次写证据的时间。
+- 两个上限：`--timeout`（默认 90 分钟）和 `--stall`（默认 20 分钟内 `--add-dir` 下没有任何文件变化）。到了就结束验证者的整个进程组，调用记录写明终止原因（`completed`、`cli_failed`、`invalid_report`、`stalled`、`timed_out`、`checkout_changed`），返回 3，owner 换另一个 CLI。停滞只看证据文件，不看 CLI 自己的输出。
+- `--preflight`：用同样的 CLI、模型、推理强度和沙箱发一次最短的调用，确认能答、能读出模型和 session id、模型家族可识别；给了 `--owner-family` 时还要求与 owner 不同家族。deliver 开工时就跑一次。codex 的预检在临时目录里运行，加 `--skip-git-repo-check`。
+- 验证时三个 CLI 都不带沙箱：codex 改用 `-s danger-full-access` 并关掉审批（`approval_policy=never`），claude 仍用 `bypassPermissions`，mcode 仍用 `--permission full`。调用记录写明 `sandbox`。最初的版本让 codex 默认带沙箱、要图形界面时再加 `--needs-gui --unsandboxed`；用户 2026-09-30 追加要求验证环节默认去掉沙箱，这两个选项随之删除。查漏（core-spec）只读代码，仍用 `-s read-only`。
+- `--effort`：显式设对方的推理强度（codex `model_reasoning_effort`、claude `--effort`、mcode `--effort`），写进调用记录。
+- codex 调用前先查 `codex login status`。
+- deliver 与跨模型调用说明相应改写；原先“沙箱挡住应用时不改用无沙箱”的写法按用户 2026-09-30 的决定取消。
+
+### 依据
+
+- 等待与超时由运行时承担：OpenAI Symphony 的超时按静默时长计，停滞就终止并重试，终止原因要分类（“`codex.turn_timeout_ms`: maximum silence interval”“If `elapsed_ms > codex.stall_timeout_ms`, terminate the worker”“Distinct terminal reasons are important”）；Anthropic “if you need a hard stop, keep your own timeout”（prompting-claude-opus-5-5）。
+- 只把副作用算作进展：Lauren “Count only side effects as progress… Treat a lane that… passes its expected runtime without a side effect, as stuck”“Transcript mtime is not liveness.”（pstack autopilot-full、orchestrate）。
+- 启动前预检、轻量：OpenAI “Validate configuration before starting the scheduling loop”“It validates the workflow/config needed to poll and launch workers, not a full audit”；Lauren “process up, right version/build, port owned by us, auth valid”“Never write a real slug you have not confirmed is available”（create-verification-skill、setup-pstack）；开工时先跑一个单元暴露环境问题：“The pilot exists to falsify the brief template, the verify recipe…”（pstack orchestrate）。
+- 放宽沙箱做成写明信任姿态的显式选项：OpenAI Symphony “Implementations are expected to document their trust and safety posture explicitly”，同时提示放宽的风险；Anthropic 建议放宽时在别的层面隔离（building-c-compiler 在容器里运行）。这里的风险与另两家 CLI 已有的权限相同。
+
+### 验证
+
+- 用假 codex CLI 在临时仓库实跑 24 个断言，都符合预期：参数错误返回 2；预检通过并写明沙箱、推理强度；预检拒绝与 owner 同家族；正常运行的调用记录含 `completed`、`effort`、`sandbox`，codex 收到 `model_reasoning_effort`，并以 `danger-full-access`、`approval_policy=never` 运行；只打印输出、不写证据的运行在停滞上限后被结束，记录为 `stalled`，进程已被杀掉，状态文件为 `stalled`；运行中日志已有输出、状态为 `running`；持续写证据的慢运行正常完成；超过总时长记录为 `timed_out`。
+- 真实 CLI 的预检：codex 默认、codex `--effort high` 都在 10 秒左右通过；mcode `custom_provider:mafia/gpt-6-astra --effort high` 9 秒通过；mcode `mafia/gpt-6-astra`（试跑中写错的引用）3 秒内返回 3；本机 claude 未登录，返回 3。
+
+### Codex 审查
+
+修改后由 Codex（`gpt-6-astra`，只读，session `01a0f272-a5e7-7e90-be8b-e88cf587b3ff`）审查 diff，报出 11 条（3 条 P1），都成立并已修正：
+
+- P1：验证者退出后，忽略 SIGTERM 的后代可能留下，脚本随即退出、SIGKILL 不再执行 → 调用结束时无论怎样结束，都对整个进程组发 SIGKILL；
+- P1：脱离进程组的后代继续占着输出管道时，`close` 不来，结果一直不结算 → 进程退出后最多等 5 秒，停止后 SIGKILL 再等 5 秒，到时关掉管道结算，只结算一次；
+- P1：脚本收到 SIGINT、SIGTERM 时，独立进程组里的验证者不会跟着结束 → 捕获这两个信号，先结束验证者再退出（130、143）；
+- P2：输出按块解码，跨块的中文变成替换字符，报告里“验证模型”被破坏 → 用 `setEncoding("utf8")` 按流解码；
+- P2：claude、mcode 用 `--output-format json`，结束前没有日志 → 改用 `stream-json`（claude 加 `--verbose`），从最后的结果事件读报告、模型和 session；
+- P2：停止不是幂等的，停滞之后又超时会改写终止原因 → 首次停止时锁定原因、停止轮询；
+- P2：未来时间戳的文件会让“最近一次变化”停在未来，停滞永远不触发 → 用快照比较是否有变化，时长用单调时钟；
+- P2：只看最大 mtime，会漏掉深层、软链接目录里的改写和删除 → 按路径比较完整快照（新增、修改、删除），不限深度、不跟随软链接；
+- P2：证据目录经软链接或 `/var` 与 `/private/var` 等不同路径给出时，脚本自己的日志、状态文件被当成进展 → 统一成真实路径再排除；
+- P2：deliver 里预检写成“参数同下文”，照抄会带上预检不接受的参数 → 写出完整的预检命令；
+- P2：强制带 `--owner-family` 与用户放宽跨模型要求的例外冲突 → 放宽时不加。
+
+补了 16 个用例（忽略 SIGTERM 的后代被清掉；脱离进程组的后代占着管道时 20 秒内结束；给脚本发 SIGTERM 后验证者被结束、返回 143；未来时间戳、经软链接给出的证据目录、深层改动、删除；claude、mcode 的 stream-json，跨块的中文不损坏），与前面 24 个都符合预期；真实 CLI 的预检结果不变（mcode 改用 stream-json 后仍通过）。修改后没有再送审。
+
+实际使用的佐证：试跑最后一次复验在用户同意下没有经本脚本，直接用 `codex exec --dangerously-bypass-approvals-and-sandbox`、`model_reasoning_effort=high` 运行（session `01a0f244-6650-73a0-b71f-5a5aff6e6df1`）：Electron 20:27 启动成功，20:21–20:32 用 11 分钟完成全部场景和代码审查，结论 PASS；同一个模型经 mcode 的那次跑了 2 小时 3 分钟没有报告。
+
+去掉沙箱后的实测：codex 以本脚本使用的 `-s danger-full-access -c approval_policy=never` 在验证检出目录运行 verify-archon 的 `electron up`，成功启动（`mainUrl` 为 `app://./archon`），随后 `electron down` 成功，检出目录保持干净（session `01a0f28e-233b-7c70-8387-c259f080f8dd`）。
+
+尚未验证：经本脚本跑完一次完整的图形界面验证。

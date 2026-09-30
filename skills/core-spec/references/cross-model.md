@@ -14,7 +14,7 @@
 
 ## 怎样调用
 
-说明文件（[查漏说明](gap-check.md)、deliver 的验证说明）不复制进命令：命令里给出它的绝对路径和本次输入的路径，由对方自己读取。报告写到文件，调用方读文件。`codex exec` 在 stdin 不是终端时会读取 stdin，所以把 stdin 接到 `/dev/null`，避免它一直等输入。调用可能运行很久，放到后台运行并等它结束，不设短超时。
+说明文件（[查漏说明](gap-check.md)、deliver 的验证说明）不复制进命令：命令里给出它的绝对路径和本次输入的路径，由对方自己读取。报告写到文件，调用方读文件。`codex exec` 在 stdin 不是终端时会读取 stdin，所以把 stdin 接到 `/dev/null`，避免它一直等输入。查漏调用可能运行很久，放到后台运行并等它结束，不设短超时；独立验证的时长由 `run-verifier.mjs` 控制。
 
 **只读：查漏。**
 
@@ -28,7 +28,7 @@ claude -p "按 <gap-check.md 的绝对路径> 查漏。spec：<路径>，sha256 
 
 `dontAsk` 拒绝所有未列出的工具，因此不能写文件。`--allowedTools`、`--add-dir` 会把后面的参数都当成自己的值，所以提示词紧跟在 `-p` 后面。
 
-**需要运行应用：deliver 的独立验证。** 用 deliver 的 `scripts/run-verifier.mjs` 启动，不手写命令。它在检出待验证 head 的专用目录里运行对方 CLI：Codex 用 `-s workspace-write` 并打开网络，Claude 用 `--permission-mode bypassPermissions`，MiniMax Code 用 `--permission full`；`--add-dir` 加入证据目录和验证输入允许的其他目录。沙箱仍然挡住应用运行时，不改用 `--dangerously-bypass-approvals-and-sandbox`：验证者按验证说明把受影响的场景报为“环境受阻”。脚本从输出里取出模型和 session id，把验证者的最终回复原样存为报告，并写下调用记录。
+**需要运行应用：deliver 的独立验证。** 用 deliver 的 `scripts/run-verifier.mjs` 启动，不手写命令。它在检出待验证 head 的专用目录里运行对方 CLI：三个 CLI 都不带沙箱：Codex 用 `-s danger-full-access`，Claude 用 `--permission-mode bypassPermissions`，MiniMax Code 用 `--permission full`；`--add-dir` 加入证据目录和验证输入允许的其他目录。Codex 的 `workspace-write` 沙箱起不了桌面端等图形应用（2026-09-30 实测 Playwright 报 “Process failed to launch!”），用户 2026-09-30 决定验证时去掉沙箱。环境仍然挡住应用运行时，验证者按验证说明把受影响的场景报为“环境受阻”。`--effort` 显式设对方的推理强度。脚本从输出里取出模型和 session id，把验证者的最终回复原样存为报告，并写下调用记录；运行有总时长和停滞两个上限，到了就停掉并返回 3。开工时可以先用 `--preflight` 试一次调用。
 
 ## 调用之后
 
