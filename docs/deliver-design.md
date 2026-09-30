@@ -343,3 +343,14 @@ core-spec 把用户确认的 sha256 记进交接提交，原因见 [core-spec �
 去掉沙箱后的实测：codex 以本脚本使用的 `-s danger-full-access -c approval_policy=never` 在验证检出目录运行 verify-archon 的 `electron up`，成功启动（`mainUrl` 为 `app://./archon`），随后 `electron down` 成功，检出目录保持干净（session `01a0f28e-233b-7c70-8387-c259f080f8dd`）。
 
 尚未验证：经本脚本跑完一次完整的图形界面验证。
+
+## 精简：不再核对推理强度，写明怎样等长任务（2026-09-30）
+
+来源：首个真实需求的复盘，super-auto `research/goal-final-delivery-trace-2026-09-30/README.md` 第 5.1、5.4 节与第 6 节的 B4、B5、B6。用户确认后改。
+
+- **删去核对 subagent 推理强度的要求。** 里程碑检查说明原来要求 subagent 报告推理强度，deliver 要求 owner 核对。子代理看不到自己的推理强度，试跑中四次报告都写“未写明”，这条无法执行。模型 ID 的核对保留。依据：Lauren “Call-mechanics instructions in skill prose do not change agent behavior; the subagent tool schema (model optional, omitted inherits the parent) governs.”（pstack 提交 #167）；OpenAI Codex 未配置时子代理默认继承父级的模型和推理强度（codex-subagents）；agent-prompt-rules 总原则“删掉它，模型会做错吗？不会就删”。
+- **一句环境知识：怎样等长任务。** 试跑中 owner 两次用 `ScheduleWakeup` 等 CI 和验证，都没有唤醒会话，空转 81 分钟，用户来问了五次。这是 Claude Code 这个运行环境的特点，模型不知道，所以写一句：长任务放后台、靠结束通知回来，CI 用会退出的轮询脚本。依据：agent-prompt-rules 三-3“只写它不知道的：项目自己的约定、踩过的坑”；OpenAI、Anthropic 都把等待与超时交给运行时（Symphony、prompting-claude-fable-5 “restructuring harnesses to check on runs asynchronously”）。时长上限由 `run-verifier.mjs` 保证，不写成 prompt。
+- **不新增“进入等待前向用户报状态”。** 复盘里的 B6 按 Anthropic 的提醒删掉：把里程碑或长回合当成汇报点是提前停下的反例（prompting-claude-opus-5-5 Unattended agentic runs），Opus 5.5 默认会写进度；状态由 plan.md 进度和 `.status.json` 提供。
+- B2（检查可以后台进行、下一个里程碑提交前处理完）已随 `check-delivery.mjs` 的顺序检查一起改，见上文“里程碑检查记录与报告沿用”。
+
+与现有规则逐条对照（避免 pstack PR 422 那类互相矛盾的规则）：新句与“常规进展不停下来等确认”“CI 失败时只修本次改动引入的问题”不冲突；删去的一句没有被其他规则引用。
