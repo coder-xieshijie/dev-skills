@@ -287,3 +287,39 @@ core-spec 把用户确认的 sha256 记进交接提交，原因见 [core-spec �
 为这 4 条补了用例，与前面的用例一起：37 个、23 个断言都符合预期，真实数据回放的结论不变。第二轮的修改没有再送审。
 
 尚未验证：owner 在真实交付中按新说明后台检查、保存记录的完整过程。
+
+## 验证调用限时、预检与图形入口（2026-09-30）
+
+来源：首个真实需求（matrix/agent-archon!7576）的复盘，见 super-auto `research/goal-final-delivery-trace-2026-09-30/README.md` 第 5.1、5.2 节与第 6 节的 C1–C3、N2。用户确认后改。
+
+### 试跑中的问题
+
+- 第一轮用 Codex 验证，`-s workspace-write` 沙箱里 Playwright 启动 Electron 报 “Process failed to launch!”，核心场景 S01 和 Electron 冒烟只能标“环境受阻”，到交付第 2 小时才暴露。
+- 改用 mcode 时模型引用写成 `mafia/gpt-6-astra`，调用被拒；正确写法是 `custom_provider:mafia/gpt-6-astra`。
+- mcode 复验跑了 2 小时 3 分钟没有报告：三个入口的场景 23 分钟就跑完，之后一直在读文件。`run-verifier.mjs` 用 `spawnSync` 同步等待，没有超时，运行中不写日志，owner 只能翻 mcode 的 runtime 日志判断它在做什么，用户来问了五次进度，最后手动取消。
+
+### 改动
+
+- 调用改为异步：CLI 的输出边运行边写进 `.log`；`.status.json` 记着状态、开始时间和最近一次写证据的时间。
+- 两个上限：`--timeout`（默认 90 分钟）和 `--stall`（默认 20 分钟内 `--add-dir` 下没有任何文件变化）。到了就结束验证者的整个进程组，调用记录写明终止原因（`completed`、`cli_failed`、`invalid_report`、`stalled`、`timed_out`、`checkout_changed`），返回 3，owner 换另一个 CLI。停滞只看证据文件，不看 CLI 自己的输出。
+- `--preflight`：用同样的 CLI、模型、推理强度和沙箱发一次最短的调用，确认能答、能读出模型和 session id、模型家族可识别；给了 `--owner-family` 时还要求与 owner 不同家族。deliver 开工时就跑一次。codex 的预检在临时目录里运行，加 `--skip-git-repo-check`。
+- `--needs-gui` 与 `--unsandboxed`：verify 要驱动图形界面时，codex 必须同时加 `--unsandboxed`（改用 `-s danger-full-access`），否则直接返回 3；claude 和 mcode 本来就不在沙箱里。调用记录写明 `sandbox`。
+- `--effort`：显式设对方的推理强度（codex `model_reasoning_effort`、claude `--effort`、mcode `--effort`），写进调用记录。
+- codex 调用前先查 `codex login status`。
+- deliver 与跨模型调用说明相应改写；原先“沙箱挡住应用时不改用无沙箱”的写法按用户 2026-09-30 的决定取消。
+
+### 依据
+
+- 等待与超时由运行时承担：OpenAI Symphony 的超时按静默时长计，停滞就终止并重试，终止原因要分类（“`codex.turn_timeout_ms`: maximum silence interval”“If `elapsed_ms > codex.stall_timeout_ms`, terminate the worker”“Distinct terminal reasons are important”）；Anthropic “if you need a hard stop, keep your own timeout”（prompting-claude-opus-5-5）。
+- 只把副作用算作进展：Lauren “Count only side effects as progress… Treat a lane that… passes its expected runtime without a side effect, as stuck”“Transcript mtime is not liveness.”（pstack autopilot-full、orchestrate）。
+- 启动前预检、轻量：OpenAI “Validate configuration before starting the scheduling loop”“It validates the workflow/config needed to poll and launch workers, not a full audit”；Lauren “process up, right version/build, port owned by us, auth valid”“Never write a real slug you have not confirmed is available”（create-verification-skill、setup-pstack）；开工时先跑一个单元暴露环境问题：“The pilot exists to falsify the brief template, the verify recipe…”（pstack orchestrate）。
+- 放宽沙箱做成写明信任姿态的显式选项：OpenAI Symphony “Implementations are expected to document their trust and safety posture explicitly”，同时提示放宽的风险；Anthropic 建议放宽时在别的层面隔离（building-c-compiler 在容器里运行）。这里的风险与另两家 CLI 已有的权限相同。
+
+### 验证
+
+- 用假 codex CLI 在临时仓库实跑 24 个断言，都符合预期：参数错误返回 2；codex 加 `--needs-gui` 不加 `--unsandboxed` 返回 3；预检通过并写明沙箱、推理强度；预检拒绝与 owner 同家族；正常运行的调用记录含 `completed`、`effort`、`sandbox`，codex 收到 `model_reasoning_effort`；`--unsandboxed` 用 `danger-full-access`；只打印输出、不写证据的运行在停滞上限后被结束，记录为 `stalled`，进程已被杀掉，状态文件为 `stalled`；运行中日志已有输出、状态为 `running`；持续写证据的慢运行正常完成；超过总时长记录为 `timed_out`。
+- 真实 CLI 的预检：codex 默认、codex `--unsandboxed --needs-gui --effort high` 都在 8 秒内通过；mcode `custom_provider:mafia/gpt-6-astra --effort high` 9 秒通过；mcode `mafia/gpt-6-astra`（试跑中写错的引用）3 秒内返回 3；本机 claude 未登录，返回 3。
+
+实际使用的佐证：试跑最后一次复验在用户同意下没有经本脚本，直接用 `codex exec --dangerously-bypass-approvals-and-sandbox`、`model_reasoning_effort=high` 运行（session `01a0f244-6650-73a0-b71f-5a5aff6e6df1`）：Electron 20:27 启动成功，20:21–20:32 用 11 分钟完成全部场景和代码审查，结论 PASS；同一个模型经 mcode 的那次跑了 2 小时 3 分钟没有报告。
+
+尚未验证：经本脚本、以 `-s danger-full-access` 运行的完整验证（与上面的无沙箱调用在沙箱上等价，审批策略沿用 `codex exec` 的默认值）。
