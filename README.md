@@ -13,7 +13,7 @@
 | [explain-as-fool](skills/explain-as-fool/SKILL.md) | 面向对话题一无所知的人进行解释 | 仅手动触发 |
 | [review-rules](skills/review-rules/SKILL.md) | 为代码和设计评审、问题复核及修复方案提供判断准则 | 仅手动触发 |
 | [design-for-review](skills/design-for-review/SKILL.md) | 将需求和设计材料整理成可独立阅读的技术评审文档 | 仅手动触发 |
-| [core-spec](skills/core-spec/SKILL.md) | 讨论结束后，把多轮澄清与多份材料收敛为核心决策 spec，再依据 spec 写验收文档 verify：以用户可观察的端到端场景为单位，写明每项约定怎样算做对、用什么证据证明；另一家模型在新 session 中查漏后，用户一次确认，两份冻结。只要 spec 时只产出 spec | 仅手动触发 |
+| [core-spec](skills/core-spec/SKILL.md) | 讨论结束后，把澄清与材料收敛为核心决策 spec，并为自动交付写出验收要求 verify；另一家模型查漏后用户一次确认，两份冻结。也可以只产出 spec | 仅手动触发 |
 | [deliver](skills/deliver/SKILL.md) | 依据冻结的 spec 和 verify，由一个 owner session 连续完成实现、逐里程碑在应用里验证、另一家模型的独立验证、MR/PR 与 CI，直到可合入 | 仅手动触发 |
 | [plan-for-agents](skills/plan-for-agents/SKILL.md) | 创建、修订或检查供 agent 执行的完整计划，覆盖方案、步骤、边界、产物与验收 | 仅手动触发 |
 | [mr-for-human](skills/mr-for-human/SKILL.md) | 把 MR/PR 整理成面向人的金字塔式阅读指南：核心结论、功能与抽象设计、执行逻辑与伪代码、底层运行约束、代码定位 | 仅手动触发 |
@@ -66,10 +66,10 @@ Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: fals
 
 用于多轮讨论、grill 和需求澄清结束后的定稿。默认产出两份文件，一起查漏、一起确认、一起冻结：
 
-- `spec.md`《核心决策与约束》：开头通常选 3–5 个最重要的决定，后文完整保留已确认的规则、边界和取舍，供 agent 在 plan、implement、review 阶段使用，也供人核对和汇报。交付前对照原始约定与最终确认检查遗漏、无依据新增、冲突和歧义。用于自动交付时另外写明目的、非目标、硬约束和交付与授权（目标仓库与分支、能否推送并开 MR、能否合入）；非目标和授权只由用户决定，讨论中没有定下时作为问题提出。
-- `verify.md`《验收要求》：以 spec 为唯一需求来源，写冒烟集、要求表（每条约定对应的证明方式：场景、机械检查或已有检查）、场景、回归范围、验证工具缺口和覆盖盲区。场景是用户在一个入口上完成的一次完整操作及其结果，默认从真实入口驱动，由实现 agent 自己运行；每个场景写字面检查点、在改动前代码上的基线预期和会被拒绝的错误实现。启动和驱动应用引用项目已有的验证能力（控制命令、功能地图），缺口补成可复用的能力。
+- `spec.md`《核心决策与约束》：开头通常选 3–5 个最重要的决定，后文完整保留已确认的规则、边界和取舍，供 agent 在 plan、implement、review 阶段使用，也供人核对和汇报。交付前对照原始约定与最终确认检查遗漏、无依据新增、冲突和歧义。用于自动交付时另外写明目的、非目标、硬约束和交付与授权（目标仓库与分支、能否推送并开 MR、能否合入）；非目标只写用户明确的，没谈到时写“未单列非目标”，只有某个具体的相邻事项会改变交付范围时才问；交付与授权只由用户决定，讨论中没有定下时作为问题提出。
+- `verify.md`《验收要求》：以 spec 为唯一需求来源，写冒烟集、要求表（每条约定对应的证明方式：场景、机械检查或已有检查）、场景、回归范围、验证工具缺口和覆盖盲区。场景是用户在一个入口上完成的一次完整操作及其结果，默认从真实入口驱动，由实现 agent 自己运行；每个场景写字面检查点和在改动前代码上的基线预期，基线覆盖不到关键风险时再写一个会被拒绝的错误实现。启动和驱动应用引用项目已有的验证能力（控制命令、功能地图），缺口按需补最小的一块，并按仓库规则保留成可复用的能力。
 
-写 verify 之前，先按每个功能的用户入口和状态找 spec 没有定下的行为，会改变判定的回写 spec。写完后，用与写文档的模型不同家族的 CLI（在 Claude Code 里用 `codex exec`，在 Codex 里用 `claude -p`）开一个新 session 查漏：它只读 spec、verify 和仓库，按固定的[查漏说明](skills/core-spec/references/gap-check.md)报告问题；verify 的问题直接改，spec 的问题转成给用户的问题，最多两轮。最终回复给出两份文件的 sha256，请用户一次确认，确认后两份冻结。
+写 verify 之前，先按每个功能的用户入口和状态找 spec 没有定下的行为，会改变判定的回写 spec。写完后，用与写文档的模型不同家族的 CLI（在 Claude Code 里用 `codex exec`，在 Codex 里用 `claude -p`）开一个新 session 查漏：它读 spec、verify、原始约定（需求稿、ADR、用户最终决定的原话）和仓库，按固定的[查漏说明](skills/core-spec/references/gap-check.md)报告问题；verify 的问题直接改，spec 的问题在原始约定里有依据的直接改、没有依据的转成给用户的问题，最多两轮。另一家模型用不了时不降级为同家族，记为查漏未完成，不请用户冻结。最后用 `scripts/freeze.mjs` 算出两份文件的 sha256 并核对二者配套，请用户一次确认；确认后两份冻结，这两个 sha256 交给 deliver。
 
 只要 spec（用于方案设计、design-for-review、plan-for-agents 或汇报）时，写完并核对 spec 即交付，不写 verify、不查漏。已有定稿 spec、只需要验收时，从找 spec 缺口开始，不重新收敛 spec。
 
