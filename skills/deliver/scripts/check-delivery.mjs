@@ -2,17 +2,24 @@
 // Delivery gate for the deliver Skill.
 //
 //   node check-delivery.mjs --plan <plan.md> --frozen-only
-//   node check-delivery.mjs --plan <plan.md> --report <report.md> [--head <sha>]
+//   node check-delivery.mjs --plan <plan.md> --milestones-only [--head <sha>] [--repo <dir>]
+//   node check-delivery.mjs --plan <plan.md> --report <report.md> [--head <sha>] [--repo <dir>]
 //
 // --frozen-only runs check 1 alone; run it when starting or resuming, after
-// writing the user-confirmed hashes into plan.md. The full gate runs on the
-// MR's actual head before calling the MR mergeable, and again before merging:
+// writing the user-confirmed hashes into plan.md. --milestones-only runs
+// check 5 alone, on the code repository's HEAD unless --head is given. The
+// full gate runs on the MR's actual head before calling the MR mergeable,
+// and again before merging:
 //
 // 1. spec and verify still match the sha256 recorded under plan.md's frozen
 //    inputs (the hashes the user confirmed), so no scenario was made to pass
 //    by editing the acceptance docs.
 // 2. The verification report names the same head as the MR. Without --head,
-//    the HEAD of the git repository that contains plan.md is used.
+//    the HEAD of the git repository that contains plan.md is used. A report
+//    for an earlier head still holds when that head is an ancestor of the MR
+//    head and every file changed since is a test, a doc or lint config, and
+//    neither spec.md nor verify.md changed (report-reuse.mjs); the files are
+//    listed.
 // 3. The report is complete (report-format.mjs): a row for every scenario and
 //    every requirement proven by a mechanical or existing check, the verdict,
 //    smoke-regression and code-issues lines, the model line and the closing
@@ -26,19 +33,28 @@
 //    differs from the owner's family in plan.md.
 //    A same-family verifier passes only when plan.md records the user's
 //    waiver (`- cross-family: waived ...`).
+// 5. Milestone checks (milestones.mjs): every milestone ID in plan.md has a
+//    record saved by record-milestone-check.mjs, the records cover the
+//    branch without gaps up to the last checked commit, and each record was
+//    saved before the next commit. A late record passes only with the
+//    user's waiver (`- milestone-order: waived ...`).
 //
+// The code repository is --repo, else the git repository that holds spec.md.
 // Exit 0 when every check passes, 1 when any fails, 2 on usage errors.
 // Zero dependencies.
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
+import { checkMilestones, codeRepo } from "./milestones.mjs";
 import { familyOf } from "./model-family.mjs";
 import { isDeclaredBlindSpot, parseReport, parseVerify, reportProblems } from "./report-format.mjs";
+import { reuseCheck } from "./report-reuse.mjs";
 
 const USAGE =
   "usage: check-delivery.mjs --plan <plan.md> --frozen-only\n" +
-  "       check-delivery.mjs --plan <plan.md> --report <report.md> [--head <sha>]";
+  "       check-delivery.mjs --plan <plan.md> --milestones-only [--head <sha>] [--repo <dir>]\n" +
+  "       check-delivery.mjs --plan <plan.md> --report <report.md> [--head <sha>] [--repo <dir>]";
 
 function usage(message) {
   console.error(`check-delivery: ${message}\n${USAGE}`);
@@ -49,20 +65,24 @@ const args = {};
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i += 1) {
   const key = argv[i];
-  if (key === "--frozen-only") {
-    args["frozen-only"] = true;
+  if (key === "--frozen-only" || key === "--milestones-only") {
+    args[key.slice(2)] = true;
     continue;
   }
-  if (!["--plan", "--report", "--head"].includes(key))
+  if (!["--plan", "--report", "--head", "--repo"].includes(key))
     usage(`unknown argument ${key}`);
   if (i + 1 >= argv.length) usage(`missing value for ${key}`);
   args[key.slice(2)] = argv[(i += 1)];
 }
 if (!args.plan) usage("--plan is required");
-if (!args["frozen-only"] && !args.report)
-  usage("--report is required unless --frozen-only");
-if (args["frozen-only"] && (args.report || args.head))
+if (args["frozen-only"] && args["milestones-only"])
+  usage("--frozen-only and --milestones-only are separate checks");
+if (!args["frozen-only"] && !args["milestones-only"] && !args.report)
+  usage("--report is required unless --frozen-only or --milestones-only");
+if (args["frozen-only"] && (args.report || args.head || args.repo))
   usage("--frozen-only takes only --plan");
+if (args["milestones-only"] && args.report)
+  usage("--milestones-only takes no --report");
 for (const key of ["plan", "report"])
   if (args[key] && !existsSync(args[key]))
     usage(`${key} file not found: ${args[key]}`);
@@ -84,6 +104,22 @@ function finish(okMessage) {
   }
   console.log(`check-delivery: OK (${okMessage})`);
   process.exit(0);
+}
+
+const repo = codeRepo(plan, planDir, args.repo);
+
+if (args["milestones-only"]) {
+  let head = args.head;
+  if (head === undefined && repo) {
+    try {
+      head = execFileSync("git", ["-C", repo, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+    } catch {}
+  }
+  if (head !== undefined && !/^[0-9a-f]{40}$/.test(head)) usage(`--head must be a 40-hex SHA: ${head}`);
+  const result = checkMilestones({ plan, planDir, repo, head });
+  errors.push(...result.errors);
+  notes.push(...result.notes);
+  finish(`milestone checks recorded in order up to ${String(head).slice(0, 12)}`);
 }
 
 // 1. Frozen inputs: `- spec: spec.md sha256=<hex>`, paths relative to plan.md
@@ -129,6 +165,40 @@ if (head === undefined) {
 }
 if (!/^[0-9a-f]{40}$/.test(head)) usage(`--head must be a 40-hex SHA: ${head}`);
 
+// A report for an earlier head holds when only tests, docs or lint config
+// changed since; otherwise the checks below compare against the MR head.
+const parsed = parseReport(report);
+let verifiedHead = head;
+if (parsed.head && parsed.head !== head) {
+  if (!repo) errors.push("cannot find the code repository to compare the report's head; pass --repo");
+  else {
+    const inRepo = (file) => {
+      try {
+        return path.relative(realpathSync(repo), realpathSync(file)).split(path.sep).join("/");
+      } catch {
+        return null;
+      }
+    };
+    const frozenInRepo = [...frozen.values()].map((f) => inRepo(f.file));
+    const reuse = frozenInRepo.some((f) => !f || f.startsWith(".."))
+      ? {
+          ok: false,
+          problem:
+            "spec.md or verify.md lives outside the code repository, so nothing shows they are the ones the report was checked against; " +
+            "verify the MR head again",
+        }
+      : reuseCheck({ repo, verifiedHead: parsed.head, head, frozen: frozenInRepo });
+    if (reuse.ok) {
+      verifiedHead = parsed.head;
+      notes.push(
+        `report is for ${parsed.head.slice(0, 12)}; since then only tests, docs or lint config changed, so it holds for ` +
+          `${head.slice(0, 12)} (${reuse.files.map((f) => `${f.file} [${f.kind}]`).join(", ") || "no file changes"}); ` +
+          "the quality commands and CI still have to pass on the MR head",
+      );
+    } else errors.push(reuse.problem);
+  }
+}
+
 // 3. Complete report, PASS verdict, no FAIL, UNVERIFIED only for blind spots.
 const verifyText = frozen.has("verify") && existsSync(frozen.get("verify").file)
   ? readFileSync(frozen.get("verify").file, "utf8")
@@ -136,8 +206,7 @@ const verifyText = frozen.has("verify") && existsSync(frozen.get("verify").file)
 const verifyInfo = parseVerify(verifyText);
 if (verifyText && verifyInfo.scenarios.length === 0)
   errors.push("verify.md has no scenario IDs (S01, S02, ...)");
-const parsed = parseReport(report);
-errors.push(...reportProblems(parsed, verifyInfo, head));
+errors.push(...reportProblems(parsed, verifyInfo, verifiedHead));
 if (parsed.verdict && parsed.verdict !== "PASS")
   errors.push(`report verdict is ${parsed.verdict}`);
 if (parsed.smoke && parsed.smoke !== "PASS")
@@ -175,8 +244,8 @@ else {
 if (record) {
   if (record.valid !== true)
     errors.push(`run record is not valid: ${(record.problems ?? []).join("; ") || "valid is not true"}`);
-  if (record.head !== head)
-    errors.push(`run record head ${String(record.head).slice(0, 12)} is not the MR head ${head.slice(0, 12)}`);
+  if (record.head !== verifiedHead)
+    errors.push(`run record head ${String(record.head).slice(0, 12)} is not the report's head ${verifiedHead.slice(0, 12)}`);
   if (record.report_sha256 !== sha256(report))
     errors.push("report changed after the verifier returned it (sha256 differs from the run record)");
   if (!record.session_id) errors.push("run record has no session_id");
@@ -197,8 +266,15 @@ if (record) {
   }
 }
 
+// 5. Milestone checks were recorded, cover the branch and came in order.
+{
+  const result = checkMilestones({ plan, planDir, repo, head });
+  errors.push(...result.errors);
+  notes.push(...result.notes);
+}
+
 finish(
-  `spec and verify unchanged; report head ${head.slice(0, 12)}; ` +
+  `spec and verify unchanged; report head ${verifiedHead.slice(0, 12)} for MR head ${head.slice(0, 12)}; ` +
     `${verifyInfo.scenarios.length} scenarios, ${verifyInfo.requirements.length} checked requirements, ` +
     `${notes.filter((n) => n.includes("UNVERIFIED")).length} UNVERIFIED; ` +
     `verifier ${record?.family}/${record?.model} session ${record?.session_id}`,
