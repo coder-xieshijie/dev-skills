@@ -31,6 +31,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { familyOf } from "./model-family.mjs";
+import { parseReport, parseVerify, reportProblems } from "./report-format.mjs";
 
 const USAGE =
   "usage: run-verifier.mjs --cli <codex|claude|mcode> --checkout <dir> --head <sha> " +
@@ -69,8 +70,8 @@ if (!report.endsWith(".md")) fail(2, "--report must end with .md");
 for (const [name, file] of [["brief", brief], ["inputs", inputs], ["verify", verifyPath], ["checkout", checkout]])
   if (!existsSync(file)) fail(2, `${name} not found: ${file}`);
 
-const scenarios = [...new Set(readFileSync(verifyPath, "utf8").match(/\bS\d{2,}\b/g) ?? [])].sort();
-if (scenarios.length === 0) fail(2, `verify has no scenario IDs (S01, S02, ...): ${verifyPath}`);
+const verifyInfo = parseVerify(readFileSync(verifyPath, "utf8"));
+if (verifyInfo.scenarios.length === 0) fail(2, `verify has no scenario IDs (S01, S02, ...): ${verifyPath}`);
 
 const base = report.slice(0, -3);
 const recordPath = `${base}.run.json`;
@@ -162,26 +163,11 @@ function attempt() {
   return result;
 }
 
-// Report checks shared in spirit with check-delivery.mjs: head, model line on
-// the same line, one complete row per verify scenario, and the closing
-// sections, so a truncated report is caught.
+// Report completeness: head, verdict, model line, one complete row per
+// required scenario and requirement, the closing sections, and a verdict that
+// agrees with the rows. Shared with check-delivery.mjs via report-format.mjs.
 function problems(text) {
-  const found = [];
-  const head = text.match(/^head:[ \t]*([0-9a-f]{40})[ \t]*$/m)?.[1];
-  if (!head) found.push("no `head: <40-hex SHA>` line");
-  else if (head !== args.head) found.push(`report head ${head} is not ${args.head}`);
-  if (!/^验证模型[:：][ \t]*\S[^\n]*$/m.test(text)) found.push("no `验证模型：` line with a value");
-  const rows = new Map();
-  for (const m of text.matchAll(/^\|[ \t]*(S\d{2,})[ \t]*\|[ \t]*(PASS|FAIL|UNVERIFIED)[ \t]*\|([^|\n]*)\|([^|\n]*)\|[ \t]*$/gm))
-    rows.set(m[1], { result: m[2], evidence: m[3].trim() });
-  for (const id of scenarios) {
-    const row = rows.get(id);
-    if (!row) found.push(`${id} has no complete row (| ${id} | result | evidence | note |)`);
-    else if (row.result !== "UNVERIFIED" && !row.evidence) found.push(`${id} has no evidence`);
-  }
-  for (const section of ["冒烟集与回归范围", "代码问题"])
-    if (!text.includes(section)) found.push(`no \`${section}\` section (report may be truncated)`);
-  return found;
+  return reportProblems(parseReport(text), verifyInfo, args.head);
 }
 
 const started = new Date().toISOString();
