@@ -286,10 +286,15 @@ Lauren Tan 公开的 pstack（固定到 `ecc249f`）把“让 agent 自己证明
 | 冻结仍以 sha256 为准，git 历史作为补充 | 需求分支 rebase 后交接提交的 SHA 会变，按 SHA 核对会误报 | 试跑中需求分支叠在另一个 MR 上，那个 MR 已 rebase 过一次 |
 | 本 session 在仓库里的其他改动（术语、ADR）交接前另行提交 | 改动留在旧 worktree 的工作区，deliver 看不到 | 试跑中 grill 写入 `CONTEXT.md` 的术语就是未提交的改动 |
 | 交接后本 session 的 worktree 切到 detached | git 不允许同一分支在两个 worktree 检出，deliver 检出失败 | git worktree 的行为 |
-| spec 不允许推送或开 MR，或仓库规则不允许提交这两份文件时，只交本地路径 | 为了交接越过授权，或违反仓库规则 | 交付与授权只由用户决定；Agent-Archon 的 `AGENTS.md` 只要求临时计划、命令和验证记录不提交，仓库里 `.harness/docs/specs/` 已有行为 spec，其他仓库可能不同 |
-| 交接后要改 spec：deliver 停下并推送；core-spec 更新、重新确认后，在需求分支最新的远端提交上提交并推送；deliver 拉取后更新冻结输入 | 两个 session 同时写一个分支；deliver 按旧哈希继续 | deliver 的“分支只有 owner 写入”和冻结输入的核对 |
+| spec 不允许推送或开 MR，或仓库规则不允许提交这两份文件时，只交本地路径；deliver 是否推送、开 MR 仍按 spec 的授权 | 为了交接越过授权，或违反仓库规则；换一个 Skill 就多出发布授权 | 交付与授权只由用户决定；Agent-Archon 的 `AGENTS.md` 只要求临时计划、命令和验证记录不提交，仓库里 `.harness/docs/specs/` 已有行为 spec，其他仓库可能不同 |
+| 交接后要改 spec：deliver 停下；core-spec 更新、重新确认后按原来的交接方式交回（分支交接的提交并推送，本地路径的交回新路径和 sha256）；deliver 拉取或读取后更新冻结输入 | 两个 session 同时写一个分支；deliver 按旧哈希继续；本地交接的需求被迫推送 | deliver 的“分支只有 owner 写入”和冻结输入的核对 |
 
 另一个效果：评审者能在 MR 里直接读到 spec。此前 spec 放在没有远端的个人仓库时，评审者看不到，只能靠 MR 描述里的摘要。
+
+修改后由 Codex（`gpt-6-astra`，只读）在新 session 审查 diff，报出 3 条，都已修正：
+- 发布边界写成“只有交接提交和 Draft MR”，而同一步要求另行提交并推送术语、ADR 等配套改动，两处矛盾 → 发布范围写明包含配套改动；
+- 不允许推送或开 MR 时，退路却写“deliver 自己开 MR”，deliver 停下前也要求推送，越过用户授权 → 本地路径交接时，deliver 是否推送、开 MR 按 spec 的授权，停下前只在授权允许时推送；
+- 重新确认 spec 后一律“提交并推送”，本地路径交接的需求走不通 → 按原来的交接方式交回。
 
 验证：全仓库相对链接检查通过；`check-delivery.mjs` 用放在 spec 目录以外、冻结输入写绝对路径的 plan.md 跑 `--frozen-only`，结果见 deliver 的设计记录。
 

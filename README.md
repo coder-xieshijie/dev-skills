@@ -81,7 +81,7 @@ Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: fals
 - 只要 spec：`/core-spec 只保留最终核心决策与约束，保存到 docs/feature-spec.md，不写验收。`
 - 已有 spec：`/core-spec 依据 docs/feature/spec.md 写 verify.md。`
 
-`core-spec` 固化“已经选定什么、必须满足什么、怎样算做对”；`design-for-review` 展开技术方案如何运转。本 Skill 不实现产品、不编写测试代码、不执行验证；发布到远端的只有交接提交和 Draft MR。2026-09-29 起合并了原 `core-verify`，原因见设计记录。
+`core-spec` 固化“已经选定什么、必须满足什么、怎样算做对”；`design-for-review` 展开技术方案如何运转。本 Skill 不实现产品、不编写测试代码、不执行验证；发布到远端的只有交接用的提交（spec、verify 与配套改动）和 Draft MR。2026-09-29 起合并了原 `core-verify`，原因见设计记录。
 
 沿用上面的 Codex 和 Claude Code 手动触发设置。来源分析与验证边界见[设计与验证记录](docs/core-spec-design.md)。
 
