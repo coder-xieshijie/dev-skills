@@ -86,12 +86,13 @@ function finish(okMessage) {
   process.exit(0);
 }
 
-// 1. Frozen inputs: `- spec: spec.md sha256=<hex>`, paths relative to plan.md.
+// 1. Frozen inputs: `- spec: spec.md sha256=<hex>`, paths relative to plan.md
+// or absolute; a path in backticks may contain spaces.
 const frozen = new Map();
 for (const m of plan.matchAll(
-  /^\s*-\s*(spec|verify):\s*`?([^\s`]+)`?\s+sha256=([0-9a-f]{64})\s*$/gm,
+  /^\s*-\s*(spec|verify):\s*(?:`([^`]+)`|(\S+))\s+sha256=([0-9a-f]{64})\s*$/gm,
 ))
-  frozen.set(m[1], { file: path.resolve(planDir, m[2]), hash: m[3] });
+  frozen.set(m[1], { file: path.resolve(planDir, m[2] ?? m[3]), hash: m[4] });
 
 for (const kind of ["spec", "verify"]) {
   const entry = frozen.get(kind);

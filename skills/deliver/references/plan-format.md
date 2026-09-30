@@ -14,13 +14,13 @@
 
 ### 冻结输入
 
-格式固定，`scripts/check-delivery.mjs` 读取 spec、verify、owner 三行，以及可能有的 cross-family 一行；路径相对于 plan.md 所在目录，plan.md 放在 spec 目录以外时也可以写绝对路径。两个 sha256 原样抄用户确认时的值，不自己重算：
+格式固定，`scripts/check-delivery.mjs` 读取 spec、verify、owner 三行，以及可能有的 cross-family 一行；路径相对于 plan.md 所在目录，plan.md 放在 spec 目录以外时也可以写绝对路径。spec、verify、交接三行用 `scripts/read-handoff.mjs` 的输出，其中的 sha256 是交接提交记录的用户确认值；只交本地路径，或 MR 上找不到交接提交时，两个 sha256 原样抄用户给出的值。都不自己重算。路径含空格时用反引号括起来：
 
 ```text
 - spec: spec.md sha256=<64 位十六进制>
 - verify: verify.md sha256=<64 位十六进制>
 - 基线: <分支> @ <commit>
-- 交接: <MR/PR 链接> <需求分支> @ <交接提交>
+- 交接: <MR/PR 链接> <需求分支> @ <交接提交>（<作者>，<时间>）
 - owner: family=<模型家族，例如 anthropic、openai、minimax> model=<模型 ID>
 ```
 

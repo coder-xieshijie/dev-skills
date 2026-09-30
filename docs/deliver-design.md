@@ -170,3 +170,48 @@ core-spec 新增第 9 步，把冻结的 spec.md、verify.md 提交到需求分�
 - 冻结输入写相对 plan.md 的 `../` 路径：返回 0。
 
 尚未验证：owner 在新建的 worktree 里检出需求分支、接手已有 Draft MR 并取消 Draft 的完整过程。
+
+## 只凭 MR 链接开工（2026-09-30）
+
+core-spec 把用户确认的 sha256 记进交接提交，原因见 [core-spec 的来源与验证](core-spec-design.md#六交接提交记下确认的-sha256deliver-只收-mr-链接2026-09-30)。deliver 相应修改：
+
+- 输入只要交接的 MR/PR 链接。需求分支取它的源分支；交接提交是这个 MR 自己的提交里，提交信息以 `Frozen-Spec`、`Frozen-Verify` 两个 trailer 结尾的最新一个。
+- 新增 `scripts/read-handoff.mjs`，在检出需求分支的 worktree 里运行，`--base` 取 MR 目标分支的远端引用：
+  - 只看 `<base>..HEAD` 的第一父提交，从目标分支继承或从别处合并进来的交接记录都不算；
+  - 用 git 自己的 trailer 解析读取两行，提交正文里举例的同名行不算；只有其中一行、或同一行出现两次，报错；
+  - 核对该提交里两份文件的 sha256 等于记录值，之后没有提交改过这两份文件，这两份文件没有未提交、已暂存或冲突的改动；
+  - 用户给了 `--expect-spec`、`--expect-verify` 时以用户的值为准，不一致就失败；
+  - 通过后输出 plan.md 冻结输入的 spec、verify、交接三行，路径是反引号括起来的绝对路径，交接一行带提交的作者和时间。
+- 找不到交接提交时（例如交接早于这条规则），向用户要两个 sha256，手写冻结输入；只交本地路径时照旧由用户给出。
+- 重新确认后，拉取需求分支重新运行 `read-handoff.mjs`，更新冻结输入。
+- `check-delivery.mjs` 的冻结输入解析改为接受反引号括起来、含空格的路径；其余不变。
+
+修改后由 Codex（`gpt-6-astra`，reasoning high，只读）在新 session 审查 diff，报出 6 条（1 条 P1），都已修正：
+
+- P1：`git log HEAD` 搜全部祖先历史，新需求没有交接记录时会选中目标分支上别的需求的交接 → 限定为 `<base>..HEAD` 的第一父提交，`--base` 必填；
+- 正则扫描整个提交正文，代码块里举例的两行也会命中 → 改用 git 的 trailer 解析，并拒绝重复或不完整的记录；
+- 路径含空格时，读取端的 `\S+` 和 `check-delivery.mjs` 的解析都失败 → 读取端取 ` sha256=` 之前的全部内容，输出加反引号，`check-delivery.mjs` 接受反引号路径；
+- `freeze.mjs --trailers` 没有比较两份文件所在的仓库 → 不在同一仓库时拒绝；
+- 只核对工作区文件，漏掉已暂存的改动 → 用 `git status` 检查暂存区、工作区和冲突状态；
+- 没有交接记录的旧 MR，要到用户的 sha256 后怎样继续没有写清 → deliver 与计划格式写明手写冻结输入的做法。
+
+验证：`read-handoff.mjs`、`freeze.mjs --trailers` 与 `check-delivery.mjs` 的衔接，在临时 git 仓库实跑，工作目录和文件路径都含空格，16 个用例都符合预期：
+
+- 目标分支上已有需求 A 的交接、需求分支还没有交接：返回 1，不选 A；
+- 提交正文里举例的两行：不算交接，返回 1；
+- 需求 B 用 `freeze.mjs --trailers` 生成两行做交接（与其他 trailer 同在末尾区块）：返回 0，输出反引号括起来的路径；
+- 把输出写进 plan.md，`check-delivery.mjs --frozen-only` 返回 0；
+- 目标分支之后有需求 C 的交接并合并进需求分支：仍选 B，返回 0；
+- 改动已暂存、工作区恢复原样：返回 1，报出暂存的改动；
+- `--expect-*` 与记录值一致：返回 0；不一致：返回 1；
+- 交接之后另有提交改了 spec：返回 1，列出该提交；
+- 重新确认后追加新的交接提交：返回 0，取新的一个；
+- 同一个 trailer 出现两次、只有 `Frozen-Spec`：返回 1；
+- 缺少 `--base`、`--base` 不存在：返回 2；
+- `freeze.mjs --trailers` 的两份文件在不同仓库：返回 2；
+- `check-delivery.mjs` 的冻结输入写普通相对路径：仍返回 0；
+- 在真实的 Agent-Archon 需求 worktree（交接早于本规则）上以 `origin/feat/verify-archon-skill` 为 `--base` 运行：返回 1，提示向用户要 sha256。
+
+此前第一版的用例（配套检查失败时不输出两行、文件不在 git 仓库时返回 2 且不输出 OK 等）同样通过。三个脚本通过 `node --check`；全仓库链接检查通过。
+
+尚未验证：deliver 在真实需求中只凭 MR 链接开工的完整过程。

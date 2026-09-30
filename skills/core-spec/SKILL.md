@@ -158,22 +158,22 @@ description: 讨论和澄清结束后，把会话与材料收敛为核心决策 
 
 运行 `node <本 Skill 目录>/scripts/freeze.mjs --spec <spec.md> --verify <verify.md>`。它输出两份文件的 sha256，并核对 verify.md 来源里记的 spec 哈希与 spec 当前内容一致；不一致时先更新 verify.md 的来源，再运行一次。
 
-最终回复给出 spec 与 verify 的文件链接和 sha256、要求数与场景数、冒烟集、工具缺口、覆盖盲区、查漏结果（查漏用的模型、问题数与处置）和仍待确认的问题，请用户一次确认；sha256 用脚本的输出，交付时原样交给 deliver。跨模型查漏未完成时写明原因，不请用户冻结。用户确认后两份文件冻结，交付阶段不再修改，接着做第 9 步；需要改变时回到本 Skill，重新查漏和确认。
+最终回复给出 spec 与 verify 的文件链接和 sha256、要求数与场景数、冒烟集、工具缺口、覆盖盲区、查漏结果（查漏用的模型、问题数与处置）和仍待确认的问题，请用户一次确认；sha256 用脚本的输出，不手抄。跨模型查漏未完成时写明原因，不请用户冻结。用户确认后两份文件冻结，交付阶段不再修改，接着做第 9 步；需要改变时回到本 Skill，重新查漏和确认。
 
 ## 9. 提交到需求分支，开 Draft MR/PR 交给 deliver
 
 本步的MR 同时指 GitHub 的 PR，Draft 对应 GitHub 的 draft PR 和 GitLab 的 Draft MR。deliver 从需求分支和 MR 开工，可以在任何 worktree 或机器上检出，不依赖本 session 的工作目录。用户确认后：
 
-1. 在目标仓库的需求分支上单独提交 spec.md 和 verify.md，只 add 这两个文件，下称交接提交。还没有需求分支时，按仓库规则命名，从 spec 交付与授权里的基线新建。本 session 在这个仓库留下的其他改动（例如 grill 写入的术语、ADR）另行提交，留在工作区的改动 deliver 看不到。
+1. 在目标仓库的需求分支上单独提交 spec.md 和 verify.md，只 add 这两个文件，下称交接提交。提交信息的末尾原样写上 `node <本 Skill 目录>/scripts/freeze.mjs --spec <spec.md> --verify <verify.md> --trailers` 输出的 `Frozen-Spec`、`Frozen-Verify` 两行；deliver 从这两行读取用户确认过的 sha256，不能手抄或改写。还没有需求分支时，按仓库规则命名，从 spec 交付与授权里的基线新建。本 session 在这个仓库留下的其他改动（例如 grill 写入的术语、ADR）另行提交，留在工作区的改动 deliver 看不到。
 2. 推送需求分支，开一个 Draft MR/PR，目标分支取 spec 的交付与授权；平台要求的属性（例如合并方式）按仓库规则设置并读回。描述写明：这是本需求的交付 MR；spec、verify 已冻结，附两个 sha256；代码由 deliver 在同一个 MR 上提交。
 3. 本 session 的 worktree 检出着需求分支时，切到 detached，让 deliver 在自己的 worktree 里检出它。
 
-最终回复给出交接信息：MR/PR 链接、需求分支、交接提交、两份文件在仓库内的路径、两个 sha256。
+最终回复给出交接信息：MR/PR 链接，这是 deliver 开工唯一需要的输入；另列需求分支、交接提交、两份文件在仓库内的路径和两个 sha256，供用户核对和留底。
 
 spec 的交付与授权不允许推送或开 MR，或仓库规则不允许提交这两份文件时，跳过上面三项，只交本地路径：交接信息改为两份文件的本地路径和两个 sha256，deliver 在读得到它们的环境里开工，是否推送、开 MR 仍按 spec 的交付与授权。
 
-交接之后 spec 或 verify 需要改变时，deliver 会停下。按本 Skill 更新、查漏并请用户重新确认后，按原来的交接方式交回：随需求分支交接的，在需求分支最新的远端提交上提交新版本并推送，更新 MR 描述里的 sha256；只交本地路径的，交回更新后的路径和两个新 sha256。deliver 拉取或读取后继续。
+交接之后 spec 或 verify 需要改变时，deliver 会停下。按本 Skill 更新、查漏并请用户重新确认后，按原来的交接方式交回：随需求分支交接的，在需求分支最新的远端提交上提交新版本，提交信息同样以 `--trailers` 输出的两行结尾，推送后更新 MR 描述里的 sha256；只交本地路径的，交回更新后的路径和两个新 sha256。deliver 拉取或读取后继续。
 
-完成条件：交接提交已推送，其中两份文件的 sha256 与用户确认的一致；MR/PR 处于 Draft 状态，目标分支与 spec 一致；或者按上面的情况只交了本地路径，并在最终回复里写明原因。
+完成条件：交接提交已推送，其中两份文件的 sha256 与用户确认的一致，提交信息的 `Frozen-Spec`、`Frozen-Verify` 两行记的也是这两个值；MR/PR 处于 Draft 状态，目标分支与 spec 一致；或者按上面的情况只交了本地路径，并在最终回复里写明原因。
 
 本 Skill 不实现产品、不编写测试代码、不执行验证；发布到远端的只有第 9 步交接用的提交（spec、verify 和本 session 在这个仓库里的配套改动）和 Draft MR；除查漏 session 外不启动其他 agent。

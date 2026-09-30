@@ -70,7 +70,7 @@ Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: fals
 - `spec.md`《核心决策与约束》：开头通常选 3–5 个最重要的决定，后文完整保留已确认的规则、边界和取舍，供 agent 在 plan、implement、review 阶段使用，也供人核对和汇报。交付前对照原始约定与最终确认检查遗漏、无依据新增、冲突和歧义。用于自动交付时另外写明目的、非目标、硬约束和交付与授权（目标仓库与分支、能否推送并开 MR、能否合入）；非目标只写用户明确的，没谈到时写“未单列非目标”，只有某个具体的相邻事项会改变交付范围时才问；交付与授权只由用户决定，讨论中没有定下时作为问题提出。
 - `verify.md`《验收要求》：以 spec 为唯一需求来源，写冒烟集、要求表（每条约定对应的证明方式：场景、机械检查或已有检查）、场景、回归范围、验证工具缺口和覆盖盲区。场景是用户在一个入口上完成的一次完整操作及其结果，默认从真实入口驱动，由实现 agent 自己运行；每个场景写字面检查点和在改动前代码上的基线预期，基线覆盖不到关键风险时再写一个会被拒绝的错误实现。启动和驱动应用引用项目已有的验证能力（控制命令、功能地图），缺口按需补最小的一块，并按仓库规则保留成可复用的能力。
 
-写 verify 之前，先按每个功能的用户入口和状态找 spec 没有定下的行为，会改变判定的回写 spec。写完后，用与写文档的模型不同家族的 CLI（在 Claude Code 里用 `codex exec`，在 Codex 里用 `claude -p`）开一个新 session 查漏：它读 spec、verify、原始约定（需求稿、ADR、用户最终决定的原话）和仓库，按固定的[查漏说明](skills/core-spec/references/gap-check.md)报告问题；verify 的问题直接改，spec 的问题在原始约定里有依据的直接改、没有依据的转成给用户的问题，最多两轮。另一家模型用不了时不降级为同家族，记为查漏未完成，不请用户冻结。最后用 `scripts/freeze.mjs` 算出两份文件的 sha256 并核对二者配套，请用户一次确认；确认后两份冻结。随后把两份文件单独提交到需求分支，推送并开 Draft MR/PR，把 MR 链接、交接提交、文件路径和两个 sha256 交给 deliver，deliver 因此可以在任意 worktree 开工；spec 不允许推送或开 MR、或仓库规则不允许提交这两份文件时，只交本地路径。
+写 verify 之前，先按每个功能的用户入口和状态找 spec 没有定下的行为，会改变判定的回写 spec。写完后，用与写文档的模型不同家族的 CLI（在 Claude Code 里用 `codex exec`，在 Codex 里用 `claude -p`）开一个新 session 查漏：它读 spec、verify、原始约定（需求稿、ADR、用户最终决定的原话）和仓库，按固定的[查漏说明](skills/core-spec/references/gap-check.md)报告问题；verify 的问题直接改，spec 的问题在原始约定里有依据的直接改、没有依据的转成给用户的问题，最多两轮。另一家模型用不了时不降级为同家族，记为查漏未完成，不请用户冻结。最后用 `scripts/freeze.mjs` 算出两份文件的 sha256 并核对二者配套，请用户一次确认；确认后两份冻结。随后把两份文件单独提交到需求分支，提交信息末尾用 `freeze.mjs --trailers` 记下两份文件的路径和 sha256，推送并开 Draft MR/PR；deliver 只凭 MR 链接就能在任意 worktree 开工；spec 不允许推送或开 MR、或仓库规则不允许提交这两份文件时，只交本地路径。
 
 只要 spec（用于方案设计、design-for-review、plan-for-agents 或汇报）时，写完并核对 spec 即交付，不写 verify、不查漏。已有定稿 spec、只需要验收时，从找 spec 缺口开始，不重新收敛 spec。
 
@@ -93,14 +93,15 @@ core-spec 把冻结的 spec.md 和 verify.md 提交到需求分支、开好 Draf
 - 逐个里程碑实现，每个里程碑在运行中的应用上跑通它对应的 verify 场景，失败先修；再由一个继承 owner 模型和推理强度的 subagent 按固定说明检查。冒烟集在状态不明、环境或相关代码变了时才跑。
 - 请另一家模型在单独的 session 中按固定的验证说明验证最终 head；验证输入包括场景对应的实际命令和允许使用的环境。验证通过 `scripts/run-verifier.mjs` 启动，它记下模型家族、模型、session id 和报告的 sha256；另一家模型都不可用时停下，不用同家族代替。
 - 在交接的 Draft MR/PR 上推送，处理 CI 和评审意见，取消 Draft，直到可合入；spec 授权合入时合入。
-- 开工时用 `scripts/check-delivery.mjs --frozen-only` 核对 spec、verify 与用户确认的 sha256；合入前运行完整检查：两份文件未变，验证报告对应 MR 的最终 head，报告完整、总体结论为 PASS、没有 FAIL，只有 verify 列出的覆盖盲区可以是 UNVERIFIED，报告来自 `run-verifier.mjs` 的调用、之后没被改过，验证者与 owner 不是同一家模型。
+- 开工时用 `scripts/read-handoff.mjs` 从交接提交读出用户确认的 sha256，并核对两份文件自交接后没被改过，再用 `scripts/check-delivery.mjs --frozen-only` 核对；合入前运行完整检查：两份文件未变，验证报告对应 MR 的最终 head，报告完整、总体结论为 PASS、没有 FAIL，只有 verify 列出的覆盖盲区可以是 UNVERIFIED，报告来自 `run-verifier.mjs` 的调用、之后没被改过，验证者与 owner 不是同一家模型。
 
 只在四种情况下停下找用户：spec 自相矛盾或缺少会改变判定的决定；缺少 agent 拿不到的权限、凭据或环境；授权以外的不可逆操作；卡住（同一个失败，一种修法连续 3 次无效就换思路，换了思路后再连续 3 次仍无进展）。
 
 调用示例：
 
-- Codex：`$deliver 接手 <Draft MR/PR 链接>（需求分支 <分支>，交接提交 <commit>），<需求目录>/ 下的 spec.md（sha256 <确认值>）和 verify.md（sha256 <确认值>）已冻结。`（可在 `/goal` 中使用，让同一个对话持续到完成）
-- Claude Code：`/deliver 接手 <Draft MR/PR 链接>（需求分支 <分支>，交接提交 <commit>），<需求目录>/ 下的 spec.md（sha256 <确认值>）和 verify.md（sha256 <确认值>）已冻结。`
+- Codex：`$deliver 接手 <Draft MR/PR 链接>。`（可在 `/goal` 中使用，让同一个对话持续到完成）
+- Claude Code：`/deliver 接手 <Draft MR/PR 链接>。`
+- 只交了本地路径时：`/deliver <需求目录>/ 下的 spec.md（sha256 <确认值>）和 verify.md（sha256 <确认值>）已冻结。`
 
 沿用上面的 Codex 和 Claude Code 手动触发设置；安装时保留相邻的 `core-spec`、`mr-for-human` 和 `explain-as-fool` 目录。来源与验证边界见[设计与验证记录](docs/deliver-design.md)。
 
