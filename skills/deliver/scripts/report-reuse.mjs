@@ -71,8 +71,9 @@ export function reuseCheck({ repo, verifiedHead, head, frozen = [] }) {
       );
     return roots.get(dir);
   };
-  const files = git("diff", "--name-only", "--no-renames", verifiedHead, head)
-    .split("\n")
+  // -z keeps non-ASCII paths unescaped (core.quotePath would quote them).
+  const files = git("diff", "--name-only", "--no-renames", "-z", verifiedHead, head)
+    .split("\0")
     .filter(Boolean)
     .map((file) => ({ file, kind: frozen.includes(file) ? null : isNoise(file, isPackageRoot) }));
   const changedFrozen = files.filter((f) => frozen.includes(f.file));

@@ -179,8 +179,15 @@ if (parsed.head && parsed.head !== head) {
         return null;
       }
     };
-    const frozenInRepo = [...frozen.values()].map((f) => inRepo(f.file)).filter((f) => f && !f.startsWith(".."));
-    const reuse = reuseCheck({ repo, verifiedHead: parsed.head, head, frozen: frozenInRepo });
+    const frozenInRepo = [...frozen.values()].map((f) => inRepo(f.file));
+    const reuse = frozenInRepo.some((f) => !f || f.startsWith(".."))
+      ? {
+          ok: false,
+          problem:
+            "spec.md or verify.md lives outside the code repository, so nothing shows they are the ones the report was checked against; " +
+            "verify the MR head again",
+        }
+      : reuseCheck({ repo, verifiedHead: parsed.head, head, frozen: frozenInRepo });
     if (reuse.ok) {
       verifiedHead = parsed.head;
       notes.push(

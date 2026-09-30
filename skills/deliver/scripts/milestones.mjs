@@ -97,6 +97,12 @@ export function codeRepo(plan, planDir, override) {
   }
 }
 
+// The branch the requirement branch is based on, from the 基线 line, so its
+// commits are never counted as the owner's after a rebase.
+export function baseBranch(plan) {
+  return plan.match(/^\s*-\s*基线:\s*(\S+)\s*@/m)?.[1] ?? null;
+}
+
 // Where the owner's commits start: the handoff commit, else the baseline.
 export function startCommit(plan) {
   return (
@@ -169,8 +175,23 @@ export function checkMilestones({ plan, planDir, repo, head }) {
     );
     return { errors, notes };
   }
+  // Leave out anything already on the base branch, so upstream commits pulled
+  // in by a rebase are not taken for the owner's.
+  const branch = baseBranch(plan);
+  const baseRef = branch
+    ? [`origin/${branch}`, branch].find((ref) => {
+        try {
+          git("rev-parse", "--verify", "--quiet", `${ref}^{commit}`);
+          return true;
+        } catch {
+          return false;
+        }
+      })
+    : null;
   try {
-    scope = git("rev-list", "--first-parent", "--reverse", `${start}..${head}`).split("\n").filter(Boolean);
+    scope = git("rev-list", "--first-parent", "--reverse", `${start}..${head}`, ...(baseRef ? ["--not", baseRef] : []))
+      .split("\n")
+      .filter(Boolean);
   } catch {
     errors.push(`cannot list ${start.slice(0, 12)}..${head.slice(0, 12)}; pass --repo <worktree with the requirement branch> and fetch it`);
     return { errors, notes };
@@ -239,15 +260,12 @@ export function checkMilestones({ plan, planDir, repo, head }) {
     if (ids.length && !ids.includes(record.milestone))
       notes.push(`${record.name} names ${record.milestone}, which plan.md does not list`);
 
-  // Each milestone's first check covers only that milestone's commits, so two
-  // milestones cannot share one late check over the whole branch. Later
-  // rounds may span fixes anywhere.
-  const first = new Map();
-  for (const record of usable)
-    if (!first.has(record.milestone) || Number(record.round) < Number(first.get(record.milestone).round))
-      first.set(record.milestone, record);
+  // Each milestone's first check (round 1) covers only that milestone's
+  // commits, so two milestones cannot share one late check over the whole
+  // branch. Later rounds may span fixes anywhere, also when round 1 no longer
+  // matches the branch.
   const owner = new Map();
-  for (const record of first.values())
+  for (const record of usable.filter((r) => Number(r.round) === 1))
     for (const i of record.indices) {
       if (owner.has(i) && owner.get(i) !== record.milestone)
         errors.push(
