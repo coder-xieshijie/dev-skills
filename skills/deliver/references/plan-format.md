@@ -4,7 +4,7 @@
 
 ## 与 ExecPlan 原文的不同
 
-- 原文要求计划完全自包含。这里 spec.md、verify.md 已冻结，并且和 plan.md 在同一目录，所以 plan.md 引用它们，不复述需求和场景。原文也允许引用已提交的前序文档。
+- 原文要求计划完全自包含。这里 spec.md、verify.md 已冻结并提交在需求分支上，所以 plan.md 引用它们，不复述需求和场景。原文也允许引用已提交的前序文档。
 - 验收以 verify.md 的场景为准，plan.md 不重新定义。plan.md 只写场景和里程碑的对应关系，以及“实现后绑定命令”的实际命令。
 - 新增“冻结输入”一节，供机械检查使用。
 
@@ -14,12 +14,13 @@
 
 ### 冻结输入
 
-格式固定，`scripts/check-delivery.mjs` 读取 spec、verify、owner 三行，以及可能有的 cross-family 一行；路径相对于 plan.md 所在目录。两个 sha256 原样抄用户确认时的值，不自己重算：
+格式固定，`scripts/check-delivery.mjs` 读取 spec、verify、owner 三行，以及可能有的 cross-family 一行；路径相对于 plan.md 所在目录，plan.md 放在 spec 目录以外时也可以写绝对路径。两个 sha256 原样抄用户确认时的值，不自己重算：
 
 ```text
 - spec: spec.md sha256=<64 位十六进制>
 - verify: verify.md sha256=<64 位十六进制>
 - 基线: <分支> @ <commit>
+- 交接: <MR/PR 链接> <需求分支> @ <交接提交>
 - owner: family=<模型家族，例如 anthropic、openai、minimax> model=<模型 ID>
 ```
 
