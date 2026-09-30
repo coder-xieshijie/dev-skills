@@ -1,6 +1,6 @@
 ---
 name: mr-for-human
-description: 把 MR、PR 或指定代码差异整理成面向人的金字塔式阅读指南，突出重要决定，核对各目录的具体改动与需求范围，解释主流程、边界及失败降级，并定位到源码。
+description: 把 MR、PR 或代码差异整理成面向人的阅读指南，先讲重要决定，再给出到源码的阅读路线。用于要读懂一个改动、知道重点看哪里时。
 disable-model-invocation: true
 ---
 

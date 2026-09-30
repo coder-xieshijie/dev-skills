@@ -1,6 +1,6 @@
 ---
 name: agent-prompt-rules
-description: 依据 Anthropic 与 OpenAI 官方原文，为写给 agent 的 prompt、多 agent pipeline 和 SKILL.md 提供设计规则与修改流程。
+description: 为写给 agent 的 prompt、多 agent pipeline 和 SKILL.md 提供依据官方原文的设计规则与修改流程。用于编写、修改或审查这些内容。
 disable-model-invocation: true
 ---
 
