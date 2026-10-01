@@ -32,7 +32,8 @@
 // commit that makes the same change (same files, same added and removed
 // lines; the surrounding lines may differ), and author time survives a
 // rebase. Commits a rebase dropped, because the base already has them, are
-// skipped; a commit the rebase changed matches nothing and needs a new round.
+// skipped. A commit changed since its check (same author time and subject,
+// different change) must be covered again by a later round.
 // Records none of whose commits match are kept as history and ignored.
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -205,55 +206,85 @@ export function checkMilestones({ plan, planDir, repo, head }) {
 
   // A record made before a rebase names old SHAs. An old commit is the same as
   // a branch commit when it makes the same change: the same file headers and
-  // the same added and removed lines, byte for byte. Context lines, hunk
-  // positions and blob IDs are left out, because they change whenever the base
-  // changes near the edit. diff-tree prints nothing for a merge, so merges
-  // match only by SHA.
+  // the same added and removed lines, byte for byte (read as latin1, so no
+  // bytes are merged by decoding), and for a binary file the same resulting
+  // blob. Context lines, hunk positions and the other blob IDs are left out,
+  // because they change whenever the base changes near the edit. diff-tree
+  // prints nothing for a merge, so merges match only by SHA.
   const changeOf = (commit) => {
-    const diff = execFileSync("git", ["-C", repo, "diff-tree", "-p", "-M", "--no-commit-id", "--no-color", commit], {
-      maxBuffer: 1 << 28,
-    }).toString("utf8");
+    const diff = execFileSync(
+      "git",
+      ["-C", repo, "diff-tree", "-p", "-M", "--full-index", "--no-commit-id", "--no-color", commit],
+      { maxBuffer: 1 << 28 },
+    ).toString("latin1");
     const kept = [];
+    let inHunk = false;
     let afterChange = false;
+    let resultBlob = "";
     for (const line of diff.split("\n")) {
-      if (line === "" || line.startsWith(" ") || /^(index |@@ |similarity index |dissimilarity index )/.test(line)) {
+      if (line.startsWith("diff --git ")) {
+        [inHunk, afterChange, resultBlob] = [false, false, ""];
+        kept.push(line);
+      } else if (!inHunk) {
+        if (line.startsWith("@@ ")) inHunk = true;
+        else if (line.startsWith("index ")) resultBlob = line.match(/\.\.([0-9a-f]+)/)?.[1] ?? "";
+        else if (line.startsWith("Binary files ")) kept.push(`${line} ${resultBlob}`);
+        else if (line && !/^(similarity|dissimilarity) index /.test(line)) kept.push(line);
+      } else if (line.startsWith("+") || line.startsWith("-")) {
+        kept.push(line);
+        afterChange = true;
+      } else {
+        // "\ No newline at end of file" belongs to the line before it.
+        if (line.startsWith("\\") && afterChange) kept.push(line);
         afterChange = false;
-        continue;
       }
-      // "\ No newline at end of file" belongs to the line before it.
-      if (line.startsWith("\\")) {
-        if (afterChange) kept.push(line);
-        continue;
-      }
-      kept.push(line);
-      afterChange = /^[+-]/.test(line) && !/^(\+\+\+|---) /.test(line);
     }
     return kept.join("\n");
   };
+  // A rebase keeps a commit's author time and subject, so a branch commit with
+  // the same ones but a different change is the old commit changed after its
+  // check (a conflict resolved, or an amend).
+  const identityOf = (commit) => git("show", "-s", "--format=%at %s", commit);
   let byChange = null;
-  const locate = (commit) => {
-    if (indexOf.has(commit)) return indexOf.get(commit);
+  let byIdentity = null;
+  const add = (map, key, i) => map.set(key, [...(map.get(key) ?? []), i]);
+  // Returns { index } for a commit on the branch, { changed } for one changed
+  // since, or {} for one the branch no longer has. `after` is the index of the
+  // record's previous commit, so two commits making the same edit map to two
+  // branch commits in order.
+  const locate = (commit, after) => {
+    if (indexOf.has(commit)) return { index: indexOf.get(commit) };
     if (!byChange) {
       byChange = new Map();
-      for (const c of scope) {
+      byIdentity = new Map();
+      scope.forEach((c, i) => {
         const change = changeOf(c);
-        if (change && !byChange.has(change)) byChange.set(change, indexOf.get(c));
-      }
+        if (change) add(byChange, change, i);
+        add(byIdentity, identityOf(c), i);
+      });
     }
+    const pick = (list) => list.find((i) => i > after) ?? list[0];
+    const sameIdentity = byIdentity.get(identityOf(commit)) ?? [];
     const change = changeOf(commit);
-    return change ? (byChange.get(change) ?? null) : null;
+    // An empty commit or a merge has no change of its own to compare.
+    if (!change) return sameIdentity.length ? { index: pick(sameIdentity) } : {};
+    const sameChange = byChange.get(change) ?? [];
+    if (sameChange.length) return { index: sameChange.find((i) => sameIdentity.includes(i)) ?? pick(sameChange) };
+    return sameIdentity.length ? { changed: pick(sameIdentity) } : {};
   };
   const subject = (i) => git("show", "-s", "--format=%h %s", scope[i]);
   const authorSeconds = (i) => Number(git("show", "-s", "--format=%at", scope[i]));
 
   // Records whose header or body is broken are errors. A record's commits
-  // that are no longer on the branch (dropped by a rebase, or rewritten) are
-  // skipped; coverage below still requires every branch commit to be checked.
-  // Records none of whose commits are on the branch (amended, or from before a
-  // new handoff) are kept as history and do not count; a later round
-  // replaces them.
+  // that the branch no longer has (a rebase dropped them because the base has
+  // them, or they were replaced by a commit with another subject) are skipped;
+  // a replacement is a new commit and needs its own check like any other. Its commits changed since the check must be checked
+  // again, by a later round of any milestone. Records none of whose commits
+  // are on the branch unchanged (rewritten, or from before a new handoff) are
+  // kept as history and do not count; a later round replaces them.
   const records = readRecords(path.join(planDir, "evidence"));
   const usable = [];
+  const changedSinceCheck = new Map();
   for (const record of records) {
     if (record.problems.length) {
       errors.push(`${record.name}: ${record.problems.join("; ")}`);
@@ -263,17 +294,25 @@ export function checkMilestones({ plan, planDir, repo, head }) {
     try {
       commits = git("rev-list", "--first-parent", "--reverse", `${record.from}..${record.to}`).split("\n").filter(Boolean);
     } catch {}
-    const located = commits.map(locate);
-    record.indices = located.filter((i) => i !== null);
-    const gone = located.length - record.indices.length;
+    let after = -1;
+    const located = commits.map((commit) => {
+      const found = locate(commit, after);
+      after = found.index ?? found.changed ?? after;
+      return found;
+    });
+    record.indices = located.flatMap((l) => (l.index === undefined ? [] : [l.index]));
+    const changed = located.flatMap((l) => (l.changed === undefined ? [] : [l.changed]));
+    for (const i of changed) changedSinceCheck.set(i, record.name);
+    const dropped = located.length - record.indices.length - changed.length;
+    const parts = [];
+    if (dropped) parts.push(`${dropped} no longer on the branch (dropped by a rebase because the base has them, or replaced)`);
+    if (changed.length) parts.push(`${changed.length} changed since the check`);
     if (record.indices.length === 0)
-      notes.push(`${record.name} no longer matches the branch (its commits were rewritten, dropped, or precede the handoff); it does not count`);
+      notes.push(
+        `${record.name} no longer matches the branch${parts.length ? ` (of its ${located.length} commits, ${parts.join(", ")})` : ""}; it does not count`,
+      );
     else {
-      if (gone)
-        notes.push(
-          `${record.name}: ${gone} of its ${located.length} commits are no longer on the branch as recorded ` +
-            "(dropped by a rebase because the base has them, or changed); the rest still count",
-        );
+      if (parts.length) notes.push(`${record.name}: of its ${located.length} commits, ${parts.join(", ")}; the rest still count`);
       usable.push(record);
     }
   }
@@ -306,17 +345,25 @@ export function checkMilestones({ plan, planDir, repo, head }) {
   const covered = new Set(usable.flatMap((r) => r.indices));
   const last = covered.size ? Math.max(...covered) : -1;
   for (let i = 0; i <= last; i += 1)
+    if (!covered.has(i) && !changedSinceCheck.has(i))
+      errors.push(
+        `commit ${subject(i)} lies between checked ranges but no milestone check covers it: ` +
+          "check it with its milestone and record the result",
+      );
+  for (const [i, name] of changedSinceCheck)
     if (!covered.has(i))
       errors.push(
-        `commit ${subject(i)} lies between checked ranges but no milestone check covers it (a new commit, or one a rebase changed): ` +
-          "check it with its milestone and record the result",
+        `commit ${subject(i)} changed after ${name} checked it (a rebase conflict or an amend): ` +
+          "check it again and record the result as a later round",
       );
 
   // Only a milestone's first check that still counts is timed. Its next commit
-  // skips the milestone's own commits that only its later rounds cover (fixes,
-  // or its commits a rebase changed); a commit another milestone first
-  // checked is never skipped. Git keeps whole seconds, so compare at that
-  // precision.
+  // skips commits only this milestone's later rounds cover (its fixes, or its
+  // commits changed since); a commit any other milestone's record covers is
+  // never skipped. Git keeps whole seconds, so compare at that precision.
+  const coveredBy = new Map();
+  for (const record of usable)
+    for (const i of record.indices) coveredBy.set(i, new Set([...(coveredBy.get(i) ?? []), record.milestone]));
   const waived = /^\s*-\s*milestone-order:\s*waived\b/m.test(plan);
   for (const id of new Set(usable.map((r) => r.milestone))) {
     const rounds = usable.filter((r) => r.milestone === id).sort((a, b) => Number(a.round) - Number(b.round));
@@ -325,7 +372,7 @@ export function checkMilestones({ plan, planDir, repo, head }) {
       rounds
         .slice(1)
         .flatMap((r) => r.indices)
-        .filter((i) => !owner.has(i) || owner.get(i) === id),
+        .filter((i) => [...coveredBy.get(i)].every((m) => m === id)),
     );
     let next = Math.max(...record.indices) + 1;
     while (ownLater.has(next)) next += 1;
