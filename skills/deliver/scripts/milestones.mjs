@@ -40,9 +40,9 @@
 // that only re-freezes those two files is left out.
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
-import { branchHandoffs, frozenTrailers } from "./handoffs.mjs";
+import { frozenTrailers, requirementHandoffs } from "./handoffs.mjs";
 
 export const sha256 = (data) => createHash("sha256").update(data).digest("hex");
 
@@ -120,6 +120,19 @@ export function startCommit(plan) {
     plan.match(/^\s*-\s*基线:.*@\s*([0-9a-f]{7,40})(?![0-9a-f])/m)?.[1] ??
     null
   );
+}
+
+// The paths of the frozen spec.md and verify.md inside the code repository,
+// as the handoff trailers write them; a file outside it is left out.
+export function frozenPaths(plan, planDir, repo) {
+  const found = {};
+  for (const m of plan.matchAll(/^\s*-\s*(spec|verify):\s*(?:`([^`]+)`|(\S+))\s+sha256=/gm)) {
+    try {
+      const rel = path.relative(realpathSync(repo), realpathSync(path.resolve(planDir, m[2] ?? m[3])));
+      if (rel && !rel.startsWith("..") && !path.isAbsolute(rel)) found[m[1]] = rel.split(path.sep).join("/");
+    } catch {}
+  }
+  return found;
 }
 
 // The base branch as a ref in the repository: origin/<branch>, else <branch>.
@@ -226,7 +239,7 @@ export function checkMilestones({ plan, planDir, repo, head }) {
   };
   let first = start;
   if (handedOff && baseRef) {
-    const earliest = branchHandoffs(git, baseRef, head)[0]?.commit;
+    const earliest = requirementHandoffs(git, baseRef, head, frozenPaths(plan, planDir, repo))[0]?.commit;
     if (earliest && git("rev-parse", start) !== earliest) {
       try {
         git("merge-base", "--is-ancestor", earliest, start);

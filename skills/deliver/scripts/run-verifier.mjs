@@ -2,7 +2,7 @@
 // Start the deliver Skill's independent verification in a separate session of
 // another model family, and leave a run record that check-delivery.mjs reads.
 //
-//   node run-verifier.mjs --cli <codex|claude|mcode> --checkout <dir> --head <sha>
+//   node run-verifier.mjs --cli <codex|claude|mcode> --checkout <dir> --head <sha> --base <ref>
 //                         --inputs <inputs.md> --verify <verify.md> --report <report.md>
 //                         [--model <provider/model>] [--effort <level>] [--add-dir <dir>]...
 //                         [--timeout <min>] [--stall <min>] [--brief <verifier-brief.md>]
@@ -17,10 +17,12 @@
 // <report>.status.json says what the run is doing and when its evidence last
 // changed.
 //
-// When the checkout's history shows that spec or verify changed after the
-// first handoff commit for this verify.md, the call names that commit, so the
-// verifier compares the versions and reports whether acceptance got looser;
-// the run record keeps it as first_handoff.
+// --base is the MR's target branch as a ref in the checkout (e.g.
+// origin/main). When this requirement's handoff commits after it show that
+// spec or verify changed after the first handoff, the call names that commit,
+// so the verifier compares the versions and reports whether acceptance got
+// looser; the run record keeps it as first_handoff, and check-delivery.mjs
+// checks it against the first handoff it finds itself.
 //
 // A run ends by itself: after --timeout minutes (default 90), or after
 // --stall minutes (default 20) in which no file under the --add-dir
@@ -62,12 +64,12 @@ import { appendFileSync, existsSync, lstatSync, mkdtempSync, readdirSync, readFi
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { handoffsFor } from "./handoffs.mjs";
+import { requirementHandoffs } from "./handoffs.mjs";
 import { familyOf } from "./model-family.mjs";
 import { parseReport, parseVerify, reportProblems } from "./report-format.mjs";
 
 const USAGE =
-  "usage: run-verifier.mjs --cli <codex|claude|mcode> --checkout <dir> --head <sha> " +
+  "usage: run-verifier.mjs --cli <codex|claude|mcode> --checkout <dir> --head <sha> --base <ref> " +
   "--inputs <inputs.md> --verify <verify.md> --report <report.md> [--model <provider/model>] " +
   "[--effort <level>] [--add-dir <dir>]... [--timeout <min>] [--stall <min>] [--brief <path>]\n" +
   "       run-verifier.mjs --preflight --cli <codex|claude|mcode> [--model <provider/model>] [--effort <level>] " +
@@ -80,7 +82,7 @@ function fail(code, message) {
 }
 
 const FLAGS = ["preflight"];
-const KEYS = ["cli", "checkout", "head", "inputs", "verify", "report", "model", "effort", "add-dir", "brief",
+const KEYS = ["cli", "checkout", "head", "base", "inputs", "verify", "report", "model", "effort", "add-dir", "brief",
   "timeout", "stall", "owner-family"];
 const args = { "add-dir": [] };
 const argv = process.argv.slice(2);
@@ -352,7 +354,7 @@ function run(cmd, cwd, out, { logPath, statusPath, watch, own, limitMs, stallAft
 }
 
 if (args.preflight) {
-  for (const key of ["checkout", "head", "inputs", "verify", "report"])
+  for (const key of ["checkout", "head", "base", "inputs", "verify", "report"])
     if (args[key]) fail(2, `--preflight takes no --${key}`);
   const scratch = mkdtempSync(path.join(tmpdir(), "run-verifier-preflight-"));
   const out = path.join(scratch, "last-message.md");
@@ -373,7 +375,7 @@ if (args.preflight) {
   process.exit(0);
 }
 
-for (const key of ["cli", "checkout", "head", "inputs", "verify", "report"])
+for (const key of ["cli", "checkout", "head", "base", "inputs", "verify", "report"])
   if (!args[key]) fail(2, `--${key} is required`);
 if (!/^[0-9a-f]{40}$/.test(args.head)) fail(2, `--head must be a 40-hex SHA: ${args.head}`);
 
@@ -413,9 +415,14 @@ if (before.dirty) fail(2, "checkout has uncommitted changes");
 // it out.
 let firstHandoff = null;
 try {
+  git("rev-parse", "--verify", "--quiet", `${args.base}^{commit}`);
+} catch {
+  fail(2, `--base ${args.base} is not a commit in the checkout; fetch the MR's target branch`);
+}
+try {
   const verifyRepo = execFileSync("git", ["-C", path.dirname(verifyPath), "rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
   const verifyFile = path.relative(realpathSync(verifyRepo), realpathSync(verifyPath)).split(path.sep).join("/");
-  const found = handoffsFor(git, args.head, verifyFile);
+  const found = requirementHandoffs(git, args.base, args.head, { verify: verifyFile });
   const [first, last] = [found[0], found.at(-1)];
   if (first && (first.spec.hash !== last.spec.hash || first.verify.hash !== last.verify.hash)) firstHandoff = first;
 } catch {}
@@ -490,6 +497,7 @@ const record = {
   inputs,
   inputs_sha256: sha256(readFileSync(inputs)),
   verify: verifyPath,
+  base: args.base,
   first_handoff: firstHandoff?.commit ?? null,
   report: path.basename(report),
   report_sha256: callOk && result.text.trim() ? sha256(result.text) : null,

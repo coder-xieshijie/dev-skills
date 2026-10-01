@@ -50,10 +50,24 @@ export function branchHandoffs(git, baseRef, head) {
   return handoffLog(git, [`${baseRef}..${head}`]);
 }
 
-// Handoff commits for one verify.md (its path in the repository), oldest
-// first, along HEAD's first-parent line. For callers that do not know the
-// base branch: another requirement's handoffs name another verify.md.
-export function handoffsFor(git, head, verifyFile) {
-  const file = path.posix.normalize(verifyFile);
-  return handoffLog(git, [head, "--", file]).filter((h) => h.verify.file === file);
+// The handoffs of one requirement on the branch, oldest first. Start from the
+// newest handoff naming one of `current` (the frozen files' paths in the
+// repository; without them, the newest handoff) and go back through handoffs
+// that share a spec or verify path with the ones already taken, so a moved
+// file keeps its history and another requirement's handoff on the same branch
+// is left out.
+export function requirementHandoffs(git, baseRef, head, current = {}) {
+  const all = branchHandoffs(git, baseRef, head);
+  const wanted = [current.spec, current.verify].filter(Boolean).map((f) => path.posix.normalize(f));
+  let at = all.length - 1;
+  if (wanted.length) while (at >= 0 && !wanted.includes(all[at].spec.file) && !wanted.includes(all[at].verify.file)) at -= 1;
+  if (at < 0) return [];
+  const chain = [all[at]];
+  const paths = new Set([all[at].spec.file, all[at].verify.file]);
+  for (let i = at - 1; i >= 0; i -= 1)
+    if (paths.has(all[i].spec.file) || paths.has(all[i].verify.file)) {
+      chain.unshift(all[i]);
+      paths.add(all[i].spec.file).add(all[i].verify.file);
+    }
+  return chain;
 }

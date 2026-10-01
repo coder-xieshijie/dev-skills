@@ -51,8 +51,8 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
-import { branchHandoffs } from "./handoffs.mjs";
-import { baseRefIn, checkMilestones, codeRepo, gitIn } from "./milestones.mjs";
+import { requirementHandoffs } from "./handoffs.mjs";
+import { baseBranch, baseRefIn, checkMilestones, codeRepo, frozenPaths, gitIn } from "./milestones.mjs";
 import { familyOf } from "./model-family.mjs";
 import { isDeclaredBlindSpot, parseReport, parseVerify, reportProblems } from "./report-format.mjs";
 import { reuseCheck } from "./report-reuse.mjs";
@@ -155,21 +155,35 @@ for (const kind of ["spec", "verify"]) {
 }
 
 // Changes to spec or verify since the first handoff (check 1, continued).
+// The handoffs are this requirement's handoff commits after the base branch;
+// not being able to look is an error, not "no change".
 function acceptanceChanges(headSha) {
-  if (!repo || !headSha || !/^\s*-\s*交接:/m.test(plan)) return [];
-  const git = gitIn(repo);
-  const baseRef = baseRefIn(git, plan);
-  if (!baseRef) return [];
-  let first;
-  try {
-    first = branchHandoffs(git, baseRef, headSha)[0];
-  } catch {
-    return [];
+  const none = { changed: [], first: null };
+  if (!repo) {
+    notes.push("spec.md is not inside a git repository, so changes since the first handoff cannot be checked");
+    return none;
   }
+  if (!headSha) {
+    errors.push("cannot read the code repository's HEAD to look for changes since the first handoff");
+    return none;
+  }
+  const git = gitIn(repo);
+  const branch = baseBranch(plan);
+  const baseRef = baseRefIn(git, plan);
+  if (!branch || !baseRef) {
+    errors.push(
+      branch
+        ? `the base branch ${branch} is not in ${repo}; fetch it and check again`
+        : "plan.md has no `- 基线: <branch> @ <commit>` line, so the first handoff cannot be found",
+    );
+    return none;
+  }
+  const first = requirementHandoffs(git, baseRef, headSha, frozenPaths(plan, planDir, repo))[0];
+  if (!first) return none;
   const changed = [];
   for (const kind of ["spec", "verify"]) {
     const now = frozen.get(kind)?.hash;
-    if (!first || !now || first[kind].hash === now) continue;
+    if (!now || first[kind].hash === now) continue;
     changed.push(kind);
     notes.push(
       `${kind} changed since the first handoff ${first.commit.slice(0, 12)} (${first[kind].hash.slice(0, 12)} -> ${now.slice(0, 12)}); ` +
@@ -182,7 +196,7 @@ function acceptanceChanges(headSha) {
           "Only the user changes spec and verify (deliver, 停下); record their words when they confirmed this version",
       );
   }
-  return changed;
+  return { changed, first };
 }
 
 if (args["frozen-only"]) {
@@ -210,7 +224,8 @@ if (head === undefined) {
 }
 if (!/^[0-9a-f]{40}$/.test(head)) usage(`--head must be a 40-hex SHA: ${head}`);
 
-if (acceptanceChanges(head).length && !/验收文档改动/.test(report))
+const acceptance = acceptanceChanges(head);
+if (acceptance.changed.length && !/验收文档改动/.test(report))
   errors.push(
     "spec or verify changed since the first handoff, but the report has no 验收文档改动 section; " +
       "run the verifier again with the current run-verifier.mjs, which points it at the first handoff",
@@ -300,6 +315,11 @@ if (record) {
   if (record.report_sha256 !== sha256(report))
     errors.push("report changed after the verifier returned it (sha256 differs from the run record)");
   if (!record.session_id) errors.push("run record has no session_id");
+  if (acceptance.changed.length && record.first_handoff !== acceptance.first.commit)
+    errors.push(
+      `the verifier was pointed at ${record.first_handoff ? `first handoff ${String(record.first_handoff).slice(0, 12)}` : "no first handoff"}, ` +
+        `not ${acceptance.first.commit.slice(0, 12)}; run it again with --base <the MR's target branch>`,
+    );
   if (!record.model) errors.push("run record has no model");
   const owner = plan.match(/^\s*-\s*owner:.*\bfamily=(\S+)/m)?.[1];
   const waived = /^\s*-\s*cross-family:\s*waived\b/m.test(plan);

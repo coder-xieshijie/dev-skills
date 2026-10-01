@@ -59,7 +59,7 @@ description: spec.md 和 verify.md 确认并冻结后，由一个 owner 实现�
 **独立验证。** 除 verify 列出的覆盖盲区外，全部场景自验通过后，请另一家模型在单独的 session 中验证当前 head。先在证据目录写验证输入，列出[验证说明](references/verifier-brief.md)要的各项，包括场景 ID 对应的实际命令（取自 plan.md 的“验证与验收”一节）。其中允许验证者使用的环境，按项目验证能力的说明给一个独立的实例（profile、端口、数据目录），不与你正在用的实例共用。然后在检出这个 head 的专用目录里运行：
 
 ```bash
-node <本 Skill 目录>/scripts/run-verifier.mjs --cli <codex|claude|mcode> --checkout <验证检出目录> --head <head> --inputs <验证输入> --verify <verify.md> --report <证据目录>/verification-<head 前 12 位>.md --add-dir <证据目录> [--effort <推理强度>]
+node <本 Skill 目录>/scripts/run-verifier.mjs --cli <codex|claude|mcode> --checkout <验证检出目录> --head <head> --base <目标分支的远端引用> --inputs <验证输入> --verify <verify.md> --report <证据目录>/verification-<head 前 12 位>.md --add-dir <证据目录> [--effort <推理强度>]
 ```
 
 `--cli` 按[跨模型调用](../core-spec/references/cross-model.md)选与你不同的家族。验证者要启动和操作应用，三个 CLI 都不带沙箱运行（codex 用 `-s danger-full-access`）。脚本在总时长超过 `--timeout` 或连续 `--stall` 分钟没有新证据时停掉验证者；运行中 `.log` 持续写入，`.status.json` 记着最近一次写证据的时间。脚本返回 3 表示这个 CLI 用不了（包括超时、停滞），换另一个不同家族的 CLI 再试；都不可用时，不用同家族代替，做完其余工作，记为“跨模型验证未完成”，按“停下”的第 2 种情况处理。只有用户明确放宽时才用同家族，并在 plan.md 的冻结输入里记一行 `- cross-family: waived <用户原话与日期>`。验证者只报告，由你修改；改完后对新 head 重新验证，验证者照常完整验证。反复失败时，按“停下”第 4 种判断是否卡住。独立验证通过后代码又有改动（CI 修复、评审意见）时也一样；只改了测试、文档或 lint 配置时，`check-delivery.mjs` 沿用原报告，不用重新验证。
