@@ -29,7 +29,7 @@ deliver 把“从冻结的 spec、verify 到可合入的 MR”交给一个连续
 | 规则 | 不写时容易出的问题 | 依据 |
 |---|---|---|
 | 一个 owner 从读 spec 负责到 MR 可合入，连续运行，不按阶段换 session | 每交接一次丢一部分信息；阶段之间没人对整体结果负责 | OpenAI：一个 agent 从复现到开 PR、回应评审、修构建，只在需要判断时找人（[Increasing levels of autonomy](../skills/agent-prompt-rules/references/sources/openai/harness-engineering.md#increasing-levels-of-autonomy)）；Anthropic 在新模型上去掉 sprint 和 context reset（[Removing the sprint construct](../skills/agent-prompt-rules/references/sources/anthropic/harness-design-long-running-apps.md#removing-the-sprint-construct)）；pstack 每个 PR 一个 owner 负责到合入（[autopilot-full](https://github.com/cursor/plugins/blob/ecc249f1e306fc64ddf83c7bed16cacf7c2239db/pstack/skills/poteto-mode/playbooks/autopilot-full.md)）；agent-prompt-rules 二-2、二-11 |
-| 只在三种情况停下，其余自己决定并写进决策日志 | 人成为瓶颈，交付停在可以继续的地方 | ExecPlan：执行时不问下一步，自行消歧（[原文](https://cookbook.openai.com/articles/codex_exec_plans)）；pstack [principle-never-block-on-the-human](https://github.com/cursor/plugins/blob/ecc249f1e306fc64ddf83c7bed16cacf7c2239db/pstack/skills/principle-never-block-on-the-human/SKILL.md)；agent-prompt-rules 一-5、二-9 |
+| 全程不停，只在不可逆操作前停；其余自己决定并写进决定清单（2026-10-01 起；此前为三种、后为四种停下的情况，见[全程不停，只查结果](#全程不停只查结果2026-10-01)） | 人成为瓶颈，交付停在可以继续的地方 | ExecPlan：执行时不问下一步，自行消歧（[原文](https://cookbook.openai.com/articles/codex_exec_plans)）；pstack [principle-never-block-on-the-human](https://github.com/cursor/plugins/blob/ecc249f1e306fc64ddf83c7bed16cacf7c2239db/pstack/skills/principle-never-block-on-the-human/SKILL.md)；agent-prompt-rules 一-5、二-9 |
 | plan.md 按 ExecPlan 写成活文档，只读它和 git 历史就能接续 | 中断后的新 session 从头摸索，或者只能依靠上一条消息 | ExecPlan；OpenAI 长任务实践的 durable project memory（[原文](../skills/agent-prompt-rules/references/sources/openai/run-long-horizon-tasks-with-codex.md#the-key-idea-durable-project-memory)）；Anthropic 每次开工先读进度和 git 日志（[Getting up to speed](../skills/agent-prompt-rules/references/sources/anthropic/effective-harnesses-for-long-running-agents.md#getting-up-to-speed)） |
 | 开工和接续时先跑冒烟集 | 带着上次留下的坏状态继续开发 | Anthropic [Getting up to speed](../skills/agent-prompt-rules/references/sources/anthropic/effective-harnesses-for-long-running-agents.md#getting-up-to-speed) |
 | 每个里程碑在应用里跑通对应的场景，失败先修 | 后面的工作建在坏的基础上；失败集中到最后，难以定位是哪一步引入的 | OpenAI 每个里程碑跑验证命令，失败先修（[Verification at every milestone](../skills/agent-prompt-rules/references/sources/openai/run-long-horizon-tasks-with-codex.md#verification-at-every-milestone)）；Anthropic 一次做一个功能（[Incremental progress](../skills/agent-prompt-rules/references/sources/anthropic/effective-harnesses-for-long-running-agents.md#incremental-progress)）；pstack [principle-sequence-verifiable-units](https://github.com/cursor/plugins/blob/ecc249f1e306fc64ddf83c7bed16cacf7c2239db/pstack/skills/principle-sequence-verifiable-units/SKILL.md)；用户“效果优先”的决定 |
@@ -566,3 +566,78 @@ Codex 审查（`gpt-6-astra`，推理强度 high）第一版报出 5 条（1 条
 - 在 !7595 的真实提交上回放（super-auto `deliver-select-replay-7595.sh`，按入口给 32 个场景配了粗粒度的涉及路径，只读 git）：M3 场景跑在 `512fd9792f` 上，修到 `69696e4f2c` 时改了 agent-core、Goal 账本与执行器、TUI 共 19 个产品文件，脚本选出全部 32 个场景，包括 owner 手工漏掉的 S34。这次回放也说明：修复改到运行时核心时，脚本不会比全量少跑；它省的是只碰个别目录的修复，主要作用是不漏选。
 - `report-reuse.mjs` 的改动：同一脚本另有 8 个断言直接调用 `reuseCheck()`（只改测试与根目录 README 时沿用；改了产品文件、改了冻结的 verify、报告的 head 不是祖先时不沿用），在重构前后结果相同；原有各组用例（rebase 33、重新交接 16、重新冻结 29、口径偏差 58 个断言）全部通过。
 - 未验证：两部分检查在真实交付中的效果；owner 写涉及路径的粒度是否够细。下一个需求观察。
+
+## 全程不停，只查结果（2026-10-01）
+
+### 起因
+
+dev-skills#26 之后对开发流程类 Skill 做了一次一致性检查，同时复盘了 agent-archon !7595 的交付。主要发现：
+
+- **越改越重。** 正文从 #15 的 4,687 字长到 7,945 字，含限制词的句子从 30 句到 50 句，脚本从 3 个到 11 个（2,399 行）。每次试跑暴露一个问题，就加一段正文和一道脚本检查，只有 #23 删过。这正是 Anthropic prompt-audit 说的 patch accretion。
+- **规则互相矛盾。** 里程碑检查两轮后能不能往下做，正文两处说法相反；最终 head 全量重跑还是只重跑受影响的，两处说法不一；“涉及路径写漏只会让重跑变多”与 `select-scenarios.mjs` 的实际行为不符（写漏会少选，已复现）。
+- **过程门禁挡错了地方。** 门禁的场景解析认不出 !7595 verify 里的 `S12b` 和机械检查 M01–M17，报告少了这 20 项也能过；独立验证 90 分钟到点按“CLI 用不了”处理，换一家 CLI 一样会超时。
+- **为决定停下的代价大。** !7595 的 S24：spec 把现有的“立即发送”快捷键写错，owner 按当时的规则（改 spec 要用户原话）停下问了两次并重新冻结。
+
+### 用户的决定（2026-10-01）
+
+1. 全程不停，只在不可逆操作前停（合入、强推共享分支、删除共享数据、对外发消息、改共享环境）；做不了的部分写明原因，先做完其余部分。
+2. 交付中要定的事，先请另一家模型判断并讨论，再由 owner 定；决定写成决定清单，放在 plan.md 和 MR 描述最前面，用户合入前看。
+3. 流程要轻：只用很轻的说明约束，不用复杂脚本核对过程；只留一个查结果的检查。
+4. 独立验证以 60 分钟为一个周期，到点看执行过程，没做完就在同一个会话里续接，失败由 owner 判断。
+5. 代码质量意见和测试覆盖由最后的独立验证列出，不拦合入，owner 逐条改或写理由。
+6. 不加凭据泄露的即时通知，Stop 钩子不进这次改动。
+
+### 改动
+
+| 方面 | 之前 | 之后 |
+|---|---|---|
+| 停下 | 四种情况停下找用户：spec 矛盾或缺决定、缺权限环境、授权外的不可逆操作、卡住 | 只在不可逆操作前停；其余做不了的列进决定清单 |
+| 交付中的决定 | 改变产品行为的停下问用户；口径偏差单独一节，按编号和哈希核对；交付中改 spec、verify 要用户原话并重新交接 | 先问另一家模型，owner 定，写进决定清单；口径偏差、事实更正都并入决定清单；spec、verify 在交付中不改 |
+| 里程碑检查 | 代码、证据两部分各一个 subagent，`record-milestone-check.mjs` 存档，门禁核对每个里程碑的第一次检查早于之后的提交、记录连续覆盖分支、经得起 rebase | 做完让一个新上下文的 subagent 对照 spec 查一遍，只报告 |
+| 修复后的重跑 | `select-scenarios.mjs` 按涉及路径选 | owner 自己判断；最终代码由另一家模型完整验证 |
+| 独立验证 | `run-verifier.mjs` 启动，留调用记录，90 分钟到点按 CLI 不可用处理 | 按 core-spec `cross-model.md` 的命令运行，`perl` 的 alarm 实现 60 分钟周期，同一会话续接 |
+| 报告沿用 | `report-reuse.mjs` 按文件类型判断 | 合进新的检查：报告之后只改了 Markdown、测试或 plan.md 所在目录的文件时沿用 |
+| 门禁 | `check-delivery.mjs` 六项，解析 verify 的场景表、核对报告逐行完整、调用记录、里程碑记录、口径偏差 | 新的 `check-delivery.mjs` 四项：spec、verify 是交接时确认的版本；报告对应 MR 最新代码；`verdict: PASS`；验证者与 owner 不同家族。场景是否验全由验证者对照 verify 负责，在 MR 里逐个列出 |
+| 质量与测试 | 质量意见只能是“可选建议，最多三条”；测试覆盖没人看 | 验证者另列代码质量意见（按 review-rules）和测试覆盖缺口，owner 逐条处理，列进 MR |
+| 用户放宽的开关 | `cross-family: waived`、`milestone-order: waived` | 去掉：做不到的列进决定清单，由用户合入前决定 |
+
+删除的脚本：`run-verifier.mjs`、`milestones.mjs`、`record-milestone-check.mjs`、`deviations.mjs`、`select-scenarios.mjs`、`report-reuse.mjs`；`read-handoff.mjs`、`handoffs.mjs`、`report-format.mjs`、`model-family.mjs` 中仍需要的部分（找交接提交、读 trailer、认模型家族）合进新的 `check-delivery.mjs`。用例 `scripts/check-delivery.test.mjs` 放进本仓库，CI 运行。
+
+### 依据
+
+- **不等人，事后纠正。** pstack [principle-never-block-on-the-human](https://github.com/cursor/plugins/blob/ecc249f1e306fc64ddf83c7bed16cacf7c2239db/pstack/skills/principle-never-block-on-the-human/SKILL.md)：“Make reasonable decisions, proceed, and let the human course-correct after the fact”；[poteto-mode](https://github.com/cursor/plugins/blob/ecc249f1e306fc64ddf83c7bed16cacf7c2239db/pstack/skills/poteto-mode/SKILL.md) 对只有人能做的决定“apply a default … Report the default with a full explanation and the one word that reverses it”，同时“Always pause for irreversible writes”。OpenAI Harness engineering：“corrections are cheap, and waiting is expensive”（[原文](../skills/agent-prompt-rules/references/sources/openai/harness-engineering.md)）；ExecPlan 执行时不问下一步，决定记进 Decision Log。
+- **决定请另一家模型看。** poteto-mode：“A second opinion is the same prompt against a different model. Agreement is high-signal.”；agent-prompt-rules 二-7。
+- **查结果，不查过程。** Anthropic 在新模型上去掉 sprint，把 evaluator 改为最后一次（[Removing the sprint construct](../skills/agent-prompt-rules/references/sources/anthropic/harness-design-long-running-apps.md#removing-the-sprint-construct)）；pstack 的验证账本按 PR 和 head SHA 记结论；三家原文里没有核对 agent 行动顺序的门禁。每次都必须发生、又最容易被跳过的只有两件：验收文档没被改、最终代码经过另一家模型验证，留给脚本（agent-prompt-rules 二-10）。
+- **删掉补丁式的规则和历史。** Anthropic prompt-audit 把“为一次事故加一条特例、越加越多”和“规则里写事故经过”列为过时写法；agent-prompt-rules 第四节第 2 步要求改动时删掉不再需要的旧指令。
+- **最重要的放开头。** Claude Code 压缩上下文后每个 Skill 只保留前 5,000 tokens；“全程不停”从正文后半段移到开头。
+
+### 接受的代价
+
+- 错的默认决定要到合入前才被发现，返工可能比当时问一句更贵。缓解：决定先问另一家模型；清单按影响排序，写明推翻后要改什么、重跑哪些场景。
+- 里程碑检查晚做、漏做不再被门禁拦下，最终结果由另一家模型的完整验证兜底。
+- 场景是否验全不再由脚本逐行核对，靠验证说明和 MR 里逐个列出的场景结果。
+
+### 验证
+
+- `scripts/check-delivery.test.mjs`：20 条用例（临时 git 仓库实跑，零依赖），全部通过。故意改坏 10 处（不比哈希、在整条历史里找交接、放过报告之后的代码改动、放过非祖先、不查 verdict、放过同家族、不查工作区、不要求报告包含最近一次交接、任意层级的 `tests/` 都算测试、不用 `-z` 读路径），每处都有用例失败。
+- 在 !7595 的真实分支上只读运行 `--frozen`：认出最近一次交接 `9a596da696`，两份文件与记录一致，通过。
+- 行为探针：新开一个 Claude 子代理和一个 Codex 会话（`gpt-6-astra`），只给新版 deliver 和 core-grill，问 6 个情境：快捷键写错、两种交互二选一、验证到 60 分钟、准备合入、只影响实现的存储选择、grill 结束时交什么。两边的回答都符合这次的决定：不停下、不改冻结文件、按代码更正并写进决定清单、产品选择先问另一家模型、同一会话续接、合入前停、存储选择记成默认决定、交出决定汇总请用户确认一次。探针暴露两处缺口，已修：验证说明的 PASS 条件仍写“符合 spec 字面预期”，与决定清单的更正冲突，改为按验证者认可的决定判；正文没写验证之后只改 plan 要不要重验，补了一句。
+- `check-links.mjs` 通过。
+
+### Codex 审查
+
+由 Codex（`gpt-6-astra`）审查第一版 diff，报出 2 条 P1、4 条 P2，都成立并已修正：
+
+- P1：用户重新交接、只改了 spec 和 verify 时，旧报告仍能通过（验收文档被当成“文档”豁免）→ 报告的 head 必须包含最近一次交接，冻结的两份文件不参与豁免；
+- P1：任意层级名为 `tests` 的目录都算测试，`src/app/tests/page.tsx` 这类产品代码会漏过重验 → 只认仓库根或包根下的 `test/`、`tests/`、`e2e/`；
+- P2：中文路径被 git 加引号，只改了中文名的文档也被要求重验 → 用 `git diff -z` 读路径；
+- P2：事实更正、改用的判定方法可以不问另一家模型 → 咨询范围改为决定清单里会影响结果或判定的三类；
+- P2：`cross-model.md` 把 `mcode --cwd` 写成加证据目录 → `--cwd` 指向验证检出目录，证据目录写在验证输入里；
+- P2：只交本地路径时 plan.md 不再记确认的 sha256，中断后接手的 session 无法核对 → 冻结输入在这种情况下写绝对路径和用户给的 sha256。
+
+修正后没有再送审。
+
+### 未验证
+
+- 新流程在真实需求上的效果：owner 是否真的不停、决定清单是否够让用户在合入前判断、60 分钟周期续接是否顺利。下一个需求观察。
+- `check-delivery.mjs` 约 230 行，比方案估计的 150 行多：识别包根和交接包含关系是审查后加的。

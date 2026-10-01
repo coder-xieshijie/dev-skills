@@ -1,6 +1,6 @@
 # Long-running work
 
-> Source: [https://developers.openai.com/codex/long-running-work](https://developers.openai.com/codex/long-running-work)
+> Source: [https://learn.chatgpt.com/docs/long-running-work](https://learn.chatgpt.com/docs/long-running-work)
 
 For work that may take many steps, give ChatGPT a clear outcome, constraints,
 and definition of done. Keep related work in the same chat so

@@ -15,3 +15,12 @@ jobs:
         with:
           node-version: 24
       - run: node skills/agent-prompt-rules/scripts/check-links.mjs
+  deliver-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node --test skills/deliver/scripts/check-delivery.test.mjs

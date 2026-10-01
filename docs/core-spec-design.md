@@ -318,3 +318,18 @@ Lauren Tan 公开的 pstack（固定到 `ecc249f`）把“让 agent 自己证明
 
 验证：见 deliver 的设计记录中本次修改的验证一节。
 
+
+## 七、交付中不再回到 core-spec；查漏核对现有事实（2026-10-01）
+
+deliver 改为全程不停、决定列进清单（见 [deliver 的来源与验证](deliver-design.md#全程不停只查结果2026-10-01)），core-spec 随之调整：
+
+| 改动 | 原因 |
+|---|---|
+| 交付与授权不再问“能否合入”：合入和其他不可逆操作始终留给用户 | 用户 2026-10-01 决定交付中只在不可逆操作前停；合入是终点，由用户看过决定清单后做 |
+| 第 9 步末段：交付中 deliver 不回到本 Skill；只有用户看过决定清单后要改 spec、verify 时，才更新、查漏、重新确认并重新交接 | spec 没定的选择、口径偏差、事实更正都由 deliver 写进决定清单；!7595 的 S24 为一个写错的快捷键停下两次、重新冻结 |
+| 查漏说明加一项“现有事实”：spec、verify 写到的快捷键、文案、入口名、默认值、设置项逐条对照代码核对 | S24 的错误在冻结前就能查出，交付中少一条决定 |
+| 第 7 步的原始约定直接用 core-grill 的决定汇总 | core-grill 结束时由用户确认这份汇总，其中的默认决定也算确认过，与第 1 步“用户没有反对不等于批准”不再冲突 |
+| `cross-model.md` 改为三类命令：查漏、交付中的决定咨询（只读，可续接）、独立验证（不带沙箱，60 分钟周期，同一会话续接）；删去 `run-verifier.mjs` 的说明和规则里夹着的实测经过与日期 | deliver 删了 `run-verifier.mjs`；三家 CLI 都能续接（`codex exec resume`、`claude -p --resume`、`mcode exec --session`），macOS 没有 `timeout`，用 `perl -e 'alarm 3600; exec @ARGV'`；规则只写当前要求，历史留在本记录（Anthropic prompt-audit） |
+| `verify.md` 写法：覆盖盲区“由门禁读取”改为“由独立验证者认” | 新的门禁不再解析 verify |
+
+`freeze.mjs` 的行为不变，只把注释里的 `read-handoff.mjs` 改成 `check-delivery.mjs`。
