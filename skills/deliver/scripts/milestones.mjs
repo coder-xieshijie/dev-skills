@@ -42,6 +42,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { branchHandoffs, frozenTrailers } from "./handoffs.mjs";
 
 export const sha256 = (data) => createHash("sha256").update(data).digest("hex");
 
@@ -121,6 +122,22 @@ export function startCommit(plan) {
   );
 }
 
+// The base branch as a ref in the repository: origin/<branch>, else <branch>.
+export function baseRefIn(git, plan) {
+  const branch = baseBranch(plan);
+  if (!branch) return null;
+  return (
+    [`origin/${branch}`, branch].find((ref) => {
+      try {
+        git("rev-parse", "--verify", "--quiet", `${ref}^{commit}`);
+        return true;
+      } catch {
+        return false;
+      }
+    }) ?? null
+  );
+}
+
 export function recordName(id, round) {
   return `milestone-${id}-r${round}.md`;
 }
@@ -186,17 +203,7 @@ export function checkMilestones({ plan, planDir, repo, head }) {
   }
   // Leave out anything already on the base branch, so upstream commits pulled
   // in by a rebase are not taken for the owner's.
-  const branch = baseBranch(plan);
-  const baseRef = branch
-    ? [`origin/${branch}`, branch].find((ref) => {
-        try {
-          git("rev-parse", "--verify", "--quiet", `${ref}^{commit}`);
-          return true;
-        } catch {
-          return false;
-        }
-      })
-    : null;
+  const baseRef = baseRefIn(git, plan);
 
   // A user who changes spec.md or verify.md during delivery hands off again:
   // a newer commit with both Frozen-Spec and Frozen-Verify trailers, which
@@ -206,25 +213,12 @@ export function checkMilestones({ plan, planDir, repo, head }) {
   // check and is not a next commit for the ordering. Trailers are read as
   // read-handoff.mjs reads them; a plan without a 交接 line is left as it was.
   const handedOff = /^\s*-\s*交接:/m.test(plan);
-  const frozenFiles = (commit) => {
-    const [spec = "", verify = ""] = git(
-      "log",
-      "-1",
-      "--format=%(trailers:key=Frozen-Spec,valueonly,separator=%x1d)%x1f%(trailers:key=Frozen-Verify,valueonly,separator=%x1d)",
-      commit,
-    ).split("\x1f");
-    const file = (value) => {
-      const trimmed = value.trim();
-      const name = trimmed.includes("\x1d") ? null : trimmed.match(/^(.+?)\s+sha256=[0-9a-f]{64}$/)?.[1];
-      return name ? path.posix.normalize(name) : null;
-    };
-    return file(spec) && file(verify) ? [file(spec), file(verify)] : null;
-  };
   const isMerge = (commit) => git("rev-list", "--parents", "-n", "1", commit).split(" ").length > 2;
   const refreezeOnly = (commit) => {
     if (!handedOff) return false;
-    const files = frozenFiles(commit);
-    if (!files || isMerge(commit)) return false;
+    const trailers = frozenTrailers(git, commit);
+    if (!trailers || isMerge(commit)) return false;
+    const files = [trailers.spec.file, trailers.verify.file];
     const changed = git("diff-tree", "--no-commit-id", "--name-only", "-r", "--no-renames", "-z", commit)
       .split("\0")
       .filter(Boolean);
@@ -232,8 +226,7 @@ export function checkMilestones({ plan, planDir, repo, head }) {
   };
   let first = start;
   if (handedOff && baseRef) {
-    const line = git("rev-list", "--first-parent", "--reverse", `${baseRef}..${head}`).split("\n").filter(Boolean);
-    const earliest = line.find((commit) => frozenFiles(commit));
+    const earliest = branchHandoffs(git, baseRef, head)[0]?.commit;
     if (earliest && git("rev-parse", start) !== earliest) {
       try {
         git("merge-base", "--is-ancestor", earliest, start);

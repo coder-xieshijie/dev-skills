@@ -24,7 +24,7 @@
 - owner: family=<模型家族，例如 anthropic、openai、minimax> model=<模型 ID>
 ```
 
-只有用户明确放宽跨模型验证时，才加一行 `- cross-family: waived <用户原话与日期>`。里程碑检查晚于之后的提交、用户同意放行时，加一行 `- milestone-order: waived <用户原话与日期>`。
+只有用户明确放宽跨模型验证时，才加一行 `- cross-family: waived <用户原话与日期>`。里程碑检查晚于之后的提交、用户同意放行时，加一行 `- milestone-order: waived <用户原话与日期>`。交付中用户改了 spec 或 verify、重新确认后，每份改过的文件加一行 `- 重新确认: <spec|verify> sha256=<新值> <用户原话与日期>`。
 
 ### 目的
 

@@ -455,3 +455,21 @@ core-spec 把用户确认的 sha256 记进交接提交，原因见 [core-spec �
 - P2：门禁接受 `read-handoff.mjs` 拒绝的折行 trailer，把交接前的草稿提交当成最早的交接 → 改用与 `read-handoff.mjs` 相同的格式要求。
 
 修正后没有再送审。
+
+### 补充：交付中改 spec、verify，要留下用户确认并由验证者对照
+
+用户追问 owner 会不会为了好实现自己改 spec、verify。规则上不能：deliver“停下”第 1 种要求 owner 停下、由用户决定，用户用 core-spec 更新并重新确认。但机械检查拦不住 owner 自己走完一整套重新交接（改文件、算 sha256、提交带两行 trailer 的交接提交、换掉 plan 的冻结输入）：交接提交里只有哈希，没有谁确认的；独立验证者按改后的 verify 验，看不出验收被放宽。上面的修正让重新交接不再顺带破坏里程碑门禁，这条路就更顺了。用户确认后一并补上两道检查：
+
+- `check-delivery.mjs`（`--frozen-only` 和完整检查）从需求分支上最早的交接提交读出 spec、verify 当时的 sha256，与 plan.md 冻结输入的值比较。不同时，要求冻结输入里有 `- 重新确认: <spec|verify> sha256=<现值> <用户原话与日期>`，同一行里必须有原话；并列出 `git diff <第一次交接> <head> -- <文件>`，供 MR 描述“验收文档改动”一条使用。
+- `run-verifier.mjs` 在检出目录里按 verify 的路径找到这份 verify 的交接提交，第一次与最后一次的哈希不同时，在调用里写明第一次交接的提交和查看方法，验证说明新增“验收文档改动”一节：逐处列出改动，判断是否放宽了验收，各场景仍按最终的 verify 判定。调用记录写 `first_handoff`。完整检查在有改动时要求报告里有这一节。
+- 交接提交的读法抽到 `scripts/handoffs.mjs`，与 `read-handoff.mjs` 的规则一致，`milestones.mjs`、`check-delivery.mjs`、`run-verifier.mjs` 共用。
+
+依据：确认行与放行行（`cross-family`、`milestone-order`）一样由 owner 照抄用户原话，信任程度相同，作用是让改动在合入前摆到用户面前，并在计划里留下可查的记录；是否放宽交给与实现无关的另一家模型判断（pstack：审 diff 时不信 PR 描述，验证者用与作者不同家族的模型；Anthropic 提醒验证者会走捷径，所以由脚本把第一次交接交给验证者，不靠 owner 写进验证输入）。agent-prompt-rules 二-10：规则进脚本。
+
+验证：新增 14 个断言（临时仓库实跑）：
+- 第一次交接后 verify 改过、没有确认行：`--frozen-only` 返回 1；确认行的哈希不对、或没有原话：返回 1；有确认行：返回 0 并列出 diff 命令。
+- 完整检查：报告没有“验收文档改动”一节返回 1，有则返回 0。
+- `run-verifier.mjs`（假 CLI）：交接后改过时调用里写明第一次交接的提交和 `git show` 命令，调用记录有 `first_handoff`；只交接过一次时不加。
+
+其余各组用例（37、23、33、16 个，run-verifier 22、16 个）全部通过。在 !7595 的真实 plan 上，`--frozen-only` 指出 verify 自第一次交接后改过、缺少确认行。
+
