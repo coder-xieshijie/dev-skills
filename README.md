@@ -23,6 +23,14 @@
 - **检查交给另一家模型**：spec 的查漏、交付中的决定、最终验证，都请另一家模型在新 session 里做（[跨模型调用](skills/core-spec/references/cross-model.md)）。
 - **查结果，不查过程**：脚本只核对两件事：spec、verify 是用户确认的版本；最终代码由另一家模型验证通过。其余由说明文字约定，交给模型判断。
 
+一次完整的用法：
+
+1. 在目标仓库里 `/core-grill 需求是 <链接或原文>，需求文档放 <需求目录>/`，回答问题，确认决定汇总。
+2. 同一个 session 里 `/core-spec 依据决定汇总写 spec.md 和 verify.md`，看查漏结果，确认 spec 和 verify；它会提交到需求分支并开 Draft MR。
+3. 新开一个 session，`/deliver 接手 <Draft MR 链接>`。等它说可以合入，看 MR 最前面的决定清单，再合入。
+
+Codex 里把 `/` 换成 `$`。
+
 设计依据与每次改动的原因见 [deliver 的设计记录](docs/deliver-design.md)、[core-spec 的设计记录](docs/core-spec-design.md) 和 [core-grill 的设计记录](docs/core-grill-design.md)。
 
 ## Skill 列表
@@ -96,12 +104,12 @@ Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: fals
 
 ### core-spec
 
-用于多轮讨论、grill 和需求澄清结束后的定稿。默认产出两份文件，一起查漏、一起确认、一起冻结：
+用于 core-grill 或其他讨论、需求澄清结束后的定稿。默认产出两份文件，一起查漏、一起确认、一起冻结：
 
 - `spec.md`《核心决策与约束》：开头通常选 3–5 个最重要的决定，后文完整保留已确认的规则、边界和取舍，供 agent 在 plan、implement、review 阶段使用，也供人核对和汇报。交付前对照原始约定与最终确认检查遗漏、无依据新增、冲突和歧义。用于自动交付时另外写明目的、非目标、硬约束和交付与授权（目标仓库与分支、能否推送并开 MR；合入始终留给用户）；非目标只写用户明确的，没谈到时写“未单列非目标”，只有某个具体的相邻事项会改变交付范围时才问；交付与授权只由用户决定，讨论中没有定下时作为问题提出。
 - `verify.md`《验收要求》：以 spec 为唯一需求来源，写冒烟集、要求表（每条约定对应的证明方式：场景、机械检查或已有检查）、场景、回归范围、验证工具缺口和覆盖盲区。场景是用户在一个入口上完成的一次完整操作及其结果，默认从真实入口驱动，由实现 agent 自己运行；每个场景写字面检查点和在改动前代码上的基线预期，基线覆盖不到关键风险时再写一个会被拒绝的错误实现。启动和驱动应用引用项目已有的验证能力（控制命令、功能地图），缺口按需补最小的一块，并按仓库规则保留成可复用的能力。
 
-写 verify 之前，先按每个功能的用户入口和状态找 spec 没有定下的行为，会改变判定的回写 spec。写完后，用与写文档的模型不同家族的 CLI（在 Claude Code 里用 `codex exec`，在 Codex 里用 `claude -p`）开一个新 session 查漏：它读 spec、verify、原始约定（需求稿、ADR、用户最终决定的原话）和仓库，按固定的[查漏说明](skills/core-spec/references/gap-check.md)报告问题，包括 spec、verify 写到的现有快捷键、文案、默认值是否与代码一致；verify 的问题直接改，spec 的问题在原始约定里有依据的直接改、没有依据的转成给用户的问题，最多两轮。另一家模型用不了时不降级为同家族，记为查漏未完成，不请用户冻结。最后用 `scripts/freeze.mjs` 算出两份文件的 sha256 并核对二者配套，请用户一次确认；确认后两份冻结。随后把两份文件单独提交到需求分支，提交信息末尾用 `freeze.mjs --trailers` 记下两份文件的路径和 sha256，推送并开 Draft MR/PR；deliver 只凭 MR 链接就能在任意 worktree 开工；spec 不允许推送或开 MR、或仓库规则不允许提交这两份文件时，只交本地路径。
+写 verify 之前，先按每个功能的用户入口和状态找 spec 没有定下的行为，会改变判定的回写 spec。写完后，用与写文档的模型不同家族的 CLI（在 Claude Code 里用 `codex exec`，在 Codex 里用 `claude -p`）开一个新 session 查漏：它读 spec、verify、原始约定（需求稿、ADR、用户最终决定的原话；有 core-grill 的决定汇总时直接用它）和仓库，按固定的[查漏说明](skills/core-spec/references/gap-check.md)报告问题，包括 spec、verify 写到的现有快捷键、文案、默认值是否与代码一致；verify 的问题直接改，spec 的问题在原始约定里有依据的直接改、没有依据的转成给用户的问题，最多两轮。另一家模型用不了时不降级为同家族，记为查漏未完成，不请用户冻结。最后用 `scripts/freeze.mjs` 算出两份文件的 sha256 并核对二者配套，请用户一次确认；确认后两份冻结。随后把两份文件单独提交到需求分支，提交信息末尾用 `freeze.mjs --trailers` 记下两份文件的路径和 sha256，推送并开 Draft MR/PR；deliver 只凭 MR 链接就能在任意 worktree 开工；spec 不允许推送或开 MR、或仓库规则不允许提交这两份文件时，只交本地路径。
 
 只要 spec（用于方案设计、design-for-review、plan-for-agents 或汇报）时，写完并核对 spec 即交付，不写 verify、不查漏。已有定稿 spec、只需要验收时，从找 spec 缺口开始，不重新收敛 spec。
 
@@ -201,5 +209,12 @@ core-spec 把冻结的 spec.md 和 verify.md 提交到需求分支、开好 Draf
 本仓库是这些 Skill 的唯一维护源。当前十个 Skill 均设为仅手动触发，Codex 使用 `$skill-name`，Claude Code 使用 `/skill-name`。安装时链接到共享入口，再通过 CC 入口引用同一份源文件；入口注册不改变手动触发策略。
 
 共享入口使用 `~/.agents/skills/<skill-name>`，指向本仓库的 `skills/<skill-name>`；CC 入口使用 `~/.claude/skills/<skill-name>`，指向前面的共享入口。注册前检查同名入口的来源，保留已有安装；仅依赖 Codex 能力的 Skill 只注册共享入口。
+
+```bash
+ln -s <本仓库>/skills/<skill-name> ~/.agents/skills/<skill-name>
+ln -s ~/.agents/skills/<skill-name> ~/.claude/skills/<skill-name>
+```
+
+Skill 之间按相邻目录互相引用（例如 deliver 读 `../core-spec/references/cross-model.md`），引用按入口所在目录解析。用开发流程时，`core-grill`、`core-spec`、`deliver`、`review-rules`、`mr-for-human`、`explain-as-fool` 六个都要注册。
 
 添加并验证具体 Skill 后再按需启用，并在客户端确认可以找到和读取它。已有 Skill 内容更新后，入口继续读取仓库中的同一份文件；本地修改完成后通过 Git 提交、推送同步。
