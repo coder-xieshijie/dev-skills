@@ -17,7 +17,12 @@
 //    paths instead, pass --spec <path>@<sha256> --verify <path>@<sha256>.
 // 2. Each report's `head:` is the MR head, or an ancestor of it after which
 //    only Markdown files, test files and files under plan.md's directory
-//    (plan, evidence) changed.
+//    (plan, evidence) changed; spec and verify themselves always count as
+//    changes. The report's head must contain the latest handoff, so a report
+//    made before the user re-confirmed spec and verify does not hold. A test
+//    file is *.test.* / *.spec.*, anything under __tests__/, or under a test/,
+//    tests/ or e2e/ directory at the repository root or at a package root (a
+//    directory with its own package.json, pyproject.toml, go.mod or Cargo.toml).
 // 3. Each report says `verdict: PASS`.
 // 4. The model on each report's `验证模型：` line is not of the family of the
 //    model on plan.md's `- owner:` line.
@@ -97,10 +102,13 @@ const notes = [];
 
 // 1. The frozen files.
 const kinds = ["spec", "verify"];
+const frozenFiles = new Set();
+let handoffSha = null;
 if (local) {
   for (const kind of kinds) {
     const m = args[kind].match(/^(.+)@([0-9a-f]{64})$/);
     if (!m) usage(`--${kind} must be <path>@<sha256>`);
+    if (existsSync(m[1])) frozenFiles.add(path.relative(root, realpathSync(m[1])).split(path.sep).join("/"));
     if (!existsSync(m[1])) errors.push(`${kind} not found: ${m[1]}`);
     else if (sha256(readFileSync(m[1])) !== m[2]) errors.push(`${kind} is not the version the user confirmed: ${m[1]}`);
   }
@@ -117,8 +125,12 @@ if (local) {
       const m = values[i]?.trim().match(/^([^\x1d]+?)\s+sha256=([0-9a-f]{64})$/);
       if (!m) errors.push(`handoff ${sha.slice(0, 12)}: the ${kind} trailer is missing, repeated or not "<path> sha256=<64 hex>"`);
       else if (path.isAbsolute(m[1]) || m[1].split("/").includes("..")) errors.push(`handoff ${sha.slice(0, 12)}: ${kind} path must be inside the repository: ${m[1]}`);
-      else handoff[kind] = { file: path.posix.normalize(m[1]), hash: m[2] };
+      else {
+        handoff[kind] = { file: path.posix.normalize(m[1]), hash: m[2] };
+        frozenFiles.add(handoff[kind].file);
+      }
     });
+    handoffSha = sha;
     break;
   }
   if (!handoff)
@@ -143,6 +155,14 @@ if (local) {
 }
 
 // 2-4. The verification reports.
+function isAncestor(a, b) {
+  try {
+    git("merge-base", "--is-ancestor", a, b);
+    return true;
+  } catch {
+    return false;
+  }
+}
 function familyOf(token) {
   const id = token.toLowerCase().split("/").pop();
   if (/^(claude|anthropic)/.test(id)) return "anthropic";
@@ -164,21 +184,33 @@ if (!args.frozen) {
   if (owner.problem) errors.push(`plan.md ${owner.problem}`);
   const planDir = path.relative(root, realpathSync(path.dirname(args.plan))).split(path.sep).join("/");
   const inPlanDir = (f) => planDir && !planDir.startsWith("..") && f.startsWith(`${planDir}/`);
-  const notCode = (f) => /\.mdx?$/i.test(f) || /\.(test|spec)\.[^./]+$/.test(f) || /(^|\/)(__tests__|tests?|e2e)\//.test(f) || inPlanDir(f);
+  const MANIFESTS = ["package.json", "pyproject.toml", "go.mod", "Cargo.toml"];
+  const isPackageRoot = (dir) =>
+    MANIFESTS.some((m) => {
+      try {
+        git("cat-file", "-e", `${head}:${dir}/${m}`);
+        return true;
+      } catch {
+        return false;
+      }
+    });
+  const isTest = (f) => {
+    const dirs = f.split("/").slice(0, -1);
+    if (/\.(test|spec)\.[^./]+$/.test(f) || dirs.includes("__tests__")) return true;
+    return dirs.some((d, i) => ["test", "tests", "e2e"].includes(d) && (i === 0 || isPackageRoot(dirs.slice(0, i).join("/"))));
+  };
+  const notCode = (f) => !frozenFiles.has(f) && (/\.md$/i.test(f) || isTest(f) || inPlanDir(f));
 
   for (const file of args.report) {
     const text = readFileSync(file, "utf8");
     const name = path.basename(file);
     const verified = text.match(/^head:[ \t]*([0-9a-f]{40})[ \t]*$/m)?.[1];
     if (!verified) errors.push(`${name}: no \`head: <40-hex SHA>\` line`);
+    else if (handoffSha && !isAncestor(handoffSha, verified))
+      errors.push(`${name}: verified ${verified.slice(0, 12)}, which does not contain the latest handoff ${handoffSha.slice(0, 12)}; verify again against the confirmed spec and verify`);
     else if (verified !== head) {
-      let ancestor = true;
-      try {
-        git("merge-base", "--is-ancestor", verified, head);
-      } catch {
-        ancestor = false;
-      }
-      const code = ancestor ? git("diff", "--name-only", "--no-renames", verified, head).split("\n").filter((f) => f && !notCode(f)) : [];
+      const ancestor = isAncestor(verified, head);
+      const code = ancestor ? git("diff", "-z", "--name-only", "--no-renames", verified, head).split("\0").filter((f) => f && !notCode(f)) : [];
       if (!ancestor) errors.push(`${name}: verified ${verified.slice(0, 12)}, which is not an ancestor of the MR head ${head.slice(0, 12)}; verify the MR head`);
       else if (code.length)
         errors.push(`${name}: verified ${verified.slice(0, 12)}; code changed since (${code.slice(0, 5).join(", ")}${code.length > 5 ? ", ..." : ""}); verify the MR head`);

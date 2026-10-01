@@ -40,7 +40,7 @@ claude -p "按 <gap-check.md 的绝对路径> 查漏。spec：<路径>，sha256 
 
 ### 运行应用：独立验证
 
-验证者要启动和操作应用，三个 CLI 都不带沙箱：Codex 用 `-s danger-full-access`，Claude 用 `--permission-mode bypassPermissions`，MiniMax Code 用 `--permission full`。在检出待验证 head 的专用目录里运行，证据目录用 `--add-dir` 加入（`mcode` 用 `--cwd`）。以 60 分钟为一个周期，用 `perl -e 'alarm 3600; exec @ARGV'` 包住命令（macOS 没有 `timeout`）：
+验证者要启动和操作应用，三个 CLI 都不带沙箱：Codex 用 `-s danger-full-access`，Claude 用 `--permission-mode bypassPermissions`，MiniMax Code 用 `--permission full`。在检出待验证 head 的专用目录里运行（`mcode` 用 `--cwd <验证检出目录>`），证据目录用 `--add-dir` 加入；`mcode` 没有这个参数，证据目录的绝对路径写在验证输入里。以 60 分钟为一个周期，用 `perl -e 'alarm 3600; exec @ARGV'` 包住命令（macOS 没有 `timeout`）：
 
 ```bash
 perl -e 'alarm 3600; exec @ARGV' codex exec -C <验证检出目录> -s danger-full-access --add-dir <证据目录> -o <报告文件> "按 <verifier-brief.md 的绝对路径> 验证。验证输入：<路径>。" < /dev/null

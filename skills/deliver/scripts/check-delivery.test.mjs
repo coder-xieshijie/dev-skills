@@ -51,7 +51,9 @@ function repo() {
 }
 
 function check(r, ...args) {
-  const result = spawnSync("node", [SCRIPT, "--repo", r.dir, ...args], { encoding: "utf8" });
+  // Git's default quotePath, so non-ASCII paths come out quoted unless read with -z.
+  const env = { ...process.env, GIT_CONFIG_COUNT: "1", GIT_CONFIG_KEY_0: "core.quotePath", GIT_CONFIG_VALUE_0: "true" };
+  const result = spawnSync("node", [SCRIPT, "--repo", r.dir, ...args], { encoding: "utf8", env });
   return { code: result.status, out: result.stdout + result.stderr };
 }
 
@@ -62,7 +64,11 @@ const report = (head, { verdict = "PASS", model = "gpt-6.1-sol" } = {}) =>
 function delivered(reportOptions) {
   const r = repo();
   r.handoff("spec v1\n", "verify v1\n");
-  r.commit("code", { "src/app.ts": "export const a = 2;\n", [`${REQ}/plan.md`]: "- owner: claude-opus-5-5\n" });
+  r.commit("code", {
+    "src/app.ts": "export const a = 2;\n",
+    "packages/x/package.json": "{}\n",
+    [`${REQ}/plan.md`]: "- owner: claude-opus-5-5\n",
+  });
   const head = r.git("rev-parse", "HEAD");
   r.write(`${REQ}/evidence/verification-a.md`, report(head, reportOptions));
   return { ...r, head, plan: path.join(r.dir, REQ, "plan.md"), report: path.join(r.dir, REQ, "evidence/verification-a.md") };
@@ -157,6 +163,7 @@ test("full: only plan, evidence, docs and tests changed after the report", () =>
     [`${REQ}/plan.md`]: "- owner: claude-opus-5-5\n- done\n",
     [`${REQ}/evidence/shot.png`]: "png",
     "README.md": "readme\n",
+    "docs/说明.md": "中文路径\n",
     "src/app.test.ts": "test\n",
     "packages/x/tests/a.ts": "test\n",
   });
@@ -171,6 +178,22 @@ test("full: code changed after the report", () => {
   const { code, out } = full(r);
   assert.equal(code, 1);
   assert.match(out, /code changed since \(src\/app.ts\)/);
+});
+
+test("full: a directory named tests inside the source tree is code", () => {
+  const r = delivered();
+  r.commit("page", { "src/app/tests/page.tsx": "export default 1;\n" });
+  const { code, out } = full(r);
+  assert.equal(code, 1);
+  assert.match(out, /code changed since \(src\/app\/tests\/page.tsx\)/);
+});
+
+test("full: a report made before the user re-confirmed spec and verify", () => {
+  const r = delivered();
+  r.handoff("spec v2\n", "verify v2\n");
+  const { code, out } = full(r);
+  assert.equal(code, 1);
+  assert.match(out, /does not contain the latest handoff/);
 });
 
 test("full: report head is not an ancestor of the MR head", () => {

@@ -31,7 +31,7 @@ spec.md、verify.md 已冻结并提交在需求分支上，plan.md 引用它们�
 - owner: <你的模型 ID，例如 claude-opus-5-5>
 ```
 
-`check-delivery.mjs` 读 owner 一行，用来确认独立验证者来自另一家。
+`check-delivery.mjs` 读 owner 一行，用来确认独立验证者来自另一家。只交了本地路径时，交接一行写“本地”，spec、verify 两行写绝对路径和用户给的 sha256（`- spec: <绝对路径> sha256=<值>`），接手的 session 用它们运行 `check-delivery.mjs --spec <路径>@<sha256> --verify <路径>@<sha256>`。
 
 ### 目的
 
