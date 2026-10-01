@@ -28,7 +28,7 @@ description: spec.md 和 verify.md 确认并冻结后，由一个 owner 实现�
    node <本 Skill 目录>/scripts/check-delivery.mjs --plan <plan.md> --report <验证报告> --head <MR head>
    ```
 
-   它检查五件事：spec.md、verify.md 的 sha256 与记在 plan.md 里的确认版本一致；验证报告对应 MR head，或者对应更早的 head、之后只改了测试、文档和 lint 配置；报告完整、总体结论为 PASS、没有 FAIL，只有 verify 列出的覆盖盲区可以是 UNVERIFIED；报告来自 `run-verifier.mjs` 的调用，之后没被改过，验证者的模型家族与你不同；写了场景的里程碑都有检查记录，记录连续覆盖需求分支，并且早于之后的提交。
+   它检查五件事：spec.md、verify.md 的 sha256 与记在 plan.md 里的确认版本一致；验证报告对应 MR head，或者对应更早的 head、之后只改了测试、文档和 lint 配置；报告完整、总体结论为 PASS、没有 FAIL，只有 verify 列出的覆盖盲区可以是 UNVERIFIED；报告来自 `run-verifier.mjs` 的调用，之后没被改过，验证者的模型家族与你不同；写了场景的里程碑都有检查记录，记录连续覆盖需求分支，每个里程碑的第一次检查早于之后的提交。
 4. **MR 可合入。** 已取消 Draft；CI 在最终 head 上通过；每条评审意见都已处理，改了代码或回复了理由。授权合入的，合入；没有授权的，停在可合入。
 5. **plan.md 反映实际情况**，并已向用户汇报（见“汇报”一节）。
 
@@ -50,7 +50,7 @@ description: spec.md 和 verify.md 确认并冻结后，由一个 owner 实现�
 
 **里程碑。** 每个里程碑是一段能单独验证的行为，对应 verify 的若干场景。依赖某项验证能力的场景执行前，先补上这项能力：优先复用项目已有的验证能力，只补本次需要的最小缺口，按仓库规则保留成可复用的入口。一个里程碑做完的标准：它对应的场景在运行中的应用上跑通（verify 列出的覆盖盲区里的检查点除外），质量命令通过，里程碑检查没有未解决的问题，已提交，plan.md 的进度已更新。场景或质量命令失败先修，再进入下一个里程碑。
 
-**里程碑检查。** 每个里程碑的场景跑通后，开一个新上下文的 subagent，按[里程碑检查说明](references/milestone-check.md)检查，调用时引用这份说明，不另写。subagent 继承你的模型和推理强度：Claude Code 用 general-purpose 类型，Codex 用默认 agent；不传模型和推理强度参数，也不用 Explore 这类自带配置的类型。只给它说明里列出的输入，不给你的推理过程。检查在后台进行时，你可以接着做下一个里程碑，但下一个里程碑的第一个提交要等这次检查的结果处理完：`check-delivery.mjs` 会核对检查记录早于之后的提交。它只报告，由你修改；改完请它再查一次，每个里程碑最多两轮。每一轮的报告用 `scripts/record-milestone-check.mjs --plan <plan.md> --milestone <里程碑编号> --range <起>..<止> --report <报告文件>` 存下，范围就是交给它的起止 commit。它报告的模型 ID 与你的不同，这次检查作废，重开一个。把它报告的模型 ID 和结论记进 plan.md 的进度；两轮后仍未解决的问题也记在那里，在请独立验证之前解决。
+**里程碑检查。** 每个里程碑的场景跑通后，开一个新上下文的 subagent，按[里程碑检查说明](references/milestone-check.md)检查，调用时引用这份说明，不另写。subagent 继承你的模型和推理强度：Claude Code 用 general-purpose 类型，Codex 用默认 agent；不传模型和推理强度参数，也不用 Explore 这类自带配置的类型。只给它说明里列出的输入，不给你的推理过程。检查在后台进行时，你可以接着做下一个里程碑，但下一个里程碑的第一个提交要等这次检查的结果处理完：`check-delivery.mjs` 会核对每个里程碑的第一次检查早于之后的提交。它只报告，由你修改；改完请它再查一次，每个里程碑最多两轮。每一轮的报告用 `scripts/record-milestone-check.mjs --plan <plan.md> --milestone <里程碑编号> --range <起>..<止> --report <报告文件>` 存下，范围就是交给它的起止 commit。它报告的模型 ID 与你的不同，这次检查作废，重开一个。把它报告的模型 ID 和结论记进 plan.md 的进度；两轮后仍未解决的问题也记在那里，在请独立验证之前解决。
 
 **绑定命令。** verify.md 里标为“实现后绑定命令”的场景，把实际命令写在 plan.md 的“验证与验收”一节，不改 verify.md。
 
