@@ -13,7 +13,12 @@
 //
 // 1. spec and verify still match the sha256 recorded under plan.md's frozen
 //    inputs (the hashes the user confirmed), so no scenario was made to pass
-//    by editing the acceptance docs.
+//    by editing the acceptance docs. When either differs from the first
+//    handoff commit on the requirement branch, the user changed it during
+//    delivery: plan.md must record their confirmation of the current hash
+//    (`- 重新确认: verify sha256=<hex> <the user's words and date>`), the
+//    change is listed for the MR, and the full gate wants the verifier's
+//    "验收文档改动" section, in which it judges whether acceptance got looser.
 // 2. The verification report names the same head as the MR. Without --head,
 //    the HEAD of the git repository that contains plan.md is used. A report
 //    for an earlier head still holds when that head is an ancestor of the MR
@@ -46,7 +51,8 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
-import { checkMilestones, codeRepo } from "./milestones.mjs";
+import { requirementHandoffs } from "./handoffs.mjs";
+import { baseBranch, baseRefIn, checkMilestones, codeRepo, frozenPaths, gitIn } from "./milestones.mjs";
 import { familyOf } from "./model-family.mjs";
 import { isDeclaredBlindSpot, parseReport, parseVerify, reportProblems } from "./report-format.mjs";
 import { reuseCheck } from "./report-reuse.mjs";
@@ -147,7 +153,60 @@ for (const kind of ["spec", "verify"]) {
         `(recorded ${entry.hash.slice(0, 12)}, now ${actual.slice(0, 12)})`,
     );
 }
-if (args["frozen-only"]) finish("spec and verify match the frozen hashes");
+
+// Changes to spec or verify since the first handoff (check 1, continued).
+// The handoffs are this requirement's handoff commits after the base branch;
+// not being able to look is an error, not "no change".
+function acceptanceChanges(headSha) {
+  const none = { changed: [], first: null };
+  if (!repo) {
+    notes.push("spec.md is not inside a git repository, so changes since the first handoff cannot be checked");
+    return none;
+  }
+  if (!headSha) {
+    errors.push("cannot read the code repository's HEAD to look for changes since the first handoff");
+    return none;
+  }
+  const git = gitIn(repo);
+  const branch = baseBranch(plan);
+  const baseRef = baseRefIn(git, plan);
+  if (!branch || !baseRef) {
+    errors.push(
+      branch
+        ? `the base branch ${branch} is not in ${repo}; fetch it and check again`
+        : "plan.md has no `- 基线: <branch> @ <commit>` line, so the first handoff cannot be found",
+    );
+    return none;
+  }
+  const first = requirementHandoffs(git, baseRef, headSha, frozenPaths(plan, planDir, repo))[0];
+  if (!first) return none;
+  const changed = [];
+  for (const kind of ["spec", "verify"]) {
+    const now = frozen.get(kind)?.hash;
+    if (!now || first[kind].hash === now) continue;
+    changed.push(kind);
+    notes.push(
+      `${kind} changed since the first handoff ${first.commit.slice(0, 12)} (${first[kind].hash.slice(0, 12)} -> ${now.slice(0, 12)}); ` +
+        `list it in the MR: git diff ${first.commit.slice(0, 12)} ${headSha.slice(0, 12)} -- ${first[kind].file}`,
+    );
+    const confirmed = new RegExp(`^[ \\t]*-[ \\t]*重新确认:[ \\t]*${kind}[ \\t]+sha256=${now}[ \\t]+\\S`, "m");
+    if (!confirmed.test(plan))
+      errors.push(
+        `${kind} is not the version of the first handoff, and plan.md has no \`- 重新确认: ${kind} sha256=${now} <the user's words and date>\` line. ` +
+          "Only the user changes spec and verify (deliver, 停下); record their words when they confirmed this version",
+      );
+  }
+  return { changed, first };
+}
+
+if (args["frozen-only"]) {
+  let repoHead;
+  try {
+    repoHead = repo ? execFileSync("git", ["-C", repo, "rev-parse", "HEAD"], { encoding: "utf8" }).trim() : undefined;
+  } catch {}
+  acceptanceChanges(repoHead);
+  finish("spec and verify match the frozen hashes");
+}
 
 const reportPath = path.resolve(args.report);
 const report = readFileSync(reportPath, "utf8");
@@ -164,6 +223,13 @@ if (head === undefined) {
   }
 }
 if (!/^[0-9a-f]{40}$/.test(head)) usage(`--head must be a 40-hex SHA: ${head}`);
+
+const acceptance = acceptanceChanges(head);
+if (acceptance.changed.length && !/验收文档改动/.test(report))
+  errors.push(
+    "spec or verify changed since the first handoff, but the report has no 验收文档改动 section; " +
+      "run the verifier again with the current run-verifier.mjs, which points it at the first handoff",
+  );
 
 // A report for an earlier head holds when only tests, docs or lint config
 // changed since; otherwise the checks below compare against the MR head.
@@ -249,6 +315,11 @@ if (record) {
   if (record.report_sha256 !== sha256(report))
     errors.push("report changed after the verifier returned it (sha256 differs from the run record)");
   if (!record.session_id) errors.push("run record has no session_id");
+  if (acceptance.changed.length && record.first_handoff !== acceptance.first.commit)
+    errors.push(
+      `the verifier was pointed at ${record.first_handoff ? `first handoff ${String(record.first_handoff).slice(0, 12)}` : "no first handoff"}, ` +
+        `not ${acceptance.first.commit.slice(0, 12)}; run it again with --base <the MR's target branch>`,
+    );
   if (!record.model) errors.push("run record has no model");
   const owner = plan.match(/^\s*-\s*owner:.*\bfamily=(\S+)/m)?.[1];
   const waived = /^\s*-\s*cross-family:\s*waived\b/m.test(plan);

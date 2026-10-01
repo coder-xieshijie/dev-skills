@@ -2,7 +2,7 @@
 // Start the deliver Skill's independent verification in a separate session of
 // another model family, and leave a run record that check-delivery.mjs reads.
 //
-//   node run-verifier.mjs --cli <codex|claude|mcode> --checkout <dir> --head <sha>
+//   node run-verifier.mjs --cli <codex|claude|mcode> --checkout <dir> --head <sha> --base <ref>
 //                         --inputs <inputs.md> --verify <verify.md> --report <report.md>
 //                         [--model <provider/model>] [--effort <level>] [--add-dir <dir>]...
 //                         [--timeout <min>] [--stall <min>] [--brief <verifier-brief.md>]
@@ -16,6 +16,13 @@
 // grows while the CLI runs (claude and mcode print stream-json events), and
 // <report>.status.json says what the run is doing and when its evidence last
 // changed.
+//
+// --base is the MR's target branch as a ref in the checkout (e.g.
+// origin/main). When this requirement's handoff commits after it show that
+// spec or verify changed after the first handoff, the call names that commit,
+// so the verifier compares the versions and reports whether acceptance got
+// looser; the run record keeps it as first_handoff, and check-delivery.mjs
+// checks it against the first handoff it finds itself.
 //
 // A run ends by itself: after --timeout minutes (default 90), or after
 // --stall minutes (default 20) in which no file under the --add-dir
@@ -57,11 +64,12 @@ import { appendFileSync, existsSync, lstatSync, mkdtempSync, readdirSync, readFi
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { requirementHandoffs } from "./handoffs.mjs";
 import { familyOf } from "./model-family.mjs";
 import { parseReport, parseVerify, reportProblems } from "./report-format.mjs";
 
 const USAGE =
-  "usage: run-verifier.mjs --cli <codex|claude|mcode> --checkout <dir> --head <sha> " +
+  "usage: run-verifier.mjs --cli <codex|claude|mcode> --checkout <dir> --head <sha> --base <ref> " +
   "--inputs <inputs.md> --verify <verify.md> --report <report.md> [--model <provider/model>] " +
   "[--effort <level>] [--add-dir <dir>]... [--timeout <min>] [--stall <min>] [--brief <path>]\n" +
   "       run-verifier.mjs --preflight --cli <codex|claude|mcode> [--model <provider/model>] [--effort <level>] " +
@@ -74,7 +82,7 @@ function fail(code, message) {
 }
 
 const FLAGS = ["preflight"];
-const KEYS = ["cli", "checkout", "head", "inputs", "verify", "report", "model", "effort", "add-dir", "brief",
+const KEYS = ["cli", "checkout", "head", "base", "inputs", "verify", "report", "model", "effort", "add-dir", "brief",
   "timeout", "stall", "owner-family"];
 const args = { "add-dir": [] };
 const argv = process.argv.slice(2);
@@ -346,7 +354,7 @@ function run(cmd, cwd, out, { logPath, statusPath, watch, own, limitMs, stallAft
 }
 
 if (args.preflight) {
-  for (const key of ["checkout", "head", "inputs", "verify", "report"])
+  for (const key of ["checkout", "head", "base", "inputs", "verify", "report"])
     if (args[key]) fail(2, `--preflight takes no --${key}`);
   const scratch = mkdtempSync(path.join(tmpdir(), "run-verifier-preflight-"));
   const out = path.join(scratch, "last-message.md");
@@ -367,7 +375,7 @@ if (args.preflight) {
   process.exit(0);
 }
 
-for (const key of ["cli", "checkout", "head", "inputs", "verify", "report"])
+for (const key of ["cli", "checkout", "head", "base", "inputs", "verify", "report"])
   if (!args[key]) fail(2, `--${key} is required`);
 if (!/^[0-9a-f]{40}$/.test(args.head)) fail(2, `--head must be a 40-hex SHA: ${args.head}`);
 
@@ -402,8 +410,30 @@ const before = checkoutState();
 if (before.head !== args.head) fail(2, `checkout HEAD ${before.head} is not --head ${args.head}`);
 if (before.dirty) fail(2, "checkout has uncommitted changes");
 
+// When the user changed spec or verify after the first handoff, point the
+// verifier at the first version itself, so the owner's inputs cannot leave
+// it out.
+let firstHandoff = null;
+try {
+  git("rev-parse", "--verify", "--quiet", `${args.base}^{commit}`);
+} catch {
+  fail(2, `--base ${args.base} is not a commit in the checkout; fetch the MR's target branch`);
+}
+try {
+  const verifyRepo = execFileSync("git", ["-C", path.dirname(verifyPath), "rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
+  const verifyFile = path.relative(realpathSync(verifyRepo), realpathSync(verifyPath)).split(path.sep).join("/");
+  const found = requirementHandoffs(git, args.base, args.head, { verify: verifyFile });
+  const [first, last] = [found[0], found.at(-1)];
+  if (first && (first.spec.hash !== last.spec.hash || first.verify.hash !== last.verify.hash)) firstHandoff = first;
+} catch {}
+
 const prompt =
   `按 ${brief} 验证。本次输入见 ${inputs}。` +
+  (firstHandoff
+    ? `spec 或 verify 在第一次交接（检出目录里的提交 ${firstHandoff.commit}）之后改过，` +
+      `当时的版本用 git show ${firstHandoff.commit}:${firstHandoff.spec.file} 和 git show ${firstHandoff.commit}:${firstHandoff.verify.file} 查看；` +
+      "按验证说明“验收文档改动”一节报告。"
+    : "") +
   "把验证报告作为你的最终回复输出，调用方会把它原样保存为报告文件。";
 
 // Report completeness: head, verdict, model line, one complete row per
@@ -467,6 +497,8 @@ const record = {
   inputs,
   inputs_sha256: sha256(readFileSync(inputs)),
   verify: verifyPath,
+  base: args.base,
+  first_handoff: firstHandoff?.commit ?? null,
   report: path.basename(report),
   report_sha256: callOk && result.text.trim() ? sha256(result.text) : null,
   started_at: started,

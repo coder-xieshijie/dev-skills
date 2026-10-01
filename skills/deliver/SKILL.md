@@ -59,7 +59,7 @@ description: spec.md 和 verify.md 确认并冻结后，由一个 owner 实现�
 **独立验证。** 除 verify 列出的覆盖盲区外，全部场景自验通过后，请另一家模型在单独的 session 中验证当前 head。先在证据目录写验证输入，列出[验证说明](references/verifier-brief.md)要的各项，包括场景 ID 对应的实际命令（取自 plan.md 的“验证与验收”一节）。其中允许验证者使用的环境，按项目验证能力的说明给一个独立的实例（profile、端口、数据目录），不与你正在用的实例共用。然后在检出这个 head 的专用目录里运行：
 
 ```bash
-node <本 Skill 目录>/scripts/run-verifier.mjs --cli <codex|claude|mcode> --checkout <验证检出目录> --head <head> --inputs <验证输入> --verify <verify.md> --report <证据目录>/verification-<head 前 12 位>.md --add-dir <证据目录> [--effort <推理强度>]
+node <本 Skill 目录>/scripts/run-verifier.mjs --cli <codex|claude|mcode> --checkout <验证检出目录> --head <head> --base <目标分支的远端引用> --inputs <验证输入> --verify <verify.md> --report <证据目录>/verification-<head 前 12 位>.md --add-dir <证据目录> [--effort <推理强度>]
 ```
 
 `--cli` 按[跨模型调用](../core-spec/references/cross-model.md)选与你不同的家族。验证者要启动和操作应用，三个 CLI 都不带沙箱运行（codex 用 `-s danger-full-access`）。脚本在总时长超过 `--timeout` 或连续 `--stall` 分钟没有新证据时停掉验证者；运行中 `.log` 持续写入，`.status.json` 记着最近一次写证据的时间。脚本返回 3 表示这个 CLI 用不了（包括超时、停滞），换另一个不同家族的 CLI 再试；都不可用时，不用同家族代替，做完其余工作，记为“跨模型验证未完成”，按“停下”的第 2 种情况处理。只有用户明确放宽时才用同家族，并在 plan.md 的冻结输入里记一行 `- cross-family: waived <用户原话与日期>`。验证者只报告，由你修改；改完后对新 head 重新验证，验证者照常完整验证。反复失败时，按“停下”第 4 种判断是否卡住。独立验证通过后代码又有改动（CI 修复、评审意见）时也一样；只改了测试、文档或 lint 配置时，`check-delivery.mjs` 沿用原报告，不用重新验证。
@@ -75,7 +75,7 @@ node <本 Skill 目录>/scripts/run-verifier.mjs --cli <codex|claude|mcode> --ch
 3. 需要授权范围以外的不可逆操作，例如合入、删除共享数据、对外发消息、改动共享环境。
 4. 卡住：同一个失败（场景、里程碑检查、独立验证或 CI），一种修法连续 3 次无效就换思路；换了思路后再连续 3 次仍没有进展。停下时写明试过的修法和证据，不宣称通过。
 
-停下之前，先把不受影响的部分做完；在 plan.md 的进度里记下卡在哪里，提交需求分支，授权允许推送时推送；给用户的问题写清楚可选项、各自的影响和你的建议。spec 和 verify 在交付中不修改：用户做出决定后，由用户用 core-spec 更新、重新确认，按原来的交接方式交回；你拉取需求分支后重新运行 `read-handoff.mjs`，只交本地路径时读取新路径并用用户给的新值，把新的冻结输入写进 plan.md，再继续。
+停下之前，先把不受影响的部分做完；在 plan.md 的进度里记下卡在哪里，提交需求分支，授权允许推送时推送；给用户的问题写清楚可选项、各自的影响和你的建议。spec 和 verify 在交付中不修改：用户做出决定后，由用户用 core-spec 更新、重新确认，按原来的交接方式交回；你拉取需求分支后重新运行 `read-handoff.mjs`，只交本地路径时读取新路径并用用户给的新值，把新的冻结输入写进 plan.md，并按[计划格式](references/plan-format.md)记下用户重新确认时的原话，再继续。
 
 ## MR
 
@@ -85,6 +85,7 @@ MR 描述写给决定是否合入的人，先写结论：
 - 场景结果：每个场景的结果和证据路径；独立验证用的模型、结论和对应的 head。
 - 自主决定：决策日志里值得用户事后看的条目。
 - 未验证：覆盖盲区里的检查点、UNVERIFIED 的场景和原因；跨模型要求没满足时写明。
+- 验收文档改动：第一次交接后 spec、verify 改了什么，用户何时怎样确认，验证者对是否放宽了验收的判断。
 - 补上的验证能力，以及复盘发现的仓库缺口。
 
 评审者需要阅读路线时，按同仓库的 [mr-for-human](../mr-for-human/SKILL.md) 写。
