@@ -42,6 +42,35 @@ export function isNoise(file, isPackageRoot = () => false) {
   return null;
 }
 
+// Files changed between two commits, each with its kind: "test", "docs",
+// "lint config", or null for anything else (frozen files are always null).
+// Shared by reuseCheck() and select-scenarios.mjs, so "only tests, docs or
+// lint config changed" means the same thing to both.
+export function changedFiles({ repo, from, to, frozen = [] }) {
+  const git = gitIn(repo);
+  const roots = new Map();
+  const isPackageRoot = (dir) => {
+    if (!roots.has(dir))
+      roots.set(
+        dir,
+        MANIFESTS.some((m) => {
+          try {
+            git("cat-file", "-e", `${to}:${dir ? `${dir}/` : ""}${m}`);
+            return true;
+          } catch {
+            return false;
+          }
+        }),
+      );
+    return roots.get(dir);
+  };
+  // -z keeps non-ASCII paths unescaped (core.quotePath would quote them).
+  return git("diff", "--name-only", "--no-renames", "-z", from, to)
+    .split("\0")
+    .filter(Boolean)
+    .map((file) => ({ file, kind: frozen.includes(file) ? null : isNoise(file, isPackageRoot) }));
+}
+
 // Returns { ok, files: [{ file, kind }], problem }. frozen lists the frozen
 // spec.md and verify.md as repository-relative paths.
 export function reuseCheck({ repo, verifiedHead, head, frozen = [] }) {
@@ -55,27 +84,7 @@ export function reuseCheck({ repo, verifiedHead, head, frozen = [] }) {
       problem: `the report's head ${verifiedHead.slice(0, 12)} is not an ancestor of the MR head ${head.slice(0, 12)}; verify the MR head`,
     };
   }
-  const roots = new Map();
-  const isPackageRoot = (dir) => {
-    if (!roots.has(dir))
-      roots.set(
-        dir,
-        MANIFESTS.some((m) => {
-          try {
-            git("cat-file", "-e", `${head}:${dir ? `${dir}/` : ""}${m}`);
-            return true;
-          } catch {
-            return false;
-          }
-        }),
-      );
-    return roots.get(dir);
-  };
-  // -z keeps non-ASCII paths unescaped (core.quotePath would quote them).
-  const files = git("diff", "--name-only", "--no-renames", "-z", verifiedHead, head)
-    .split("\0")
-    .filter(Boolean)
-    .map((file) => ({ file, kind: frozen.includes(file) ? null : isNoise(file, isPackageRoot) }));
+  const files = changedFiles({ repo, from: verifiedHead, to: head, frozen });
   const changedFrozen = files.filter((f) => frozen.includes(f.file));
   if (changedFrozen.length)
     return {

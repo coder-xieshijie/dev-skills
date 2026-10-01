@@ -538,3 +538,31 @@ Codex 审查（`gpt-6-astra`，推理强度 high）第一版报出 5 条（1 条
 - P2：条目原文塞进命令行，长了会超出参数长度（E2BIG），被当成 CLI 故障 → 原文写进报告旁的文件，调用说明只写位置。
 
 修正后没有再送审。
+
+## 里程碑检查先审代码；修复后的重跑由脚本选（2026-10-01）
+
+来源：agent-archon !7595 的交付复盘。M2 从提交到第二轮检查通过用了约 4 小时 50 分钟，其中场景跑了三轮（80、36、72 分钟）。第一轮检查在两轮场景之后才开始，报出的两个代码问题（取消且无用量的请求按 0 计、旧总结项启动后仍算待处理）都不依赖场景结果，修完又跑了第三轮。M3 修复后，owner 凭判断挑了 11 个场景重跑，漏了 S34：它经过的 token 预算路径被其中一个修复改了，M3 的第一轮检查才指出来。
+
+### 改动
+
+- **SKILL.md“里程碑检查”**：每一轮分代码和证据两部分，各开一个 subagent。代码部分在里程碑提交后就开始，与场景同时进行；证据部分在场景跑完后开始；范围同为一段起止 commit，终点是场景所跑的 head。这一轮报出的问题先在工作区改好，等这一轮存下再提交；两份报告按代码、证据的顺序放进一个文件，由 `record-milestone-check.mjs` 存为一轮。哪一部分的模型 ID 不对，那一部分作废重开。
+- **milestone-check.md**：拆成“代码部分：读改动”和“证据部分：看证据”；报告多写一行 `part: code|evidence`。证据要在范围终点的 commit 上跑出，更早 head 上的证据只有在 `select-scenarios.mjs` 的输出表明之后的改动不影响该场景时才算数。
+- **SKILL.md“里程碑”**：修复后重跑哪些场景，由 `scripts/select-scenarios.mjs` 选，不凭印象挑；最终 head 照常跑全部场景。
+- **plan-format.md“验证与验收”**：场景写成 `场景 | 命令 | 涉及路径` 的表；涉及路径是这个场景经过的代码，写成相对仓库根目录的 glob。
+- **scripts/select-scenarios.mjs**（新）：读这张表和 `--from..--to` 之间改动的文件。只改测试、文档、lint 配置的不触发（与报告沿用同一套判定）；改了冻结的 spec、verify，或有文件没有任何场景认领，选全部场景；其余按涉及路径选。冒烟集一行、涉及路径为空或 `*` 的行每次都选，`--failed` 追加上次失败的场景。表缺失、缺列、某行没有场景 ID 时返回 1。
+- **scripts/report-reuse.mjs**：把列出改动文件并分类的部分提成 `changedFiles()`，`reuseCheck()` 与 `select-scenarios.mjs` 共用。
+- `milestones.mjs`、`record-milestone-check.mjs`、`check-delivery.mjs` 不改：一轮仍是一条记录，记录脚本只存正文和它的 sha256，不解析正文；门禁的顺序规则（第一次检查早于之后的提交）照旧，所以修复要等这一轮存下再提交。
+
+### 依据
+
+- 审代码不需要场景结果，可以并行：OpenAI Codex subagents “use parallel agents for read-heavy tasks such as exploration, tests, triage, and summarization”；Anthropic 多代理 “A verifier that only needs to run tests and report results does not require implementation context”，Fable 5.1 让主代理在子代理运行时继续工作；pstack 的审代码 lane 与场景 lane 在同一轮扇出，问题合成一次退回。
+- 补丁一变就要重新验证，不凭推理收窄：pstack shipping “Re-verify anything else when the patch changed”；Anthropic 多代理提醒验证者会走捷径。所以中间轮的选择交给脚本，并且认不出的改动一律全选；最终 head 照常全量。
+- 中间轮可以只跑相关部分：OpenAI GPT-6 “broaden or repeat testing only when new changes, failures, or unresolved concerns justify it”；Anthropic 编译器实验的 `--fast` 抽样用于迭代、全量交给 CI。
+- 规则进脚本，prompt 只写边界（agent-prompt-rules 二-10）：SKILL 只加一句“用脚本选”，怎样选写在脚本里。
+
+### 验证
+
+- `select-scenarios.mjs`：新增 47 个断言（临时仓库实跑，super-auto `deliver-select-cases.sh`），覆盖用法错误、缺节、缺列、行没有场景 ID、无改动、只改测试和文档、`**` 与 `*` 的区别、目录模式不误配同名前缀（`pkg/ui` 不匹配 `pkg/uix`）、一行多个场景、没人认领的文件、`.harness/docs/` 下的冻结 verify、`--failed`、`--json`、空涉及路径与 `*`。故意改坏三处（冻结文件按普通文件处理、目录模式按前缀匹配、没人认领的文件不触发全选），各有断言失败。
+- 在 !7595 的真实提交上回放（super-auto `deliver-select-replay-7595.sh`，按入口给 32 个场景配了粗粒度的涉及路径，只读 git）：M3 场景跑在 `512fd9792f` 上，修到 `69696e4f2c` 时改了 agent-core、Goal 账本与执行器、TUI 共 19 个产品文件，脚本选出全部 32 个场景，包括 owner 手工漏掉的 S34。这次回放也说明：修复改到运行时核心时，脚本不会比全量少跑；它省的是只碰个别目录的修复，主要作用是不漏选。
+- `report-reuse.mjs` 的改动：同一脚本另有 8 个断言直接调用 `reuseCheck()`（只改测试与根目录 README 时沿用；改了产品文件、改了冻结的 verify、报告的 head 不是祖先时不沿用），在重构前后结果相同；原有各组用例（rebase 33、重新交接 16、重新冻结 29、口径偏差 58 个断言）全部通过。
+- 未验证：两部分检查在真实交付中的效果；owner 写涉及路径的粒度是否够细。下一个需求观察。

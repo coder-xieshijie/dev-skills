@@ -38,7 +38,7 @@ description: spec.md 和 verify.md 确认并冻结后，由一个 owner 实现�
 |---|---|---|
 | plan.md | 与 spec 同目录；用户指定了位置时放在那里 | 按[计划格式](references/plan-format.md)写的活文档，随代码提交；仓库规则不允许提交时不提交，MR 里给出摘要 |
 | 证据 | 与 plan.md 同目录的 `evidence/` | 场景的实际输出、读回的状态、截图或录像。plan.md 和 MR 只写路径和一句结论；是否提交按仓库规则 |
-| 里程碑检查记录 | `evidence/milestone-<里程碑编号>-r<轮次>.md` | `record-milestone-check.mjs` 写：检查的 commit 范围、保存时间和 subagent 的报告原文 |
+| 里程碑检查记录 | `evidence/milestone-<里程碑编号>-r<轮次>.md` | `record-milestone-check.mjs` 写：检查的 commit 范围、保存时间和两个 subagent 的报告原文（代码部分在前，证据部分在后） |
 | 验证输入 | `evidence/verification-<head 前 12 位>.inputs.md` | 你写：验证说明列出的各项输入，包括允许验证者使用的环境 |
 | 验证报告与调用记录 | `evidence/verification-<head 前 12 位>.md`、`.run.json`、`.log` | `run-verifier.mjs` 写：报告是验证者按[验证说明](references/verifier-brief.md)格式给出的最终回复；调用记录含 CLI、模型家族、模型、session id、head 和报告的 sha256 |
 | 提交 | 需求分支，接在交接提交之后 | 按里程碑提交 |
@@ -48,9 +48,9 @@ description: spec.md 和 verify.md 确认并冻结后，由一个 owner 实现�
 
 **开工与接续。** 用平台 CLI 读出 MR/PR 的源分支和目标分支，在你自己的 worktree 里检出源分支，新建的 worktree 也可以，并 fetch 目标分支；从交接提交往后，这个分支只有你写入。然后运行 `node <本 Skill 目录>/scripts/read-handoff.mjs --repo <worktree> --base <目标分支的远端引用，例如 origin/main> --mr <MR/PR 链接>`，用户给了 sha256 时加上 `--expect-spec`、`--expect-verify`。它只在这个 MR 自己的提交里找交接提交，核对两份文件与记录的 sha256 一致、之后没有提交改过、没有未提交或已暂存的改动，输出冻结输入的 spec、verify、交接三行；报出问题就停下，把问题告诉用户。找不到交接提交时（例如交接早于这条规则），向用户要两个 sha256，从 MR 描述或 spec 所在目录取得两份文件的路径，手写 spec、verify 两行和交接一行。把这三行写进 plan.md 的冻结输入，连同基线 commit 和你自己的模型家族（见[计划格式](references/plan-format.md)），然后运行 `node <本 Skill 目录>/scripts/check-delivery.mjs --plan <plan.md> --frozen-only`：文件与确认的版本不一致就停下，告诉用户哪份文件变了。再用 `node <本 Skill 目录>/scripts/run-verifier.mjs --preflight --cli <codex|claude|mcode> [--model <模型>] [--effort <推理强度>] --owner-family <你的家族>` 试一次准备用于独立验证的 CLI 和模型，后几项与下文独立验证时的取值相同；用户放宽了跨模型要求时不加 `--owner-family`。返回 3 就换一个，都不通过按“停下”第 2 种处理。写好计划后提交。开工或接续时，要有适用于当前代码和环境的冒烟证据：状态不明、环境变了或相关代码变了，就跑一遍冒烟集。本次改动引起的失败先修；与本次改动无关的基线失败，记进 plan.md 的意外与发现，继续做不受影响的部分。session 中断后，新 session 只读 plan.md 和 git 历史就能接着做。
 
-**里程碑。** 每个里程碑是一段能单独验证的行为，对应 verify 的若干场景。依赖某项验证能力的场景执行前，先补上这项能力：优先复用项目已有的验证能力，只补本次需要的最小缺口，按仓库规则保留成可复用的入口。一个里程碑做完的标准：它对应的场景在运行中的应用上跑通（verify 列出的覆盖盲区里的检查点除外），质量命令通过，里程碑检查没有未解决的问题，已提交，plan.md 的进度已更新。场景或质量命令失败先修，再进入下一个里程碑。
+**里程碑。** 每个里程碑是一段能单独验证的行为，对应 verify 的若干场景。依赖某项验证能力的场景执行前，先补上这项能力：优先复用项目已有的验证能力，只补本次需要的最小缺口，按仓库规则保留成可复用的入口。一个里程碑做完的标准：它对应的场景在运行中的应用上跑通（verify 列出的覆盖盲区里的检查点除外），质量命令通过，里程碑检查没有未解决的问题，已提交，plan.md 的进度已更新。场景或质量命令失败先修，再进入下一个里程碑。修复之后重跑哪些场景，用 `scripts/select-scenarios.mjs --plan <plan.md> --from <这些场景上次跑的 head>` 选出，不凭印象挑：只改了测试、文档的不算；改了冻结的 spec、verify，或改了没有场景认领的文件，全部重跑。最终 head 上照常跑全部场景。
 
-**里程碑检查。** 每个里程碑的场景跑通后，开一个新上下文的 subagent，按[里程碑检查说明](references/milestone-check.md)检查，调用时引用这份说明，不另写。subagent 继承你的模型和推理强度：Claude Code 用 general-purpose 类型，Codex 用默认 agent；不传模型和推理强度参数，也不用 Explore 这类自带配置的类型。只给它说明里列出的输入，不给你的推理过程。检查在后台进行时，你可以接着做下一个里程碑，但下一个里程碑的第一个提交要等这次检查的结果处理完：`check-delivery.mjs` 会核对每个里程碑的第一次检查早于之后的提交。它只报告，由你修改；改完请它再查一次，每个里程碑最多两轮。每一轮的报告用 `scripts/record-milestone-check.mjs --plan <plan.md> --milestone <里程碑编号> --range <起>..<止> --report <报告文件>` 存下，范围就是交给它的起止 commit。它报告的模型 ID 与你的不同，这次检查作废，重开一个。把它报告的模型 ID 和结论记进 plan.md 的进度；两轮后仍未解决的问题也记在那里，在请独立验证之前解决。
+**里程碑检查。** 每一轮检查分代码和证据两部分，各开一个新上下文的 subagent，按[里程碑检查说明](references/milestone-check.md)检查，调用时引用这份说明，不另写。代码部分不依赖场景结果，里程碑提交后就开始，与场景同时进行；证据部分在这些场景跑完后开始。两部分的范围是同一段起止 commit，终点是场景所跑的 head。subagent 继承你的模型和推理强度：Claude Code 用 general-purpose 类型，Codex 用默认 agent；不传模型和推理强度参数，也不用 Explore 这类自带配置的类型。只给它说明里列出的输入，不给你的推理过程。检查在后台进行时，你可以接着做下一个里程碑，但下一个里程碑的第一个提交要等这次检查的结果处理完：`check-delivery.mjs` 会核对每个里程碑的第一次检查早于之后的提交。所以这一轮里代码部分报的、场景失败暴露的问题，先在工作区改好，等这一轮存下再提交。它只报告，由你修改；改完请它再查一次，每个里程碑最多两轮。每一轮两部分都回来后，把两份报告按代码、证据的顺序放进一个文件，用 `scripts/record-milestone-check.mjs --plan <plan.md> --milestone <里程碑编号> --range <起>..<止> --report <报告文件>` 存下，范围就是交给它们的起止 commit。哪一部分报告的模型 ID 与你的不同，那一部分作废，重开一个。把它报告的模型 ID 和结论记进 plan.md 的进度；两轮后仍未解决的问题也记在那里，在请独立验证之前解决。
 
 **绑定命令。** verify.md 里标为“实现后绑定命令”的场景，把实际命令写在 plan.md 的“验证与验收”一节，不改 verify.md。
 
