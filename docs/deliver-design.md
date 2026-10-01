@@ -641,3 +641,30 @@ dev-skills#26 之后对开发流程类 Skill 做了一次一致性检查，同�
 
 - 新流程在真实需求上的效果：owner 是否真的不停、决定清单是否够让用户在合入前判断、60 分钟周期续接是否顺利。下一个需求观察。
 - `check-delivery.mjs` 约 230 行，比方案估计的 150 行多：识别包根和交接包含关系是审查后加的。
+
+## subagent 按角色选类型（2026-10-01）
+
+### 起因
+
+agent-archon !7595 的主会话和 62 个 subagent 全部跑在 `claude-opus-5-5`。按公开价粗算约 $1,390：主会话 $574，检查与评审（24 个）$304，写代码与集成（18 个）$224，跑场景（11 个）$221。同样 token 换成 Sonnet 5.5，只换跑场景的约省 $79（6%），连检查一起换约省 $200（14%）；两家缓存读同价，长会话的输入大多是缓存读，所以省得比价目表少。同时本机另行把所有通用 subagent 默认到了 Sonnet 5.5，与“里程碑检查继承 owner”冲突。
+
+### 用户的决定（2026-10-01）
+
+- 只让跑场景、收证据这类执行型 subagent 用较小模型；写代码、集成、里程碑检查与 owner 同级。
+- Skill 里只写角色和类型名，不写模型 ID；具体模型由各台机器的 agent 定义决定。本机 `general-purpose` 改回继承，较小模型的类型 effort 用 `high`。Codex 用默认设置（subagent 继承主 agent）。
+
+### 改动
+
+deliver“里程碑”一节加一段：写代码、集成、里程碑检查用继承 owner 的类型（Claude Code `general-purpose`、Codex 默认 agent，不传模型参数）；跑场景、收证据、读日志可以交给 `verify-runner`，本机没有时用继承的类型。README 同步一句。
+
+### 依据
+
+- Anthropic：“Move down to Sonnet or Haiku for lookups, not for writing code: subagents that search and summarize, reading logs and test output”；“Every subagent that inherits the main model inherits its price too”；模型写在 subagent 定义的 `model:` 里（What a task costs on Opus 5.5，“Choose the right model for your work”）。Sonnet 5.5 在 `xhigh`、`max` 会自开评审轮次，常规工作用 `high` 及以下（[Prompting Claude Sonnet 5.5](../skills/agent-prompt-rules/references/sources/anthropic/prompting-claude-sonnet-5-5.md)）。
+- OpenAI：不配置时 subagent 继承父 agent 的模型和推理强度；“`gpt-6-luna`: Use for fast, narrowly scoped agents handling clear, repeatable, or high-volume work”（[Codex Subagents](../skills/agent-prompt-rules/references/sources/openai/codex-subagents.md)）。
+- pstack：每个角色显式指定模型，映射由 `/setup-pstack` 写进本地规则，Skill 只写角色；PR #167：“Call-mechanics instructions in skill prose do not change agent behavior; the subagent tool schema ... governs.”
+
+### 接受的代价与未验证
+
+- 跑场景降级后，执行或读回出错要到最终验证才暴露；里程碑检查不降级，正是为了不让判断类问题（如 !7595 的 S26、S34）漏到最后。
+- 降级的效果没有对照数据；下一个需求可让两种模型各跑同一批场景对比。
+- 行为探针：新开 Codex 会话（`gpt-6-astra`）只读新版 SKILL.md，问派里程碑检查和跑场景各用什么类型：答 `general-purpose`、不传模型参数；跑场景派 `verify-runner`，本机没有时回退到 `general-purpose`。与决定一致。
