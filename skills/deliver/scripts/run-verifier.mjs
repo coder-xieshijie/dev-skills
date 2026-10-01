@@ -5,7 +5,7 @@
 //   node run-verifier.mjs --cli <codex|claude|mcode> --checkout <dir> --head <sha> --base <ref>
 //                         --inputs <inputs.md> --verify <verify.md> --report <report.md>
 //                         [--model <provider/model>] [--effort <level>] [--add-dir <dir>]...
-//                         [--timeout <min>] [--stall <min>] [--brief <verifier-brief.md>]
+//                         [--timeout <min>] [--stall <min>] [--brief <verifier-brief.md>] [--plan <plan.md>]
 //   node run-verifier.mjs --preflight --cli <codex|claude|mcode> [--model <provider/model>]
 //                         [--effort <level>] [--owner-family <family>]
 //
@@ -23,6 +23,15 @@
 // so the verifier compares the versions and reports whether acceptance got
 // looser; the run record keeps it as first_handoff, and check-delivery.mjs
 // checks it against the first handoff it finds itself.
+//
+// --plan is the owner's plan.md. Its 口径偏差 entries (verify checkpoints the
+// owner judged with another method, see deliver SKILL.md) are written to
+// <report>.deviations.md and the call points the verifier at that file, so it
+// judges each one whatever the owner's inputs say (a file, not the command
+// line, so long entries cannot exceed the argument limit). The run record
+// lists each entry's ID and sha256; check-delivery.mjs requires them to match
+// the plan, so an entry added, removed or reworded after the verification
+// needs a new one, and requires the report to judge every entry.
 //
 // A run ends by itself: after --timeout minutes (default 90), or after
 // --stall minutes (default 20) in which no file under the --add-dir
@@ -64,6 +73,7 @@ import { appendFileSync, existsSync, lstatSync, mkdtempSync, readdirSync, readFi
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { digest, parseDeviations } from "./deviations.mjs";
 import { requirementHandoffs } from "./handoffs.mjs";
 import { familyOf } from "./model-family.mjs";
 import { parseReport, parseVerify, reportProblems } from "./report-format.mjs";
@@ -71,7 +81,7 @@ import { parseReport, parseVerify, reportProblems } from "./report-format.mjs";
 const USAGE =
   "usage: run-verifier.mjs --cli <codex|claude|mcode> --checkout <dir> --head <sha> --base <ref> " +
   "--inputs <inputs.md> --verify <verify.md> --report <report.md> [--model <provider/model>] " +
-  "[--effort <level>] [--add-dir <dir>]... [--timeout <min>] [--stall <min>] [--brief <path>]\n" +
+  "[--effort <level>] [--add-dir <dir>]... [--timeout <min>] [--stall <min>] [--brief <path>] [--plan <plan.md>]\n" +
   "       run-verifier.mjs --preflight --cli <codex|claude|mcode> [--model <provider/model>] [--effort <level>] " +
   "[--owner-family <family>]";
 
@@ -83,7 +93,7 @@ function fail(code, message) {
 
 const FLAGS = ["preflight"];
 const KEYS = ["cli", "checkout", "head", "base", "inputs", "verify", "report", "model", "effort", "add-dir", "brief",
-  "timeout", "stall", "owner-family"];
+  "timeout", "stall", "owner-family", "plan"];
 const args = { "add-dir": [] };
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i += 1) {
@@ -386,13 +396,23 @@ const inputs = path.resolve(args.inputs);
 const verifyPath = path.resolve(args.verify);
 const report = path.resolve(args.report);
 if (!report.endsWith(".md")) fail(2, "--report must end with .md");
-for (const [name, file] of [["brief", brief], ["inputs", inputs], ["verify", verifyPath], ["checkout", checkout]])
-  if (!existsSync(file)) fail(2, `${name} not found: ${file}`);
+const planPath = args.plan ? path.resolve(args.plan) : null;
+for (const [name, file] of [["brief", brief], ["inputs", inputs], ["verify", verifyPath], ["checkout", checkout], ["plan", planPath]])
+  if (file && !existsSync(file)) fail(2, `${name} not found: ${file}`);
+
+// Acceptance deviations the owner recorded in plan.md; quoted in the call.
+let deviations = null;
+if (planPath) {
+  const parsed = parseDeviations(readFileSync(planPath, "utf8"));
+  if (parsed.problems.length) fail(2, `plan.md: ${parsed.problems.join("; ")}`);
+  deviations = parsed.entries;
+}
 
 const verifyInfo = parseVerify(readFileSync(verifyPath, "utf8"));
 if (verifyInfo.scenarios.length === 0) fail(2, `verify has no scenario IDs (S01, S02, ...): ${verifyPath}`);
 
 const base = report.slice(0, -3);
+const deviationsPath = `${base}.deviations.md`;
 const recordPath = `${base}.run.json`;
 const logPath = `${base}.log`;
 const statusPath = `${base}.status.json`;
@@ -434,6 +454,10 @@ const prompt =
       `当时的版本用 git show ${firstHandoff.commit}:${firstHandoff.spec.file} 和 git show ${firstHandoff.commit}:${firstHandoff.verify.file} 查看；` +
       "按验证说明“验收文档改动”一节报告。"
     : "") +
+  (deviations?.length
+    ? `owner 在 plan.md 记了 ${deviations.length} 条口径偏差（${deviations.map((d) => d.id).join("、")}），` +
+      `原文见 ${deviationsPath}；按验证说明判断每条是否成立、是否放宽了验收，并在“口径偏差”一节报告。`
+    : "") +
   "把验证报告作为你的最终回复输出，调用方会把它原样保存为报告文件。";
 
 // Report completeness: head, verdict, model line, one complete row per
@@ -445,14 +469,23 @@ function problems(text) {
 
 const started = new Date().toISOString();
 const deadline = Date.now() + timeoutMs;
-const own = new Set([report, recordPath, logPath, statusPath]);
+const own = new Set([report, recordPath, logPath, statusPath, deviationsPath]);
+let deviationsText = null;
+const addDirs = [...args["add-dir"]];
+if (deviations?.length) {
+  deviationsText = `${deviations.map((d) => d.text).join("\n\n")}\n`;
+  writeFileSync(deviationsPath, deviationsText);
+  const dir = realpathSync(path.dirname(deviationsPath));
+  if (!addDirs.some((d) => existsSync(d) && (dir === realpathSync(d) || dir.startsWith(`${realpathSync(d)}${path.sep}`))))
+    addDirs.push(path.dirname(deviationsPath));
+}
 writeFileSync(logPath, "");
 let result;
 let issues = [];
 let terminal = "completed";
 for (let round = 1; round <= 2; round += 1) {
   const out = path.join(mkdtempSync(path.join(tmpdir(), "run-verifier-")), "last-message.md");
-  const cmd = command(prompt, checkout, out, args["add-dir"]);
+  const cmd = command(prompt, checkout, out, addDirs);
   appendFileSync(logPath, `=== attempt ${round}\n$ ${cmd.map((c) => (c === prompt ? JSON.stringify(c) : c)).join(" ")}\n`);
   result = await run(cmd, checkout, out, {
     logPath, statusPath, watch: args["add-dir"], own, limitMs: Math.max(0, deadline - Date.now()), stallAfterMs: stallMs,
@@ -499,6 +532,10 @@ const record = {
   verify: verifyPath,
   base: args.base,
   first_handoff: firstHandoff?.commit ?? null,
+  plan: planPath,
+  deviations: deviations ? deviations.map((d) => ({ id: d.id, sha256: d.sha256 })) : null,
+  deviations_file: deviationsText ? path.basename(deviationsPath) : null,
+  deviations_sha256: deviationsText ? digest(deviationsText) : null,
   report: path.basename(report),
   report_sha256: callOk && result.text.trim() ? sha256(result.text) : null,
   started_at: started,

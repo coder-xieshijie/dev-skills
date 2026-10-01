@@ -90,12 +90,12 @@ Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: fals
 core-spec 把冻结的 spec.md 和 verify.md 提交到需求分支、开好 Draft MR/PR 之后使用。一个 owner session 在任意 worktree 检出需求分支，从读 spec 连续做到这个 MR/PR 可合入，中途不找人：
 
 - 按 OpenAI ExecPlan 的格式写 `plan.md`，边做边更新进度、意外与发现、决策日志和复盘；中断后新 session 只读 plan.md 和 git 历史就能接着做。
-- 逐个里程碑实现，每个里程碑在运行中的应用上跑通它对应的 verify 场景，失败先修；再由一个继承 owner 模型和推理强度的 subagent 按固定说明检查；检查可以在后台进行，但下一个里程碑提交前要处理完，报告用 `scripts/record-milestone-check.mjs` 存下。冒烟集在状态不明、环境或相关代码变了时才跑。
+- 逐个里程碑实现，每个里程碑在运行中的应用上跑通它对应的 verify 场景，失败先修；再由继承 owner 模型和推理强度的 subagent 按固定说明检查，分两部分：代码部分在提交后就开始、与场景同时进行，证据部分在场景跑完后进行；检查可以在后台进行，但下一个里程碑提交前要处理完，两部分的报告合成一轮，用 `scripts/record-milestone-check.mjs` 存下。修复后重跑哪些场景由 `scripts/select-scenarios.mjs` 按 plan.md 里每个场景的涉及路径选出，最终 head 照常跑全部场景。冒烟集在状态不明、环境或相关代码变了时才跑。
 - 请另一家模型在单独的 session 中按固定的验证说明验证最终 head；验证输入包括场景对应的实际命令和允许使用的环境。验证通过 `scripts/run-verifier.mjs` 启动，它记下模型家族、模型、推理强度、沙箱、session id 和报告的 sha256，运行中持续写日志，超时或长时间没有新证据时停掉；开工时用它的 `--preflight` 先试一次验证用的 CLI 和模型；另一家模型都不可用时停下，不用同家族代替。
 - 在交接的 Draft MR/PR 上推送，处理 CI 和评审意见，取消 Draft，直到可合入；spec 授权合入时合入。
 - 开工时用 `scripts/read-handoff.mjs` 从交接提交读出用户确认的 sha256，并核对两份文件自交接后没被改过，再用 `scripts/check-delivery.mjs --frozen-only` 核对；合入前运行完整检查：两份文件未变，验证报告对应 MR 的最终 head（之后只改了测试、文档和 lint 配置时沿用原报告），报告完整、总体结论为 PASS、没有 FAIL，只有 verify 列出的覆盖盲区可以是 UNVERIFIED，报告来自 `run-verifier.mjs` 的调用、之后没被改过，验证者与 owner 不是同一家模型，写了场景的里程碑都有检查记录，第一次检查早于之后的提交；rebase 后记录照样有效，只有冲突改过的提交要再查。
 
-只在四种情况下停下找用户：spec 自相矛盾或缺少会改变判定的决定；缺少 agent 拿不到的权限、凭据或环境；授权以外的不可逆操作；卡住（同一个失败，一种修法连续 3 次无效就换思路，换了思路后再连续 3 次仍无进展）。
+只在四种情况下停下找用户：spec 自相矛盾或缺少会改变产品行为的决定（verify 的检查方法与 spec 对不上时，owner 记为口径偏差、自己定判定方法，由独立验证者判断是否放宽验收）；缺少 agent 拿不到的权限、凭据或环境；授权以外的不可逆操作；卡住（同一个失败，一种修法连续 3 次无效就换思路，换了思路后再连续 3 次仍无进展）。
 
 调用示例：
 
