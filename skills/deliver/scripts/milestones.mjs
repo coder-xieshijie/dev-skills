@@ -35,6 +35,9 @@
 // skipped. A commit changed since its check (same author time and subject,
 // different change) must be covered again by a later round.
 // Records none of whose commits match are kept as history and ignored.
+// The owner's commits count from the first handoff commit, also after the user
+// changes spec.md or verify.md and hands off again; a later handoff commit
+// that only re-freezes those two files is left out.
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -194,12 +197,50 @@ export function checkMilestones({ plan, planDir, repo, head }) {
         }
       })
     : null;
-  try {
-    scope = git("rev-list", "--first-parent", "--reverse", `${start}..${head}`, ...(baseRef ? ["--not", baseRef] : []))
-      .split("\n")
+
+  // A user who changes spec.md or verify.md during delivery hands off again:
+  // a newer commit with both Frozen-Spec and Frozen-Verify trailers, which
+  // becomes the 交接 line. The owner's work still starts at the first handoff,
+  // so its checks keep counting. A later handoff commit that only re-freezes
+  // the two files is the user's change, not the owner's: it needs no milestone
+  // check and is not a next commit for the ordering.
+  const frozenFiles = (commit) => {
+    const [spec = "", verify = ""] = git(
+      "log",
+      "-1",
+      "--format=%(trailers:key=Frozen-Spec,valueonly,separator=%x1d)%x1f%(trailers:key=Frozen-Verify,valueonly,separator=%x1d)",
+      commit,
+    ).split("\x1f");
+    const file = (value) => value.trim().match(/^([^\x1d]+?)\s+sha256=[0-9a-f]{64}$/)?.[1];
+    return file(spec) && file(verify) ? [file(spec), file(verify)] : null;
+  };
+  const refreezeOnly = (commit) => {
+    const files = frozenFiles(commit);
+    if (!files) return false;
+    const changed = git("diff-tree", "--no-commit-id", "--name-only", "-r", "--no-renames", "-z", commit)
+      .split("\0")
       .filter(Boolean);
+    return changed.every((name) => files.includes(name));
+  };
+  let first = start;
+  if (/^\s*-\s*交接:/m.test(plan) && baseRef) {
+    const line = git("rev-list", "--first-parent", "--reverse", `${baseRef}..${head}`).split("\n").filter(Boolean);
+    const earliest = line.find((commit) => frozenFiles(commit));
+    if (earliest && git("rev-parse", start) !== earliest) {
+      try {
+        git("merge-base", "--is-ancestor", earliest, start);
+        first = earliest;
+        notes.push(`counting the owner's commits from the first handoff ${earliest.slice(0, 12)}; the 交接 line names a later one`);
+      } catch {}
+    }
+  }
+  try {
+    scope = git("rev-list", "--first-parent", "--reverse", `${first}..${head}`, ...(baseRef ? ["--not", baseRef] : []))
+      .split("\n")
+      .filter(Boolean)
+      .filter((commit) => !refreezeOnly(commit));
   } catch {
-    errors.push(`cannot list ${start.slice(0, 12)}..${head.slice(0, 12)}; pass --repo <worktree with the requirement branch> and fetch it`);
+    errors.push(`cannot list ${first.slice(0, 12)}..${head.slice(0, 12)}; pass --repo <worktree with the requirement branch> and fetch it`);
     return { errors, notes };
   }
   const indexOf = new Map(scope.map((commit, i) => [commit, i]));
@@ -292,7 +333,10 @@ export function checkMilestones({ plan, planDir, repo, head }) {
     }
     let commits = [];
     try {
-      commits = git("rev-list", "--first-parent", "--reverse", `${record.from}..${record.to}`).split("\n").filter(Boolean);
+      commits = git("rev-list", "--first-parent", "--reverse", `${record.from}..${record.to}`)
+        .split("\n")
+        .filter(Boolean)
+        .filter((commit) => !refreezeOnly(commit));
     } catch {}
     let after = -1;
     const located = commits.map((commit) => {
