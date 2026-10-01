@@ -1,6 +1,6 @@
 # Prompting
 
-> Source: [https://developers.openai.com/codex/prompting](https://developers.openai.com/codex/prompting)
+> Source: [https://learn.chatgpt.com/docs/prompting](https://learn.chatgpt.com/docs/prompting)
 
 ## Prompting overview
 

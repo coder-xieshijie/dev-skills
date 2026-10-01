@@ -16,7 +16,7 @@
 //   Frozen-Spec: <path in repo> sha256=<hex>
 //   Frozen-Verify: <path in repo> sha256=<hex>
 //
-// deliver's read-handoff.mjs reads the confirmed hashes from these lines.
+// deliver's check-delivery.mjs reads the confirmed hashes from these lines.
 //
 // Exit 0 when the pair matches, 1 when it does not, 2 on usage errors.
 // Zero dependencies.
