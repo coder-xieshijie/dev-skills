@@ -43,11 +43,13 @@
 //    branch without gaps up to the last checked commit, and each record was
 //    saved before the next commit. A late record passes only with the
 //    user's waiver (`- milestone-order: waived ...`).
-// 6. Acceptance deviations (deviations.mjs): every 口径偏差 entry in plan.md
-//    names a scenario or requirement and says how it is judged instead; the
-//    run record lists the same entries (the verifier was given them through
-//    --plan); the report judges each one; and none was judged to loosen
-//    acceptance. Each passing entry is listed, because the MR must show it.
+// 6. Acceptance deviations (deviations.mjs): plan.md has at most one 口径偏差
+//    section, every entry in it is well formed and no D<n> entry sits
+//    outside it; the run record lists the same entries with the same sha256
+//    (the verifier was given this wording through --plan); the report's
+//    口径偏差 section judges each one once, with a reason; and none was judged
+//    to loosen acceptance. Each passing entry is listed, because the MR must
+//    show it.
 //
 // The code repository is --repo, else the git repository that holds spec.md.
 // Exit 0 when every check passes, 1 when any fails, 2 on usage errors.
@@ -347,25 +349,27 @@ if (record) {
 {
   const { entries, problems } = parseDeviations(plan);
   errors.push(...problems);
-  const ids = entries.map((d) => d.id);
   if (record) {
     const given = Array.isArray(record.deviations) ? record.deviations : [];
-    if (given.length !== ids.length || !ids.every((id) => given.includes(id)))
+    const key = (list) => list.map((d) => `${d?.id}:${d?.sha256}`).sort().join(",");
+    if (key(given) !== key(entries))
       errors.push(
-        `plan.md records 口径偏差 ${ids.join(", ") || "none"}, but the verifier was given ` +
-          `${Array.isArray(record.deviations) ? given.join(", ") || "none" : "no plan"}; ` +
+        `plan.md records 口径偏差 ${entries.map((d) => d.id).join(", ") || "none"}, but the verifier was given ` +
+          `${Array.isArray(record.deviations) ? given.map((d) => d?.id ?? d).join(", ") || "none" : "no plan"}` +
+          `${given.length && given.length === entries.length ? " or a different wording" : ""}; ` +
           "run it again with --plan <plan.md> so it judges the current entries",
       );
   }
-  if (ids.length) {
-    if (!/口径偏差/.test(report))
+  if (entries.length) {
+    const { found, judged, problems: reportProblemsFound } = parseJudgements(report);
+    if (!found)
       errors.push("plan.md records 口径偏差, but the report has no 口径偏差 section; run the verifier again with --plan <plan.md>");
-    const judged = parseJudgements(report);
-    for (const id of ids) {
+    errors.push(...reportProblemsFound);
+    for (const { id } of entries) {
       const j = judged.get(id);
-      if (!j)
-        errors.push(`the report does not judge 口径偏差 ${id} (a line \`${id}：成立|不成立；未放宽|放宽；<理由>\`)`);
-      else if (j.looser)
+      if (!j) {
+        if (found) errors.push(`the report's 口径偏差 section does not judge ${id} (a line \`${id}：成立|不成立；未放宽|放宽；<理由>\`)`);
+      } else if (j.looser)
         errors.push(
           `the verifier judged 口径偏差 ${id} to loosen acceptance${j.reason ? ` (${j.reason})` : ""}; ` +
             "hand it to the user as deliver 停下 case 1: they decide, and change verify through core-spec if they accept it",
