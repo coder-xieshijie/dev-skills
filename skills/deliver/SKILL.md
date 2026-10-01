@@ -28,7 +28,7 @@ description: spec.md 和 verify.md 确认并冻结后，由一个 owner 实现�
    node <本 Skill 目录>/scripts/check-delivery.mjs --plan <plan.md> --report <验证报告> --head <MR head>
    ```
 
-   它检查五件事：spec.md、verify.md 的 sha256 与记在 plan.md 里的确认版本一致；验证报告对应 MR head，或者对应更早的 head、之后只改了测试、文档和 lint 配置；报告完整、总体结论为 PASS、没有 FAIL，只有 verify 列出的覆盖盲区可以是 UNVERIFIED；报告来自 `run-verifier.mjs` 的调用，之后没被改过，验证者的模型家族与你不同；写了场景的里程碑都有检查记录，记录连续覆盖需求分支，每个里程碑的第一次检查早于之后的提交。
+   它检查六件事：spec.md、verify.md 的 sha256 与记在 plan.md 里的确认版本一致；验证报告对应 MR head，或者对应更早的 head、之后只改了测试、文档和 lint 配置；报告完整、总体结论为 PASS、没有 FAIL，只有 verify 列出的覆盖盲区可以是 UNVERIFIED；报告来自 `run-verifier.mjs` 的调用，之后没被改过，验证者的模型家族与你不同；写了场景的里程碑都有检查记录，记录连续覆盖需求分支，每个里程碑的第一次检查早于之后的提交；plan.md 记的口径偏差都交给了验证者，每条都判为没有放宽验收。
 4. **MR 可合入。** 已取消 Draft；CI 在最终 head 上通过；每条评审意见都已处理，改了代码或回复了理由。授权合入的，合入；没有授权的，停在可合入。
 5. **plan.md 反映实际情况**，并已向用户汇报（见“汇报”一节）。
 
@@ -54,12 +54,14 @@ description: spec.md 和 verify.md 确认并冻结后，由一个 owner 实现�
 
 **绑定命令。** verify.md 里标为“实现后绑定命令”的场景，把实际命令写在 plan.md 的“验证与验收”一节，不改 verify.md。
 
+**口径偏差。** spec 规定的产品行为清楚、实现也符合 spec，但 verify 某个检查点按字面判不了或必然判错时，例如拿两个观测源对数而观测工具不记录被取消的请求，你自己定改用的判定方法，不停下，不改 verify.md。按[计划格式](references/plan-format.md)在 plan.md 记一条，写明字面为什么不成立、证据和改用的方法；verify 里用同一判定方式的检查点一并列出、一并处理。最终的独立验证者逐条判断偏差是否成立、是否放宽了验收；判为放宽的，按“停下”第 1 种交给用户。
+
 **自主决定。** spec 没有规定、也不影响任何场景判定的问题，你自己决定；影响后续工作、或值得用户事后看的，写进 plan.md 的决策日志，在 MR 里汇总。
 
 **独立验证。** 除 verify 列出的覆盖盲区外，全部场景自验通过后，请另一家模型在单独的 session 中验证当前 head。先在证据目录写验证输入，列出[验证说明](references/verifier-brief.md)要的各项，包括场景 ID 对应的实际命令（取自 plan.md 的“验证与验收”一节）。其中允许验证者使用的环境，按项目验证能力的说明给一个独立的实例（profile、端口、数据目录），不与你正在用的实例共用。然后在检出这个 head 的专用目录里运行：
 
 ```bash
-node <本 Skill 目录>/scripts/run-verifier.mjs --cli <codex|claude|mcode> --checkout <验证检出目录> --head <head> --base <目标分支的远端引用> --inputs <验证输入> --verify <verify.md> --report <证据目录>/verification-<head 前 12 位>.md --add-dir <证据目录> [--effort <推理强度>]
+node <本 Skill 目录>/scripts/run-verifier.mjs --cli <codex|claude|mcode> --checkout <验证检出目录> --head <head> --base <目标分支的远端引用> --inputs <验证输入> --verify <verify.md> --plan <plan.md> --report <证据目录>/verification-<head 前 12 位>.md --add-dir <证据目录> [--effort <推理强度>]
 ```
 
 `--cli` 按[跨模型调用](../core-spec/references/cross-model.md)选与你不同的家族。验证者要启动和操作应用，三个 CLI 都不带沙箱运行（codex 用 `-s danger-full-access`）。脚本在总时长超过 `--timeout` 或连续 `--stall` 分钟没有新证据时停掉验证者；运行中 `.log` 持续写入，`.status.json` 记着最近一次写证据的时间。脚本返回 3 表示这个 CLI 用不了（包括超时、停滞），换另一个不同家族的 CLI 再试；都不可用时，不用同家族代替，做完其余工作，记为“跨模型验证未完成”，按“停下”的第 2 种情况处理。只有用户明确放宽时才用同家族，并在 plan.md 的冻结输入里记一行 `- cross-family: waived <用户原话与日期>`。验证者只报告，由你修改；改完后对新 head 重新验证，验证者照常完整验证。反复失败时，按“停下”第 4 种判断是否卡住。独立验证通过后代码又有改动（CI 修复、评审意见）时也一样；只改了测试、文档或 lint 配置时，`check-delivery.mjs` 沿用原报告，不用重新验证。
@@ -70,7 +72,7 @@ node <本 Skill 目录>/scripts/run-verifier.mjs --cli <codex|claude|mcode> --ch
 
 只在四种情况下停下来找用户：
 
-1. spec 自相矛盾，或缺少一个会改变场景判定结果的决定。
+1. spec 自相矛盾，或缺少一个会改变产品行为的决定。verify 的检查方法与 spec 对不上、产品该怎样表现已经清楚时，不停，按“口径偏差”处理。
 2. 需要你自己拿不到的权限、凭据或环境。
 3. 需要授权范围以外的不可逆操作，例如合入、删除共享数据、对外发消息、改动共享环境。
 4. 卡住：同一个失败（场景、里程碑检查、独立验证或 CI），一种修法连续 3 次无效就换思路；换了思路后再连续 3 次仍没有进展。停下时写明试过的修法和证据，不宣称通过。
@@ -86,6 +88,7 @@ MR 描述写给决定是否合入的人，先写结论：
 - 自主决定：决策日志里值得用户事后看的条目。
 - 未验证：覆盖盲区里的检查点、UNVERIFIED 的场景和原因；跨模型要求没满足时写明。
 - 验收文档改动：第一次交接后 spec、verify 改了什么，用户何时怎样确认，验证者对是否放宽了验收的判断。
+- 口径偏差：每条偏差、改用的判定方法和证据、验证者的判断；写明推翻某一条后要重跑哪些场景。
 - 补上的验证能力，以及复盘发现的仓库缺口。
 
 评审者需要阅读路线时，按同仓库的 [mr-for-human](../mr-for-human/SKILL.md) 写。
@@ -98,6 +101,7 @@ MR 描述写给决定是否合入的人，先写结论：
 - 场景总数、通过数、未验证数。
 - 独立验证用的模型和结论。
 - 需要用户事后看的自主决定。
+- 口径偏差的条数，以及验证者判为放宽、需要用户决定的。
 - 复盘发现的仓库缺口。
 
 按同仓库 [explain-as-fool](../explain-as-fool/SKILL.md) 的表达要求写，不写过程。

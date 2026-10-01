@@ -43,6 +43,11 @@
 //    branch without gaps up to the last checked commit, and each record was
 //    saved before the next commit. A late record passes only with the
 //    user's waiver (`- milestone-order: waived ...`).
+// 6. Acceptance deviations (deviations.mjs): every 口径偏差 entry in plan.md
+//    names a scenario or requirement and says how it is judged instead; the
+//    run record lists the same entries (the verifier was given them through
+//    --plan); the report judges each one; and none was judged to loosen
+//    acceptance. Each passing entry is listed, because the MR must show it.
 //
 // The code repository is --repo, else the git repository that holds spec.md.
 // Exit 0 when every check passes, 1 when any fails, 2 on usage errors.
@@ -51,6 +56,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
+import { parseDeviations, parseJudgements } from "./deviations.mjs";
 import { requirementHandoffs } from "./handoffs.mjs";
 import { baseBranch, baseRefIn, checkMilestones, codeRepo, frozenPaths, gitIn } from "./milestones.mjs";
 import { familyOf } from "./model-family.mjs";
@@ -333,6 +339,38 @@ if (record) {
     else if (family === owner.toLowerCase()) {
       if (waived) notes.push(`verifier family ${family} equals the owner's; the user waived cross-family verification`);
       else errors.push(`verifier family ${family} equals the owner's family; cross-family verification is required`);
+    }
+  }
+}
+
+// 6. Acceptance deviations were handed to the verifier and none loosened acceptance.
+{
+  const { entries, problems } = parseDeviations(plan);
+  errors.push(...problems);
+  const ids = entries.map((d) => d.id);
+  if (record) {
+    const given = Array.isArray(record.deviations) ? record.deviations : [];
+    if (given.length !== ids.length || !ids.every((id) => given.includes(id)))
+      errors.push(
+        `plan.md records 口径偏差 ${ids.join(", ") || "none"}, but the verifier was given ` +
+          `${Array.isArray(record.deviations) ? given.join(", ") || "none" : "no plan"}; ` +
+          "run it again with --plan <plan.md> so it judges the current entries",
+      );
+  }
+  if (ids.length) {
+    if (!/口径偏差/.test(report))
+      errors.push("plan.md records 口径偏差, but the report has no 口径偏差 section; run the verifier again with --plan <plan.md>");
+    const judged = parseJudgements(report);
+    for (const id of ids) {
+      const j = judged.get(id);
+      if (!j)
+        errors.push(`the report does not judge 口径偏差 ${id} (a line \`${id}：成立|不成立；未放宽|放宽；<理由>\`)`);
+      else if (j.looser)
+        errors.push(
+          `the verifier judged 口径偏差 ${id} to loosen acceptance${j.reason ? ` (${j.reason})` : ""}; ` +
+            "hand it to the user as deliver 停下 case 1: they decide, and change verify through core-spec if they accept it",
+        );
+      else notes.push(`口径偏差 ${id}: the verifier judged it ${j.holds ? "valid" : "not valid, so it checked the literal wording"} and not looser; list it in the MR`);
     }
   }
 }
