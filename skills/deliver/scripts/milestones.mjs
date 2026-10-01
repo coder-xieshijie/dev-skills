@@ -203,7 +203,9 @@ export function checkMilestones({ plan, planDir, repo, head }) {
   // becomes the 交接 line. The owner's work still starts at the first handoff,
   // so its checks keep counting. A later handoff commit that only re-freezes
   // the two files is the user's change, not the owner's: it needs no milestone
-  // check and is not a next commit for the ordering.
+  // check and is not a next commit for the ordering. Trailers are read as
+  // read-handoff.mjs reads them; a plan without a 交接 line is left as it was.
+  const handedOff = /^\s*-\s*交接:/m.test(plan);
   const frozenFiles = (commit) => {
     const [spec = "", verify = ""] = git(
       "log",
@@ -211,19 +213,25 @@ export function checkMilestones({ plan, planDir, repo, head }) {
       "--format=%(trailers:key=Frozen-Spec,valueonly,separator=%x1d)%x1f%(trailers:key=Frozen-Verify,valueonly,separator=%x1d)",
       commit,
     ).split("\x1f");
-    const file = (value) => value.trim().match(/^([^\x1d]+?)\s+sha256=[0-9a-f]{64}$/)?.[1];
+    const file = (value) => {
+      const trimmed = value.trim();
+      const name = trimmed.includes("\x1d") ? null : trimmed.match(/^(.+?)\s+sha256=[0-9a-f]{64}$/)?.[1];
+      return name ? path.posix.normalize(name) : null;
+    };
     return file(spec) && file(verify) ? [file(spec), file(verify)] : null;
   };
+  const isMerge = (commit) => git("rev-list", "--parents", "-n", "1", commit).split(" ").length > 2;
   const refreezeOnly = (commit) => {
+    if (!handedOff) return false;
     const files = frozenFiles(commit);
-    if (!files) return false;
+    if (!files || isMerge(commit)) return false;
     const changed = git("diff-tree", "--no-commit-id", "--name-only", "-r", "--no-renames", "-z", commit)
       .split("\0")
       .filter(Boolean);
-    return changed.every((name) => files.includes(name));
+    return changed.length > 0 && changed.every((name) => files.includes(name));
   };
   let first = start;
-  if (/^\s*-\s*交接:/m.test(plan) && baseRef) {
+  if (handedOff && baseRef) {
     const line = git("rev-list", "--first-parent", "--reverse", `${baseRef}..${head}`).split("\n").filter(Boolean);
     const earliest = line.find((commit) => frozenFiles(commit));
     if (earliest && git("rev-parse", start) !== earliest) {
