@@ -1,221 +1,117 @@
 # dev-skills
 
-谢世杰自用的开发 Skills，供 Codex 和 Claude Code 使用。把实际开发中反复用到的流程、判断依据和工具操作维护在这里。
+English | [简体中文](README.zh-CN.md)
 
-## 仓库结构
+Skills for Claude Code and Codex that take a requirement from the first question to a mergeable MR with as little waiting on people as possible. People define the work at the start and decide at the end; in between, one agent does the work and proves its own result by running the app, and a model from another family checks it. The reasoning behind every rule, with links to the OpenAI, Anthropic and Lauren Tan (pstack) sources it rests on, is in [docs/basis.md](docs/basis.md).
 
-每个 Skill 独立存放在 `skills/<skill-name>/`，入口是 `SKILL.md`。需要脚本、参考资料或输出素材时，再在该 Skill 内增加 `scripts/`、`references/` 或 `assets/`。
+## The workflow
 
-## 开发流程
-
-复杂需求从定义到合入分四个阶段。用户只在定义阶段回答问题、确认两次，交付后看决定清单并合入；中间全自动。
-
-| 阶段 | Skill | agent 做什么 | 用户做什么 |
-|---|---|---|---|
-| A 仓库准备 | 项目自己的验证 Skill | 让 agent 能在 worktree 里启动、操作、观察应用：控制命令、功能地图、冒烟集、质量命令 | 按需补齐，每个仓库一次 |
-| B 定义 | [core-grill](skills/core-grill/SKILL.md) → [core-spec](skills/core-spec/SKILL.md) | 逐轮追问，整理决定汇总；相关功能地图先与产品对齐；写 spec.md 和 verify.md，请另一家模型逐条款查漏；冻结后提交到需求分支，开 Draft MR | 回答问题；确认一次决定汇总；确认一次 spec 和 verify |
-| C 交付 | [deliver](skills/deliver/SKILL.md) | 一个 owner 全程不停：开工时请另一家模型预判最终验证怎样判；逐个里程碑实现并在应用里跑场景；另一家模型先只读审代码，owner 修一轮，再与 owner 的全量自验同时做独立验证；处理 CI 和评审，做到可合入；要定的事先问另一家模型，决定列在 plan.md 和 MR 描述最前面 | 合入前看决定清单，合入 |
-| D 回流 | — | MR 和 plan.md 的复盘里列出这次暴露的仓库缺口 | 决定哪些补回 A 或 Skill |
-
-几条贯穿全程的约定：
-
-- **约束放在两端**：定义阶段把要人决定的事和验收要求定全；交付结尾由另一家模型按 verify 的完成条件验证。中间交给 owner 自动完成，有分歧记进决定清单、不停下，合入前交给用户看。
-- **不可逆操作留给用户**：合入、强推共享分支、删除共享数据、对外发消息、改共享环境。其余工作 agent 自己做完，做不了的写明原因。
-- **检查交给另一家模型**：spec 的查漏、交付开工时的预判、交付中的决定、最终验证前的代码审查和最终验证，都请另一家模型在新 session 里做（[跨模型调用](skills/core-spec/references/cross-model.md)）。
-- **查结果，不查过程**：脚本只核对两件事：spec、verify 是用户确认的版本；最终代码由另一家模型验证通过。其余由说明文字约定，交给模型判断。
-
-一次完整的用法：
-
-1. 在目标仓库里 `/core-grill 需求是 <链接或原文>，需求文档放 <需求目录>/`，回答问题，确认决定汇总。
-2. 同一个 session 里 `/core-spec 依据决定汇总写 spec.md 和 verify.md`，看查漏结果，确认 spec 和 verify；它会提交到需求分支并开 Draft MR。
-3. 新开一个 session，`/deliver 接手 <Draft MR 链接>`。等它说可以合入，看 MR 最前面的决定清单，再合入。
-
-Codex 里把 `/` 换成 `$`。
-
-设计依据与每次改动的原因见 [deliver 的设计记录](docs/deliver-design.md)、[core-spec 的设计记录](docs/core-spec-design.md) 和 [core-grill 的设计记录](docs/core-grill-design.md)。
-
-## Skill 列表
-
-| Skill | 用途 | 触发方式 |
-|---|---|---|
-| [explain-as-fool](skills/explain-as-fool/SKILL.md) | 面向对话题一无所知的人进行解释 | 仅手动触发 |
-| [review-rules](skills/review-rules/SKILL.md) | 为代码和设计评审、问题复核及修复方案提供判断准则 | 仅手动触发 |
-| [design-for-review](skills/design-for-review/SKILL.md) | 将需求和设计材料整理成可独立阅读的技术评审文档 | 仅手动触发 |
-| [core-grill](skills/core-grill/SKILL.md) | 需求起步时逐轮追问，只问会改变用户可见结果的决定，写好术语，整理成用户确认的决定汇总交给 core-spec | 仅手动触发 |
-| [core-spec](skills/core-spec/SKILL.md) | 讨论结束后，把澄清与材料收敛为核心决策 spec，并为自动交付写出验收要求 verify；另一家模型查漏后用户一次确认，两份冻结。也可以只产出 spec | 仅手动触发 |
-| [deliver](skills/deliver/SKILL.md) | 依据冻结的 spec 和 verify，由一个 owner 全程不停地完成实现、逐里程碑在应用里验证、另一家模型的独立验证、MR/PR 与 CI，做到可合入；自己做的决定列在最前面供用户合入前看 | 仅手动触发 |
-| [plan-for-agents](skills/plan-for-agents/SKILL.md) | 创建、修订或检查供 agent 执行的完整计划，覆盖方案、步骤、边界、产物与验收 | 仅手动触发 |
-| [mr-for-human](skills/mr-for-human/SKILL.md) | 把 MR/PR 整理成面向人的金字塔式阅读指南：核心结论、功能与抽象设计、执行逻辑与伪代码、底层运行约束、代码定位 | 仅手动触发 |
-| [agent-prompt-rules](skills/agent-prompt-rules/SKILL.md) | 依据 Anthropic 与 OpenAI 官方原文，设计和修改写给 agent 的 prompt、多 agent pipeline 与 SKILL.md | 仅手动触发 |
-| [recon-to-contract](skills/recon-to-contract/SKILL.md) | 将多个外部参照物的对标调研收敛为有证据、有决策、有验收的可执行契约 | 仅手动触发 |
-
-### explain-as-fool
-
-提示词：
-
-```text
-Explain like I'm someone who knows nothing about this topic
+```mermaid
+flowchart LR
+    A["A. Repository readiness<br/>control commands, feature map,<br/>smoke set, quality commands"] --> B1
+    subgraph B["B. Definition"]
+        B1["core-grill<br/>questions in rounds,<br/>decision summary"] --> B2["core-spec<br/>spec.md + verify.md,<br/>gap check by another family,<br/>freeze, Draft MR"]
+    end
+    B2 --> C["C. Delivery: deliver<br/>one owner, milestones run in the app,<br/>code review and independent verification<br/>by another family, CI, mergeable MR"]
+    C --> D["D. Feedback<br/>gaps go back into A or the Skills"]
+    H1(["You: answer questions,<br/>confirm the decision summary"]) -.-> B1
+    H2(["You: confirm spec and verify once"]) -.-> B2
+    H3(["You: read the decision list, merge"]) -.-> C
 ```
 
-调用示例：
+| Stage | Skill | What the agent does | What you do |
+|---|---|---|---|
+| A. Repository readiness | Your project's own verification setup ([guide](docs/repository-readiness.md)) | Makes the app startable, drivable and observable from a worktree: control commands, a feature map, a smoke set, quality commands | Build it once per repository, then extend it as needed |
+| B. Definition | [core-grill](skills/core-grill/SKILL.md) → [core-spec](skills/core-spec/SKILL.md) | Asks in rounds and writes a decision summary; brings the related feature map in line with the product; writes spec.md and verify.md and has another model family check them clause by clause; after freezing, commits them to the feature branch and opens a Draft MR | Answer the questions; confirm the decision summary once; confirm spec and verify once |
+| C. Delivery | [deliver](skills/deliver/SKILL.md) | One owner works without stopping: has another family preview how the final verification will judge the plan; implements milestone by milestone and runs the scenarios in the app; has another family review the code read-only, fixes one round, then runs its full self-verification while another family verifies independently; handles CI and review until the MR is mergeable; asks another family before decisions and lists them at the top of plan.md and the MR | Read the decision list before merging, then merge |
+| D. Feedback | — | Lists the repository gaps this run exposed, in the MR and plan.md | Decide which go back into stage A or the Skills |
 
-- Codex：`$explain-as-fool 解释一下什么是线程池`
-- Claude Code：`/explain-as-fool 解释一下什么是线程池`
+Rules that hold throughout:
 
-Codex 通过 `agents/openai.yaml` 中的 `policy.allow_implicit_invocation: false` 限制自动调用；Claude Code 通过 `SKILL.md` 中的 `disable-model-invocation: true` 保留手动入口。普通解释请求不会自动触发这个 Skill。
+- **Constraints at both ends.** The definition stage settles every decision a person must make and every acceptance requirement; at the end, another model family verifies against verify's done criteria. In between, the owner works on its own; disagreements go into the decision list instead of stopping the work, and you review them before merging.
+- **Irreversible operations are yours.** Merging, force-pushing a shared branch, deleting shared data, sending messages outside, changing a shared environment. The agent finishes everything else, and writes down why for anything it cannot do.
+- **Checks go to another model family.** The gap check of spec and verify, the preview at the start of delivery, decisions during delivery, the code review before the final verification and the final verification itself all run in a new session of a model from another family ([cross-model calls](skills/core-spec/references/cross-model.md)).
+- **Check results, not process.** Scripts check two things: spec and verify are the versions you confirmed, and the final code passed verification by another family. Everything else is stated in text and left to the model's judgment.
 
-`disable-model-invocation` 是 [Claude Code 支持的扩展字段](https://code.claude.com/docs/en/skills#control-who-invokes-a-skill)。当前 Codex 附带的通用 `quick_validate.py` 会把它报告为未知字段；维护时保留这个手动开关，并分别检查两个客户端的原生加载结果。
+## Requirements
 
-### review-rules
+- **Two model families.** [Claude Code](https://code.claude.com/docs) and [Codex](https://developers.openai.com/codex), both installed and logged in. The gap check and the final verification need a model from a family other than the one doing the work; with only one family available, the workflow stops there instead of checking with the same family.
+- **Node.js 24** for the scripts, **git**, and the platform CLI for MRs and PRs: `gh` for GitHub or `glab` for GitLab.
+- **An app agents can drive.** Agents must be able to start, operate and observe the app from a worktree, at the entry points users use. See [Repository readiness](docs/repository-readiness.md).
 
-将复用、必要改造、复杂度、扩展性和责任边界等准则应用于当前评审，也用它们检查 Reviewer 提出的修改建议。可以独立使用，或与现有 `code-review`、设计评审流程一起使用；评审范围、执行方式和是否修复由当前任务决定。
+## Install
 
-调用示例：
+All Skills are manual-only: they run when you call them, never on their own.
 
-- Codex：`$review-rules review 这个 MR：<链接>`
-- Claude Code：`/review-rules review 这个 MR：<链接>`
-- 配合评审流程：`使用 code-review 评审这个 MR，并应用 review-rules。`
-- 复核结论：`按 review-rules 重新检查刚才的 findings，判断哪些问题成立、哪些修复方案可以更简单。`
-
-沿用上面的 Codex 和 Claude Code 手动触发设置。
-
-### design-for-review
-
-将已有需求、设计讨论和技术材料整理成面向人评审的技术方案。读者只读这一篇，就能理解问题、完整流程、改动与复用范围，以及关键取舍。默认交付中文 Markdown，按需使用 Mermaid，并沿用已经确认的需求、设计决定和文档大纲。
-
-写作前直接读取同仓库 `explain-as-fool/SKILL.md` 的正文规则，统一维护表达要求，不再复制原文。使用完整仓库或保留相邻的 `explain-as-fool` 目录；两个 Skill 的手动触发设置保持不变。
-
-调用示例：
-
-- Codex：`$design-for-review 根据当前需求和已确认的设计讨论，整理一份可独立阅读的技术评审文档。`
-- Claude Code：`/design-for-review 根据当前需求和已确认的设计讨论，整理一份可独立阅读的技术评审文档。`
-
-沿用上面的 Codex 和 Claude Code 手动触发设置。
-
-### core-grill
-
-需求起步时用。先收四项输入（目标、完成条件、授权、范围），能从仓库查到的不问；然后逐轮追问，每轮把前提已定的问题一起问，每题给推荐答案；事实由 agent 自己查。只问会改变用户可见结果的决定，其余由 agent 定，记成默认决定并写明怎样推翻。术语当场写进 `CONTEXT.md`，ADR 只在难以反悔、没有上下文会让人意外、确有取舍三条都满足时写。结束时把四项输入、用户答过的决定和默认决定写成一份决定汇总，请用户确认一次，交给 core-spec 作为原始约定。
-
-调用示例：
-
-- Codex：`$core-grill 需求是 <链接或原文>，需求文档放 docs/specs/<需求>/。`
-- Claude Code：`/core-grill 需求是 <链接或原文>，需求文档放 docs/specs/<需求>/。`
-
-内容改写自 [mattpocock/skills](https://github.com/mattpocock/skills) 的 grilling 与 domain-modeling（MIT 许可），保留了什么、改了什么见[设计记录](docs/core-grill-design.md)。沿用上面的 Codex 和 Claude Code 手动触发设置；安装时保留相邻的 `core-spec` 目录。
-
-### core-spec
-
-用于 core-grill 或其他讨论、需求澄清结束后的定稿。默认产出两份文件，一起查漏、一起确认、一起冻结：
-
-- `spec.md`《核心决策与约束》：开头通常选 3–5 个最重要的决定，后文完整保留已确认的规则、边界和取舍，供 agent 在 plan、implement、review 阶段使用，也供人核对和汇报。交付前对照原始约定与最终确认检查遗漏、无依据新增、冲突和歧义。用于自动交付时另外写明目的、非目标、硬约束和交付与授权（目标仓库与分支、能否推送并开 MR；合入始终留给用户）；非目标只写用户明确的，没谈到时写“未单列非目标”，只有某个具体的相邻事项会改变交付范围时才问；交付与授权只由用户决定，讨论中没有定下时作为问题提出。
-- `verify.md`《验收要求》：以 spec 为唯一需求来源，写冒烟集、要求表（每条约定对应的证明方式：场景、机械检查或已有检查）、场景、回归范围、验证工具缺口和覆盖盲区。场景是用户在一个入口上完成的一次完整操作及其结果，默认从真实入口驱动，由实现 agent 自己运行；每个场景写字面检查点和在改动前代码上的基线预期，基线覆盖不到关键风险时再写一个会被拒绝的错误实现。启动和驱动应用引用项目已有的验证能力（控制命令、功能地图），缺口按需补最小的一块，并按仓库规则保留成可复用的能力。
-
-写 verify 之前，先按每个功能的用户入口和状态找 spec 没有定下的行为，会改变判定的回写 spec。写完后，用与写文档的模型不同家族的 CLI（在 Claude Code 里用 `codex exec`，在 Codex 里用 `claude -p`）开一个新 session 查漏：它读 spec、verify、原始约定（需求稿、ADR、用户最终决定的原话；有 core-grill 的决定汇总时直接用它）和仓库，按固定的[查漏说明](skills/core-spec/references/gap-check.md)报告问题，包括 spec、verify 写到的现有快捷键、文案、默认值是否与代码一致；verify 的问题直接改，spec 的问题在原始约定里有依据的直接改、没有依据的转成给用户的问题，最多两轮。另一家模型用不了时不降级为同家族，记为查漏未完成，不请用户冻结。最后用 `scripts/freeze.mjs` 算出两份文件的 sha256 并核对二者配套，请用户一次确认；确认后两份冻结。随后把两份文件单独提交到需求分支，提交信息末尾用 `freeze.mjs --trailers` 记下两份文件的路径和 sha256，推送并开 Draft MR/PR；deliver 只凭 MR 链接就能在任意 worktree 开工；spec 不允许推送或开 MR、或仓库规则不允许提交这两份文件时，只交本地路径。
-
-只要 spec（用于方案设计、design-for-review、plan-for-agents 或汇报）时，写完并核对 spec 即交付，不写 verify、不查漏。已有定稿 spec、只需要验收时，从找 spec 缺口开始，不重新收敛 spec。
-
-调用示例：
-
-- Codex：`$core-spec 将当前讨论收敛成 spec 并写出验收，保存到 docs/<需求>/。`
-- Claude Code：`/core-spec 根据这个 session 和需求、ADR 文件写 spec.md 和 verify.md。`
-- 只要 spec：`/core-spec 只保留最终核心决策与约束，保存到 docs/feature-spec.md，不写验收。`
-- 已有 spec：`/core-spec 依据 docs/feature/spec.md 写 verify.md。`
-
-`core-spec` 固化“已经选定什么、必须满足什么、怎样算做对”；`design-for-review` 展开技术方案如何运转。本 Skill 不实现产品、不编写测试代码、不执行验证；发布到远端的只有交接用的提交（spec、verify 与配套改动）和 Draft MR。2026-09-29 起合并了原 `core-verify`，原因见设计记录。
-
-沿用上面的 Codex 和 Claude Code 手动触发设置。来源分析与验证边界见[设计与验证记录](docs/core-spec-design.md)。
-
-### deliver
-
-core-spec 把冻结的 spec.md 和 verify.md 提交到需求分支、开好 Draft MR/PR 之后使用。一个 owner 在自己的 worktree 检出需求分支，从读 spec 一直做到这个 MR 可合入：
-
-- **全程不停。** 只在不可逆操作前停（合入、强推共享分支、删除共享数据、对外发消息、改共享环境）；做不了的部分写明原因，先做完其余部分。
-- **决定先问另一家模型。** 会影响用户看到的结果或验收判定的决定（产品默认做法、改用的判定方法、现有事实的更正），先用只读命令问另一家模型，意见不同在同一会话再谈一轮，然后 owner 定、继续做。
-- **决定清单放在最前面。** 产品上的默认做法、verify 按字面判不了时改用的判定方法、spec 把现有事实写错时的更正、做不了的部分，都写进 plan.md 和 MR 描述最前面的决定清单，按影响排序，写明推翻后要改什么、重跑哪些场景。spec、verify 在交付中不改。
-- **逐个里程碑实现**，在运行中的应用上跑对应的场景，做完让一个新上下文的 subagent 对照 spec 查一遍。写代码和检查用继承 owner 模型的 subagent，跑场景、收证据可以交给本机定义的 `verify-runner` 类型；具体模型由本机的 agent 定义决定。plan.md 按 OpenAI ExecPlan 的格式边做边更新，中断后新 session 只读它和 git 历史就能接着做。
-- **另一家模型独立验证最终代码**，以 60 分钟为一个周期，没做完就在同一个会话里续接。代码质量意见（按 review-rules）和测试覆盖缺口不拦合入，owner 逐条改或写明理由，列进 MR。
-- **一个只查结果的检查**：`scripts/check-delivery.mjs` 核对 spec、verify 是交接时用户确认的版本；每份验证报告包含最近一次交接、对应 MR 的最新代码（之后只改了文档、测试或 plan 与证据也算），结论为 PASS，验证者与 owner 不是同一家模型。用例在 `scripts/check-delivery.test.mjs`，CI 里运行。
-
-调用示例：
-
-- Codex：`$deliver 接手 <Draft MR/PR 链接>。`（可在 `/goal` 中使用，让同一个对话持续到完成）
-- Claude Code：`/deliver 接手 <Draft MR/PR 链接>。`
-- 只交了本地路径时：`/deliver <需求目录>/ 下的 spec.md（sha256 <确认值>）和 verify.md（sha256 <确认值>）已冻结。`
-
-沿用上面的 Codex 和 Claude Code 手动触发设置；安装时保留相邻的 `core-spec`、`review-rules`、`mr-for-human` 和 `explain-as-fool` 目录。来源与验证边界见[设计与验证记录](docs/deliver-design.md)。
-
-### plan-for-agents
-
-将需求和已确认决策落实为可由 agent 独立执行的计划，适用于开发、调研、创作、数据处理等任务。核心内容通用，专业细节按需展开；沿用用户决策，并核对每项要求到执行步骤、产物和验收证据的对应关系。
-
-修订已有 plan 时保留有效细节，说明实质删除或替换的依据；摘要不能替代完整正文。编写计划本身不授权实施、发布或启动其他 agent。
-
-调用示例：
-
-- Codex：`$plan-for-agents 根据当前需求和已确认的 spec，编写一份可独立执行的完整 plan。`
-- Claude Code：`/plan-for-agents 按刚才的裁决修订现有 plan，保留有效细节并核对覆盖。`
-- 完整性检查：`按 plan-for-agents 检查这份调研计划，只报告缺口与依据，不修改文件。`
-
-`core-spec` 固化要求与决定，`plan-for-agents` 将其展开为执行计划（自动交付时 deliver 用自己的 plan 格式，不经过本 Skill），`design-for-review` 服务于人的方案评审。各 Skill 可独立使用，无须串行调用。
-
-目录与入口已创建，沿用上面的 Codex 和 Claude Code 手动触发设置。实际执行效果仍需在使用中验证。
-
-### mr-for-human
-
-面向“AI 写了很多代码，我想知道重点看哪里”的阅读任务。金字塔原则贯穿全文，只把最重要的事项交给读者决策；按目录核对每个文件的具体变化及其与目标的关系；沿主流程解释边界、失败降级与恢复。默认交付简短指南，复杂逻辑、源码证据和完整文件清单按需下钻。
-
-调用示例：
-
-- Codex：`$mr-for-human 带我读懂这个 MR 的关键设计，并给出从主流程到源码的阅读路线：<链接>`
-- Claude Code：`/mr-for-human 解释 base..head 的变化，先看核心决定，再下钻到伪代码和证据。`
-
-沿用上面的 Codex 和 Claude Code 手动触发设置。
-
-设计依据与历史取舍见[综述](docs/mr-for-human-design.md)，失败窗口与正常降级的写法见[教学示例](skills/mr-for-human/references/worked-example.md)，检查结果见[验证记录](docs/mr-for-human-validation.md)。目录与配套资料已创建；真实 MR 阅读效果需在使用中验证。
-
-### agent-prompt-rules
-
-编写、修改或审查三类内容时逐条对照：调度方写给执行端（子 agent、外部 agent）的 prompt，多 agent pipeline，以及 `SKILL.md` 和它的 `description`。每条规则都链接到 Skill 内存档的 Anthropic、OpenAI 官方原文章节，改动按 Skill 第四节的流程记录依据。
-
-调用示例：
-
-- Codex：`$agent-prompt-rules 审一下这个 pipeline 给 reviewer 的 prompt，列出不符合的条目和依据。`
-- Claude Code：`/agent-prompt-rules 按规范修改这个 SKILL.md，每条改动对应到规范条目。`
-
-厂商发布新模型或新的提示词指南时，按[原文清单](skills/agent-prompt-rules/references/sources/README.md#更新原文)的步骤更新原文和规则；CI 会检查规则指向原文的每个锚点是否仍然存在。[agent-lord](https://github.com/coder-xieshijie/agent-lord) 修改 Skill 和 pipeline 时使用这套规则。
-
-沿用上面的 Codex 和 Claude Code 手动触发设置。
-
-### recon-to-contract
-
-用于至少两个外部参照物的横向对比，并将结果交给后续执行者落实。以差集表、命题账本和接缝笔记保留事实与关系，结合已确认的决策，产出包含目标、改动范围、约束和验收标准的契约；纯探索、缺陷定位和普通增量开发不适用。
-
-调用示例：
-
-- Codex：`$recon-to-contract 根据两个参考实现、当前代码和已确认的取舍，整理迁移方案的可执行契约。`
-- Claude Code：`/recon-to-contract 将这份多方对标调研收敛为后续实现可以直接使用的契约。`
-
-从已有本地 Skill 原样迁入，保留正文及 Claude Code 手动触发设置，并补充 Codex 手动触发配置。目录和导航已建立；本次核对内容一致性、结构及客户端发现，未重新执行完整调研工作流。
-
-## 添加 Skill
-
-1. 选一个真实、重复出现的开发任务，说明它应在什么请求下触发，以及完成后交付什么。
-2. 在 `skills/<skill-name>/SKILL.md` 中填写 `name`、`description` 和执行指引；目录名使用小写字母、数字和连字符，并与 `name` 一致。
-3. 用一个真实请求检查触发条件、流程和结果；涉及脚本时执行脚本验证，再提交到 Git。
-
-`description` 用来描述能力和触发场景。正文记录会改变 Agent 判断的项目知识、操作步骤和验证依据；较长且仅在部分场景下需要的内容放入按需引用的资料中。
-
-## 本地使用
-
-本仓库是这些 Skill 的唯一维护源。当前十个 Skill 均设为仅手动触发，Codex 使用 `$skill-name`，Claude Code 使用 `/skill-name`。安装时链接到共享入口，再通过 CC 入口引用同一份源文件；入口注册不改变手动触发策略。
-
-共享入口使用 `~/.agents/skills/<skill-name>`，指向本仓库的 `skills/<skill-name>`；CC 入口使用 `~/.claude/skills/<skill-name>`，指向前面的共享入口。注册前检查同名入口的来源，保留已有安装；仅依赖 Codex 能力的 Skill 只注册共享入口。
+**Claude Code** (plugin):
 
 ```bash
-ln -s <本仓库>/skills/<skill-name> ~/.agents/skills/<skill-name>
-ln -s ~/.agents/skills/<skill-name> ~/.claude/skills/<skill-name>
+claude plugin marketplace add coder-xieshijie/dev-skills
+claude plugin install dev-skills@dev-skills
 ```
 
-Skill 之间按相邻目录互相引用（例如 deliver 读 `../core-spec/references/cross-model.md`），引用按入口所在目录解析。用开发流程时，`core-grill`、`core-spec`、`deliver`、`review-rules`、`mr-for-human`、`explain-as-fool` 六个都要注册。
+Inside a session the same commands are `/plugin marketplace add coder-xieshijie/dev-skills` and `/plugin install dev-skills@dev-skills`. Plugin Skills are namespaced: call them as `/dev-skills:core-grill`, `/dev-skills:core-spec` and so on. Third-party marketplaces do not update on their own; run `claude plugin marketplace update dev-skills` to get a newer version.
 
-添加并验证具体 Skill 后再按需启用，并在客户端确认可以找到和读取它。已有 Skill 内容更新后，入口继续读取仓库中的同一份文件；本地修改完成后通过 Git 提交、推送同步。
+**Codex** (plugin, reads the same marketplace file):
+
+```bash
+codex plugin marketplace add coder-xieshijie/dev-skills
+codex plugin add dev-skills@dev-skills
+```
+
+Call the Skills as `$dev-skills:core-grill` and so on. Run `codex plugin marketplace upgrade dev-skills` to get a newer version.
+
+**From a clone** (for working on the Skills): link each Skill directory into a Skills directory both clients read. The Skills refer to each other by relative paths (deliver reads `../core-spec/references/cross-model.md`), so link all of them side by side:
+
+```bash
+git clone https://github.com/coder-xieshijie/dev-skills.git
+for s in dev-skills/skills/*/; do
+  ln -s "$PWD/$s" ~/.agents/skills/"$(basename "$s")"
+  ln -s ~/.agents/skills/"$(basename "$s")" ~/.claude/skills/"$(basename "$s")"
+done
+```
+
+Called this way, the Skills have no namespace (`/core-grill`, `$core-grill`). Use either the plugin or the links, not both, or each Skill shows up twice.
+
+## A complete run
+
+1. In the target repository: `/dev-skills:core-grill The requirement is <link or text>; put the requirement documents in <requirement directory>/`. Answer the questions and confirm the decision summary.
+2. In the same session: `/dev-skills:core-spec Write spec.md and verify.md from the decision summary`. Read the gap check result and confirm spec and verify. It commits them to the feature branch and opens a Draft MR.
+3. In a new session: `/dev-skills:deliver Take over <Draft MR link>`. When it says the MR can be merged, read the decision list at the top of the MR, then merge.
+
+In Codex, write `$dev-skills:` instead of `/dev-skills:`. Questions, the decision summary, spec, verify, plan.md, the decision list and the MR description are written in the language you write the request in.
+
+## Skills
+
+| Skill | What it does |
+|---|---|
+| [core-grill](skills/core-grill/SKILL.md) | At the start of a requirement, asks in rounds about the decisions that change user-visible results, records terms, and hands a decision summary you confirmed to core-spec |
+| [core-spec](skills/core-spec/SKILL.md) | Turns the discussion into spec.md (decisions and constraints) and verify.md (acceptance requirements for automated delivery), has another family gap-check them, and freezes them after one confirmation. Can also produce only a spec |
+| [deliver](skills/deliver/SKILL.md) | From the frozen spec and verify, one owner implements, verifies each milestone in the app, gets independent verification by another family, and takes the MR or PR through CI to mergeable, listing its decisions at the top |
+| [review-rules](skills/review-rules/SKILL.md) | Criteria for code and design review, for re-checking findings and for judging fixes: reuse, necessary change, complexity, extensibility, ownership |
+| [mr-for-human](skills/mr-for-human/SKILL.md) | Turns an MR or PR into a reading guide for people: core conclusions, design, execution logic in pseudocode, runtime constraints, where to find the code |
+| [explain-as-fool](skills/explain-as-fool/SKILL.md) | Explains a topic to someone who knows nothing about it; other Skills reuse its writing rules |
+| [design-for-review](skills/design-for-review/SKILL.md) | Turns requirements and design material into a self-contained technical review document |
+| [plan-for-agents](skills/plan-for-agents/SKILL.md) | Creates, revises or checks a complete plan for agents to execute, from requirements and confirmed decisions to steps, outputs and acceptance evidence |
+| [agent-prompt-rules](skills/agent-prompt-rules/SKILL.md) | Rules, each linked to Anthropic and OpenAI sources, for writing and reviewing prompts for agents, multi-agent pipelines and SKILL.md files |
+| [recon-to-contract](skills/recon-to-contract/SKILL.md) | Converges a comparison of two or more external references into one executable contract with evidence, decisions and acceptance criteria |
+
+The development workflow uses core-grill, core-spec, deliver, review-rules, mr-for-human and explain-as-fool; the others can be used on their own.
+
+## Documentation
+
+- [Why the workflow looks the way it does](docs/basis.md): the three sources, where they agree and disagree, what this workflow adds, and a rule-by-rule basis for core-grill, core-spec and deliver.
+- [Repository readiness](docs/repository-readiness.md): what stage A needs, with [templates](docs/templates/) and an [example](docs/examples/feature-map-example.md).
+- [Glossary](docs/glossary.md): the terms the Skills use, with their Chinese equivalents.
+- Design records, in Chinese: [core-grill](docs/core-grill-design.md), [core-spec](docs/core-spec-design.md), [deliver](docs/deliver-design.md), [mr-for-human](docs/mr-for-human-design.md) and its [validation](docs/mr-for-human-validation.md).
+
+## Working on the Skills
+
+- Each Skill lives in `skills/<skill-name>/` with `SKILL.md` as its entry point, plus `scripts/`, `references/` or `assets/` when it needs them. `name` matches the directory name; the directory names are stable because other tools refer to them by path.
+- Skill text is English, using the terms in the [glossary](docs/glossary.md); see [AGENTS.md](AGENTS.md). Changes to rules follow [agent-prompt-rules](skills/agent-prompt-rules/SKILL.md): one component at a time, with the basis recorded, compared in a new session.
+- CI runs the link and anchor checks and the script tests: `node scripts/check-links.mjs`, `node skills/agent-prompt-rules/scripts/check-links.mjs`, `node --test skills/deliver/scripts/check-delivery.test.mjs` and `node --test skills/core-spec/scripts/clauses.test.mjs`.
+- `skills/agent-prompt-rules/references/sources/` keeps verbatim excerpts of the vendor documents the rules cite; [its README](skills/agent-prompt-rules/references/sources/README.md) says how to update them.
+
+## License
+
+[MIT](LICENSE). Third-party material and its licenses: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
