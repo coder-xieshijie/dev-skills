@@ -69,8 +69,8 @@ Call the Skills as `$dev-skills:core-grill` and so on. Run `codex plugin marketp
 git clone https://github.com/coder-xieshijie/dev-skills.git
 mkdir -p ~/.agents/skills ~/.claude/skills
 for s in dev-skills/skills/*/; do
-  ln -s "$PWD/$s" ~/.agents/skills/"$(basename "$s")"
-  ln -s ~/.agents/skills/"$(basename "$s")" ~/.claude/skills/"$(basename "$s")"
+  ln -sfn "$PWD/$s" ~/.agents/skills/"$(basename "$s")"
+  ln -sfn ~/.agents/skills/"$(basename "$s")" ~/.claude/skills/"$(basename "$s")"
 done
 ```
 
