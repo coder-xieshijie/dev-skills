@@ -1,6 +1,6 @@
 ---
 name: recon-to-contract
-description: Converges benchmarking research across several references into one executable contract: three laws, a parallel process, a scorecard.
+description: Converges a comparison of two or more external references into one executable contract with evidence, decisions and acceptance criteria. Use when the result of benchmarking, technology selection or a migration plan will be carried out by someone without this session's context.
 argument-hint: "What plan do you want to produce?"
 disable-model-invocation: true
 ---
