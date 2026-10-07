@@ -668,3 +668,55 @@ deliver“里程碑”一节加一段：写代码、集成、里程碑检查用�
 - 跑场景降级后，执行或读回出错要到最终验证才暴露；里程碑检查不降级，正是为了不让判断类问题（如 !7595 的 S26、S34）漏到最后。
 - 降级的效果没有对照数据；下一个需求可让两种模型各跑同一批场景对比。
 - 行为探针：新开 Codex 会话（`gpt-6-astra`）只读新版 SKILL.md，问派里程碑检查和跑场景各用什么类型：答 `general-purpose`、不传模型参数；跑场景派 `verify-runner`，本机没有时回退到 `general-purpose`。与决定一致。
+
+## 约束放在两端：开工预判、验证前的代码审查、自验与独立验证并行（2026-10-07）
+
+### 起因
+
+agent-archon !7595 的交付复盘（super-auto `research/flow-review-2026-10-03/`）里，最终验证的 6 个 Codex 周期中有三个没给出 PASS，原因都是开工前就能发现的事：
+
+- verify 的完成条件里有一条“每个覆盖盲区指定的替代测试都必须通过”。owner 三轮自验和 Codex 前三个周期都只看了场景表，没有人照着这一条判；验证说明自己转述了一遍完成条件，转述里漏了这一条。
+- 覆盖盲区 B01 写明要用“进程中断注入”测试，实际写成了同一进程内关闭再重开，到第 5 周期才被指出。
+- 一个写进功能地图、但没人实跑过的步骤缺了前提，第 2 周期判 FAIL。
+
+另外两点也拖慢了交付：
+- 最终验证前补做的一次 Codex 只读代码审查，9.3 分钟报出 5 个代码问题，全部成立。同模型的 7 次里程碑检查都没发现这 5 个问题。
+- 用户在模型服务故障时选择“不等自验跑完就启动 Codex”，结果 Codex 的发现提早了约 3 小时，自验也没有找到 Codex 漏掉的产品问题。
+
+### 用户的决定（2026-10-07）
+
+- 自验与独立验证同时跑（v0.33）；开工时对齐验证契约、最终验证前做只读代码审查（v0.34）。
+- 前提（v0.35）：只定结果和边界，约束放在开头的需求定义和结尾的验证，中间交给模型；不新增僵硬的脚本检查，给模型能自愈的结果；要人决策的点前置，有分歧记录、不中断；每项改动都要有三家原文和 agent-prompt-rules 依据。
+- 用户在另一会话里认可过的三项脚本检查（报告完成条件表的行数、check-delivery 复核 spec 哈希、冻结时检查条款覆盖），按上述前提收回，只保留文字改动。条款覆盖由 core-spec 改成“给查漏方一份条款清单”，见 [core-spec 的设计记录](core-spec-design.md)第八节。
+
+### 改动
+
+| 改动 | 位置 | 依据 |
+|---|---|---|
+| 完成条件第 1 条改为“verify.md‘完成条件’一节逐条满足” | `SKILL.md` | 完成条件只写在 verify 一处，其他地方指向它（agent-prompt-rules 3.5）；ExecPlan 的验收写成可观察行为（OpenAI）；evaluator 每条标准都是硬门槛（Anthropic harness design）；退出条件先写成可检查的谓词（pstack autonomous-run） |
+| 开工时请另一家模型按验证说明预判 plan：逐条写最终怎样判每条完成条件和每个覆盖盲区，指出会判不通过或判不了的地方；回复存证据目录，分歧记进决定清单，verify 不改 | `SKILL.md`“开工” | 写代码前双方先谈好怎样算 done，即 sprint contract（Anthropic harness design）；ExecPlan 用原型里程碑提前排除重大未知（OpenAI）；pilot 用来尽早证伪验证配方（pstack orchestrate）；分歧不找用户（agent-prompt-rules 2.9） |
+| 里程碑写明对应的场景和覆盖盲区；里程碑检查按 verify 写的替代判断查覆盖盲区，不再跳过 | `references/plan-format.md`、`references/milestone-check.md` | 每个单元验过再做下一个（pstack sequence-verifiable-units）；功能清单里每项都要仔细测过才标为 passing（Anthropic long-running harness） |
+| 里程碑全部通过后，先请另一家模型只读审代码（验证说明第 1、4、5、6 步，不启动应用），owner 核实并只修一轮 | `SKILL.md`“独立验证” | agent 对 agent 的评审循环（OpenAI harness engineering）；任务超出单独可靠完成的范围时 evaluator 值得它的成本（Anthropic harness design）；“Verify each claim against the code”（pstack babysit）；初审不设门槛、修订有上限（agent-prompt-rules 2.6、2.8） |
+| owner 的全量自验与独立验证同时开始，验同一个 head，各用自己的实例 | `SKILL.md`“独立验证” | “Use separate chats when independent tasks can run in parallel”（OpenAI Codex long-running work）；在同一 head 上并行扇出独立验证者（pstack autopilot-full）；工作确实能并行才拆（agent-prompt-rules 2.1） |
+| 验证说明：执行 verify 完成条件要求的检查；verdict 按完成条件逐条判；报告先逐条写完成条件 | `references/verifier-brief.md` | 写出评分者要查的每一项（Anthropic prompt audit）；验证者逐项写明查什么（agent-prompt-rules 2.4） |
+| 跨模型调用加上开工预判和代码审查 | `../skills/core-spec/references/cross-model.md` | 同上 |
+
+`check-delivery.mjs` 不变。
+
+### 接受的代价
+
+- 开工预判多一次只读跨模型调用，7595 规模约 3.5 分钟；代码审查约 10 分钟。
+- 自验与独立验证并行：owner 的自验如果发现产品问题，要改代码，验证者在旧 head 上那一轮就白跑了。先过里程碑检查和代码审查，就是为了降低这种情况。
+- 完成条件靠文字指向 verify 原文，没有脚本核对报告是否逐条写全，结果由 owner 读报告时自行判断。
+
+### 验证
+
+用 7595 的材料在新的 Codex 会话里做对照（`codex exec -s read-only`，模型 `gpt-6-astra`，2026-10-07）：
+
+- **验证说明（改前、改后各一次）**：在 `2cf29eaefb` 上只判完成条件和决定清单，沿用第 3 周期的场景结果。两次都判 UNVERIFIED，都指出覆盖盲区的替代测试没有证据证明通过。改后的报告按 verify 原文逐条写了 4 条完成条件，并逐个列出 21 个盲区，owner 能直接对着补；改前只用一行带过。这说明改后结构更好用，但不能说明“改后才抓得到”：在只判这一项的条件下，改前的版本也读到了 verify 原文。
+- **开工预判（新增步骤，没有改前版本）**：拿 7595 最早的 plan（9-30 开工时）和当时的 verify 预判，用时 3.5 分钟。指出 21 个覆盖盲区都没有安排替代判断，B01 需要真实进程中断，RG3 没有排进任何里程碑，验证与验收一节为空。这些问题在实际交付中要到两天后的第 4、5 周期才被发现。
+
+### 未验证
+
+- 代码审查和并行验证的效果，要在下一个需求上观察：审查报出的问题数和属实数，独立验证还报出几个代码问题，owner 自验有没有独立验证没发现的问题。
+- 开工预判只在一个需求上试过一次。
