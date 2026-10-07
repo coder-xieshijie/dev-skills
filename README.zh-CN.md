@@ -35,7 +35,7 @@ flowchart LR
 
 ## 前提
 
-- **两家模型。** [Claude Code](https://code.claude.com/docs) 和 [Codex](https://developers.openai.com/codex) 都装好并登录。查漏和最终验证要用与干活的模型不同家族的模型；只有一家可用时，流程会停在那一步，不会降级成同家族检查。
+- **两家模型。** 两个不同家族模型的 CLI，都装好并登录；默认是 [Claude Code](https://code.claude.com/docs) 和 [Codex](https://developers.openai.com/codex)，其他能调用另一家模型、能把回复写进文件的 CLI 也可以（[跨模型调用](skills/core-spec/references/cross-model.md)）。查漏和最终验证要用与干活的模型不同家族的模型；只有一家可用时，流程会停在那一步，不会降级成同家族检查。
 - **Node.js 24**（运行脚本）、**git**，以及开 MR/PR 用的平台 CLI：GitHub 用 `gh`，GitLab 用 `glab`。
 - **agent 能驱动的应用。** agent 要能在 worktree 里从用户实际使用的入口启动、操作、观察应用。见[仓库准备](docs/repository-readiness.md)。
 
@@ -65,6 +65,7 @@ codex plugin add dev-skills@dev-skills
 
 ```bash
 git clone https://github.com/coder-xieshijie/dev-skills.git
+mkdir -p ~/.agents/skills ~/.claude/skills
 for s in dev-skills/skills/*/; do
   ln -s "$PWD/$s" ~/.agents/skills/"$(basename "$s")"
   ln -s ~/.agents/skills/"$(basename "$s")" ~/.claude/skills/"$(basename "$s")"
@@ -79,7 +80,7 @@ done
 2. 同一个 session 里：`/dev-skills:core-spec 依据决定汇总写 spec.md 和 verify.md`。看查漏结果，确认 spec 和 verify；它会提交到需求分支并开 Draft MR。
 3. 新开一个 session：`/dev-skills:deliver 接手 <Draft MR 链接>`。等它说可以合入，看 MR 最前面的决定清单，再合入。
 
-Codex 里把 `/dev-skills:` 换成 `$dev-skills:`。问题、决定汇总、spec、verify、plan.md、决定清单和 MR 描述都用你提需求时的语言写。
+Codex 里把 `/dev-skills:` 换成 `$dev-skills:`。默认情况下，问题、决定汇总和 spec 用你提需求时的语言，verify、plan.md、决定清单和 MR 描述跟随 spec.md 的语言；你或仓库的文档规则可以另行指定。
 
 ## Skill 列表
 

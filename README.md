@@ -35,7 +35,7 @@ Rules that hold throughout:
 
 ## Requirements
 
-- **Two model families.** [Claude Code](https://code.claude.com/docs) and [Codex](https://developers.openai.com/codex), both installed and logged in. The gap check and the final verification need a model from a family other than the one doing the work; with only one family available, the workflow stops there instead of checking with the same family.
+- **Two model families.** CLIs for models from two different families, installed and logged in; by default [Claude Code](https://code.claude.com/docs) and [Codex](https://developers.openai.com/codex), and any other CLI that runs another family's model and can write its reply to a file also works ([cross-model calls](skills/core-spec/references/cross-model.md)). The gap check and the final verification need a model from a family other than the one doing the work; with only one family available, the workflow stops there instead of checking with the same family.
 - **Node.js 24** for the scripts, **git**, and the platform CLI for MRs and PRs: `gh` for GitHub or `glab` for GitLab.
 - **An app agents can drive.** Agents must be able to start, operate and observe the app from a worktree, at the entry points users use. See [Repository readiness](docs/repository-readiness.md).
 
@@ -65,6 +65,7 @@ Call the Skills as `$dev-skills:core-grill` and so on. Run `codex plugin marketp
 
 ```bash
 git clone https://github.com/coder-xieshijie/dev-skills.git
+mkdir -p ~/.agents/skills ~/.claude/skills
 for s in dev-skills/skills/*/; do
   ln -s "$PWD/$s" ~/.agents/skills/"$(basename "$s")"
   ln -s ~/.agents/skills/"$(basename "$s")" ~/.claude/skills/"$(basename "$s")"
@@ -79,7 +80,7 @@ Called this way, the Skills have no namespace (`/core-grill`, `$core-grill`). Us
 2. In the same session: `/dev-skills:core-spec Write spec.md and verify.md from the decision summary`. Read the gap check result and confirm spec and verify. It commits them to the feature branch and opens a Draft MR.
 3. In a new session: `/dev-skills:deliver Take over <Draft MR link>`. When it says the MR can be merged, read the decision list at the top of the MR, then merge.
 
-In Codex, write `$dev-skills:` instead of `/dev-skills:`. Questions, the decision summary, spec, verify, plan.md, the decision list and the MR description are written in the language you write the request in.
+In Codex, write `$dev-skills:` instead of `/dev-skills:`. By default, questions, the decision summary and spec follow the language of your request, and verify, plan.md, the decision list and the MR description follow spec.md; you or the repository's documentation rules can ask for another language.
 
 ## Skills
 

@@ -169,7 +169,7 @@ node $V down [--run <runId>] [--keep-data]
 - Stops only the processes this instance recorded. Never stops anything by process name.
 - Copies <runtime logs> into the evidence directory, then deletes scratch data. Keeps the evidence, the server log and the instance metadata.
 - Lists the evidence it kept. An empty list counts as a failed cleanup.
-- Running `down` again on a stopped instance succeeds and changes nothing.
+- Running `down` again on a stopped instance succeeds; it does only cleanup still owed, such as data kept earlier with `--keep-data`.
 - Run `down` after failed attempts too.
 - To delete data you kept with `--keep-data`, run `down --run <runId>`. Do not delete instance directories by hand.
 
@@ -231,7 +231,7 @@ Use this table to check your commands against the contract before you commit the
 | `poll` | `--until [--hold] [--timeout] [--save]` | Waits for, or holds, a state | `ok`, `final`, `trajectory` | Yes |
 | `snapshot` | `[--session] --save <name>` | Saves evidence | `ok`, file paths | Yes |
 | `restart` | `[--force]` | Restarts on the same data | `ok` | Yes |
-| `down` | `[--run] [--keep-data]` | Stops and cleans up, keeps evidence | `ok`, `evidence` list | Yes, no-op when stopped |
+| `down` | `[--run] [--keep-data]` | Stops and cleans up, keeps evidence | `ok`, `evidence` list | Yes; when stopped, only cleanup still owed |
 | `list` | | Lists instances | `ok`, instances | Yes |
 
 ## Before you commit
