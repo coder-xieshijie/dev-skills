@@ -35,7 +35,7 @@ flowchart LR
 
 ## 前提
 
-- **两家模型。** 两个不同家族模型的 CLI，都装好并登录；默认是 [Claude Code](https://code.claude.com/docs) 和 [Codex](https://developers.openai.com/codex)，其他能调用另一家模型、能把回复写进文件的 CLI 也可以（[跨模型调用](skills/core-spec/references/cross-model.md)）。也可以在 MCode 里工作，它运行你在其中配置的模型；检查交给上面 CLI 中与它不同家族的那一个。查漏和最终验证要用与干活的模型不同家族的模型；只有一家可用时，流程会停在那一步，不会降级成同家族检查。
+- **两家模型。** 两个不同家族模型的 CLI，都装好并登录；默认是 [Claude Code](https://code.claude.com/docs) 和 [Codex](https://developers.openai.com/codex)，其他能调用另一家模型、能把回复写进文件的 CLI 也可以（[跨模型调用](skills/core-spec/references/cross-model.md)）。也可以在 MCode（MiniMax 的 coding agent）里工作，它运行你在其中配置的模型；检查交给上面 CLI 中与它不同家族的那一个。查漏和最终验证要用与干活的模型不同家族的模型；只有一家可用时，流程会停在那一步，不会降级成同家族检查。
 - **Node.js 24**（运行脚本）、**git**，以及开 MR/PR 用的平台 CLI：GitHub 用 `gh`，GitLab 用 `glab`。
 - **agent 能驱动的应用。** agent 要能在 worktree 里从用户实际使用的入口启动、操作、观察应用。见[仓库准备](docs/repository-readiness.md)。
 
