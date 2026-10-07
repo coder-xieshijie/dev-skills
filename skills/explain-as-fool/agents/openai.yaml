@@ -1,2 +1,5 @@
+interface:
+  display_name: "Explain as Fool"
+  short_description: "Explain a topic plainly to someone new to it"
 policy:
   allow_implicit_invocation: false

@@ -1,2 +1,5 @@
+interface:
+  display_name: "Recon to Contract"
+  short_description: "Turn a comparison of references into an executable contract"
 policy:
   allow_implicit_invocation: false

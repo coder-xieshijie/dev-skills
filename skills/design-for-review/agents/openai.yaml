@@ -1,2 +1,5 @@
+interface:
+  display_name: "Design for Review"
+  short_description: "Turn design material into a self-contained review document"
 policy:
   allow_implicit_invocation: false

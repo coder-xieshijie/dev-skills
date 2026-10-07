@@ -1,5 +1,5 @@
 interface:
   display_name: "MR for Human"
-  short_description: "Walk people through an MR's key design and code: contracts, layered logic and runtime constraints"
+  short_description: "Turn an MR or PR into a reading guide for people"
 policy:
   allow_implicit_invocation: false

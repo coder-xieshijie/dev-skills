@@ -1,2 +1,5 @@
+interface:
+  display_name: "Review Rules"
+  short_description: "Review code and designs against five criteria"
 policy:
   allow_implicit_invocation: false

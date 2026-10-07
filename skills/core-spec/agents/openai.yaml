@@ -1,2 +1,5 @@
+interface:
+  display_name: "Core Spec"
+  short_description: "Write, gap-check and freeze spec.md and verify.md"
 policy:
   allow_implicit_invocation: false
