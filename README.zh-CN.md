@@ -4,7 +4,9 @@
 
 [English](README.md) | 简体中文
 
-给 Claude Code 和 Codex 用的一组 Skill，把一个需求从第一个问题做到可合入的 MR，中间尽量不等人。人在开头把事情定清楚、在结尾做决定；中间由一个 agent 完成工作，并通过实际运行应用证明结果，再由另一家模型复核。每条规则背后的理由，以及它依据的 OpenAI、Anthropic 和 Lauren Tan（pstack）原文，见 [docs/basis.md](docs/basis.md)（英文）。
+生产级 Agent Skills：把需求做成验证过、可合入的 PR。决定和验收标准由你在开头定下，合入前看 agent 做过的决定；中间由一个 agent 完成工作，在运行的应用里证明结果，再由另一家模型复核。每条规则背后的理由，以及它依据的 OpenAI、Anthropic 和 Lauren Tan（pstack）原文，见 [docs/basis.md](docs/basis.md)（英文）。
+
+**现状：**按版本发布（见 [CHANGELOG](CHANGELOG.md)），已用于生产代码库的真实需求，每个 PR 都跑 CI 检查。
 
 ## 开发流程
 

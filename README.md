@@ -4,7 +4,9 @@
 
 English | [简体中文](README.zh-CN.md)
 
-Skills for Claude Code and Codex that take a requirement from the first question to a mergeable MR with as little waiting on people as possible. People define the work at the start and decide at the end; in between, one agent does the work and proves its own result by running the app, and a model from another family checks it. The reasoning behind every rule, with links to the OpenAI, Anthropic and Lauren Tan (pstack) sources it rests on, is in [docs/basis.md](docs/basis.md).
+Production-grade Agent Skills: from requirement to a verified, mergeable pull request. You settle the decisions and acceptance criteria at the start and read the agent's decisions before you merge; in between, one agent does the work and proves it in the running app, and a model from another family checks it. The reasoning behind every rule, with links to the OpenAI, Anthropic and Lauren Tan (pstack) sources it rests on, is in [docs/basis.md](docs/basis.md).
+
+**Status:** versioned releases ([changelog](CHANGELOG.md)), used on real features in a production codebase, with CI checks on every pull request.
 
 ## The workflow
 

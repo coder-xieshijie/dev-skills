@@ -2,7 +2,7 @@
   "name": "dev-skills",
   "displayName": "Dev Skills",
   "version": "0.1.0",
-  "description": "A self-verifying development workflow for coding agents: core-grill settles the decisions, core-spec writes and freezes spec and verify, deliver takes them to a mergeable MR.",
+  "description": "Production-grade Agent Skills: from requirement to a verified, mergeable pull request.",
   "author": {
     "name": "Xie Shijie",
     "url": "https://github.com/coder-xieshijie"

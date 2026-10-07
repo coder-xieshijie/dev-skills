@@ -1,6 +1,6 @@
 {
   "name": "dev-skills",
-  "description": "Development workflow Skills by Xie Shijie.",
+  "description": "Production-grade development Skills by Xie Shijie.",
   "owner": {
     "name": "Xie Shijie",
     "url": "https://github.com/coder-xieshijie"
@@ -9,7 +9,7 @@
     {
       "name": "dev-skills",
       "source": "./",
-      "description": "A self-verifying development workflow for coding agents: core-grill, core-spec and deliver, plus the Skills they use.",
+      "description": "Production-grade Agent Skills: from requirement to a verified, mergeable pull request. core-grill, core-spec and deliver, plus the Skills they use.",
       "category": "Development",
       "tags": ["workflow", "spec", "verification", "code-review", "coding-agents", "agent-skills"]
     }
