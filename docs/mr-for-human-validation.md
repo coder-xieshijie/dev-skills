@@ -10,7 +10,7 @@
 
 ## 1. 输入与触发边界走查
 
-采用本次用户请求及飞书参考请求的意图，逐项核对入口 description 和执行行为：
+采用本次用户请求及用户参考文档中请求的意图，逐项核对入口 description 和执行行为：
 
 | 输入意图 | 当前指引如何处理 | 本次核验方式 |
 |---|---|---|
@@ -30,8 +30,8 @@
 - base：`2a7e489658e659723051281f405369bde697d3d3`
 - head：`787b27f034923523c0d0addaf52d2ace493136e9`
 - diff：unified=3，1 个 hunk，`@@ -1,6 +1,9 @@`，新增 3 行。
-- 重命名前使用的临时仓库：`/var/folders/pm/2zy2y3rd3tdd5j7yzlgjppvr0000gp/T/mr-reading-guide-eval-a7j7dfbx`
-- 机器结果：`/tmp/mr-understanding-research/behavior-evaluation.json`。
+- 重命名前使用的临时仓库：系统临时目录下的 `mr-reading-guide-eval-*`
+- 机器结果：临时目录下的 `mr-understanding-research/behavior-evaluation.json`。
 
 临时路径不是安装或运行 Skill 的依赖；下表保留核心观察，示例源码在仓库内可读。测试提交期间本机 hook 提示找不到 lefthook，但 Git 提交退出成功，两个 SHA、diff 与代码执行结果均已回读。未修改用户 hook 配置。
 

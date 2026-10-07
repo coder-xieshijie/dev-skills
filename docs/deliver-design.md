@@ -54,7 +54,7 @@ deliver 把“从冻结的 spec、verify 到可合入的 MR”交给一个连续
 | 最终验证由 owner 通过 `scripts/run-verifier.mjs` 启动另一家模型；脚本保存验证者的最终回复作为报告，写下调用记录（CLI、模型家族、模型、session id、head、报告 sha256） | owner 跳过调用、自己写一份格式正确的报告，检查照样通过 | agent-prompt-rules 二-10（每次必须发生的动作交给程序核对）；pstack `orchestrate`：验证昂贵、需要判断或影响面大时，验证者用不同模型家族 |
 | `check-delivery.mjs` 核对调用记录：有效、head 一致、报告在验证之后没被改过、验证者与 plan.md 登记的 owner 家族不同 | 同上；报告事后被改；同家族验证冒充跨模型 | agent-prompt-rules 二-7、二-10 |
 | 另一家模型都不可用时，deliver 不降级为同家族，按“停下”的第 2 种情况处理；只有用户明确放宽时才用同家族，并记在 plan.md | 交付阶段没人再看，降级后宣称可合入，违背用户“用不同模型审”的决定 | 用户的决定；agent-prompt-rules 审查第 17 条 |
-| 验证输入写明允许验证者使用的环境（独立的实例、profile、端口、数据目录、测试数据和清理范围）；验证者只在范围内操作，被挡住时报“环境受阻”，不自行绕过沙箱 | 验证者与 owner 共用实例，或自行放开权限；Agent-Archon 在 detached 检出目录中会退回共享 profile 并退出已安装的应用 | agent-prompt-rules 审查第 18 条；Agent-Archon `scripts/dev-electron-profile.mjs`、`dev-electron-latest.mjs` 的行为 |
+| 验证输入写明允许验证者使用的环境（独立的实例、profile、端口、数据目录、测试数据和清理范围）；验证者只在范围内操作，被挡住时报“环境受阻”，不自行绕过沙箱 | 验证者与 owner 共用实例，或自行放开权限；业务仓库的桌面应用在 detached 检出目录中会退回共享 profile 并退出已安装的应用 | agent-prompt-rules 审查第 18 条；业务仓库 `scripts/dev-electron-profile.mjs`、`dev-electron-latest.mjs` 的行为 |
 | 报告必须有 `head:` 行、`验证模型：` 行和场景表，缺项或截断重试一次 | 报告缺项或被截断仍被当作通过 | agent-prompt-rules 审查第 24 条 |
 | `/deliver` 的输入包括用户确认的两个 sha256；开工时原样写进 plan.md，并运行 `check-delivery.mjs --frozen-only` | 冻结哈希由 owner 开工时自己算，确认之后文件又被改，没人发现 | agent-prompt-rules 审查第 7 条；二-10 |
 
@@ -84,7 +84,7 @@ deliver 把“从冻结的 spec、verify 到可合入的 MR”交给一个连续
   3. 被截断的报告，或"验证模型"一行为空，也能通过。改为逐个场景核对完整的四列行，要求有"冒烟集与回归范围""代码问题"两节，模型值必须在同一行；
   4. 调用记录缺模型也能通过；
   5. CLI 返回了错误文本时，退出码被归为 1 而不是 3。
-- `run-verifier.mjs`：用假的 codex、claude、mcode 在临时 git 仓库上跑 12 个用例，结果都符合预期：
+- `run-verifier.mjs`：用假的 codex、claude 和第三个 CLI 在临时 git 仓库上跑 12 个用例，结果都符合预期：
   - 三种 CLI 正常返回：通过，并记下 provider、家族、模型和 session id；
   - 报告被截断、"验证模型"一行为空、claude 输出中没有模型、模型 ID 认不出家族（如 `qw-mid-5`）：返回 1；
   - 调用失败，包括 claude 返回 `is_error`：返回 3；
@@ -92,15 +92,15 @@ deliver 把“从冻结的 spec、verify 到可合入的 MR”交给一个连续
   - CLI 未安装，或 claude 未登录：返回 3。
 - `check-delivery.mjs`：15 个用例都符合预期：
   - `--frozen-only` 通过，以及 spec 改动后失败；
-  - 跨家族的记录通过（mcode、经网关的 GPT 对 anthropic 的 owner）；
+  - 跨家族的记录通过（第三个 CLI、经网关的 GPT 对 anthropic 的 owner）；
   - 同家族失败，包括经网关的 GPT 对 openai 的 owner；
   - 报告事后被改、记录为 `null`、记录的家族被改、记录缺模型、报告被截断、head 不一致、缺 owner 行：失败；
   - 有用户放宽记录时，同家族只提示；
   - 参数错误返回 2。
 - 真实调用：在一个只有 `./hello.sh` 和一个场景的临时仓库里，`run-verifier.mjs --cli codex` 调用 codex-cli 0.158.0-alpha.2.1（`gpt-6-astra`，high），用时约 1 分钟。验证者按验证说明实际运行了命令，证据写进证据目录，检出目录未改动，报告格式正确；调用记录中的 session id 能在 `$CODEX_HOME/sessions/` 的会话日志里找到；随后 `check-delivery.mjs` 通过。修正 5 个问题后重跑，结果见 PR 描述。
 - subagent 继承：在 Claude Code（`claude-opus-5-5[1m]`）中分别开 general-purpose 和 Explore 类型的 subagent，让它们报告系统提示词中的模型和推理强度。两者的模型都与主 agent 相同；general-purpose 的提示词里有推理强度值，Explore 的没有，所以规定用 general-purpose。主 agent 在这个环境里看不到自己的推理强度值，因此 SKILL.md 规定：模型 ID 必须核对，推理强度在 owner 能看到时再核对。
-- `mcode exec --output-format json` 的返回里有 `sessionId`、`model.providerId`、`model.modelId`，默认模型为 MiniMax-M3.1。
-- 未验证：`claude -p` 的真实调用（本机 shell 未登录）；用 mcode 做一次真实验证；里程碑检查在真实交付中的效果。
+- 第三个 CLI 的 `--output-format json` 返回里有 `sessionId`、`model.providerId`、`model.modelId`。
+- 未验证：`claude -p` 的真实调用（本机 shell 未登录）；用第三个 CLI 做一次真实验证；里程碑检查在真实交付中的效果。
 
 ## 按 agent-prompt-rules 修订（2026-09-29）
 
@@ -210,7 +210,7 @@ core-spec 把用户确认的 sha256 记进交接提交，原因见 [core-spec �
 - 缺少 `--base`、`--base` 不存在：返回 2；
 - `freeze.mjs --trailers` 的两份文件在不同仓库：返回 2；
 - `check-delivery.mjs` 的冻结输入写普通相对路径：仍返回 0；
-- 在真实的 Agent-Archon 需求 worktree（交接早于本规则）上以 `origin/feat/verify-archon-skill` 为 `--base` 运行：返回 1，提示向用户要 sha256。
+- 在业务仓库真实的需求 worktree（交接早于本规则）上，以仓库准备阶段的验证能力 MR 的分支为 `--base` 运行：返回 1，提示向用户要 sha256。
 
 此前第一版的用例（配套检查失败时不输出两行、文件不在 git 仓库时返回 2 且不输出 OK 等）同样通过。三个脚本通过 `node --check`；全仓库链接检查通过。
 
@@ -218,7 +218,7 @@ core-spec 把用户确认的 sha256 记进交接提交，原因见 [core-spec �
 
 ## 里程碑检查记录与报告沿用（2026-09-30）
 
-来源：首个真实需求（matrix/agent-archon!7576）的复盘，见 super-auto `research/goal-final-delivery-trace-2026-09-30/README.md` 第 5.3、5.4 节与第 6 节的 B1–B3、C4。用户确认后改。
+来源：首个真实需求的复盘，见 super-auto `research/goal-final-delivery-trace-2026-09-30/README.md` 第 5.3、5.4 节与第 6 节的 B1–B3、C4。用户确认后改。
 
 ### 试跑中的问题
 
@@ -260,11 +260,11 @@ core-spec 把用户确认的 sha256 记进交接提交，原因见 [core-spec �
 - `record-milestone-check.mjs`：正常保存与第二轮自动编号、从 stdin 读报告：返回 0；不在 plan 里的编号、反向范围、范围不在 HEAD 上、空报告：返回 1；编号格式不对：返回 2。
 - 完整检查：报告就在 MR head 上：返回 0；报告在前一个提交、之后只加了测试文件：返回 0 并列出文件；之后改了产品文件：返回 1 并列出文件；报告的 head 不是祖先：返回 1；缺里程碑记录时完整检查也失败；`--frozen-only` 行为不变。
 
-用试跑的真实数据回放：按两个检查子代理实际返回的时间构造四条记录（M1、M2 各两轮），在 !7576 的需求分支上运行 `--milestones-only`：返回 1，报出 M1 第一轮晚于 M2 的第一个提交 `e4742a609d`、M2 第一轮晚于 `4abb95d974`；M3（文档）不要求记录。
+用试跑的真实数据回放：按两个检查子代理实际返回的时间构造四条记录（M1、M2 各两轮），在第一个真实需求的需求分支上运行 `--milestones-only`：返回 1，报出 M1 第一轮晚于 M2 的第一个提交 `e4742a609d`、M2 第一轮晚于 `4abb95d974`；M3（文档）不要求记录。
 
 ### Codex 审查
 
-修改后由 Codex（`gpt-6-astra`，只读，session `01a0f260-c9c9-7ac2-ba1e-e0f546e1fadd`）审查 diff，报出 8 条（4 条 P1），都成立并已修正：
+修改后由 Codex（`gpt-6-astra`，只读）审查 diff，报出 8 条（4 条 P1），都成立并已修正：
 
 - P1：spec、verify 重新冻结后，它们在文档目录里，旧报告会被沿用 → 冻结的两份文件改了一律重新验证；
 - P1：产品文件重命名进 `tests/`，`--name-only` 只列新路径 → 用 `--no-renames`，删除的产品路径照样计入；
@@ -277,7 +277,7 @@ core-spec 把用户确认的 sha256 记进交接提交，原因见 [core-spec �
 
 针对这 8 条在新的临时仓库各补了用例，18 个断言都符合预期；前面的 37 个用例和真实数据回放的结论不变。
 
-修正后由 Codex 在新 session 复审（session `01a0f269-9a95-7cb1-bfa6-f1c58151066c`）：上一轮 5 条已解决、3 条部分解决，另报 1 条新问题，共 4 条，都已修正：
+修正后由 Codex 在新 session 复审：上一轮 5 条已解决、3 条部分解决，另报 1 条新问题，共 4 条，都已修正：
 
 - P1：spec、verify 在代码仓库之外（只交本地路径、用 `--repo` 指定代码仓库）时，重新冻结后旧报告仍会被沿用 → 冻结文件不在代码仓库里时，无法证明报告对应同一份验收文档，一律重新验证；
 - P2：只有基线、没有交接提交时，rebase 后上游提交仍被算进需求分支 → 列提交时排除基线分支（先找 `origin/<分支>`，再找本地分支）已有的提交；
@@ -290,21 +290,21 @@ core-spec 把用户确认的 sha256 记进交接提交，原因见 [core-spec �
 
 ## 验证调用限时、预检与图形入口（2026-09-30）
 
-来源：首个真实需求（matrix/agent-archon!7576）的复盘，见 super-auto `research/goal-final-delivery-trace-2026-09-30/README.md` 第 5.1、5.2 节与第 6 节的 C1–C3、N2。用户确认后改。
+来源：首个真实需求的复盘，见 super-auto `research/goal-final-delivery-trace-2026-09-30/README.md` 第 5.1、5.2 节与第 6 节的 C1–C3、N2。用户确认后改。
 
 ### 试跑中的问题
 
 - 第一轮用 Codex 验证，`-s workspace-write` 沙箱里 Playwright 启动 Electron 报 “Process failed to launch!”，核心场景 S01 和 Electron 冒烟只能标“环境受阻”，到交付第 2 小时才暴露。
-- 改用 mcode 时模型引用写成 `mafia/gpt-6-astra`，调用被拒；正确写法是 `custom_provider:mafia/gpt-6-astra`。
-- mcode 复验跑了 2 小时 3 分钟没有报告：三个入口的场景 23 分钟就跑完，之后一直在读文件。`run-verifier.mjs` 用 `spawnSync` 同步等待，没有超时，运行中不写日志，owner 只能翻 mcode 的 runtime 日志判断它在做什么，用户来问了五次进度，最后手动取消。
+- 改用第三个 CLI 时模型引用少写了提供方前缀，调用被拒；补上前缀后才能调用。
+- 第三个 CLI 的复验跑了 2 小时 3 分钟没有报告：三个入口的场景 23 分钟就跑完，之后一直在读文件。`run-verifier.mjs` 用 `spawnSync` 同步等待，没有超时，运行中不写日志，owner 只能翻这个 CLI 的 runtime 日志判断它在做什么，用户来问了五次进度，最后手动取消。
 
 ### 改动
 
 - 调用改为异步：CLI 的输出边运行边写进 `.log`；`.status.json` 记着状态、开始时间和最近一次写证据的时间。
 - 两个上限：`--timeout`（默认 90 分钟）和 `--stall`（默认 20 分钟内 `--add-dir` 下没有任何文件变化）。到了就结束验证者的整个进程组，调用记录写明终止原因（`completed`、`cli_failed`、`invalid_report`、`stalled`、`timed_out`、`checkout_changed`），返回 3，owner 换另一个 CLI。停滞只看证据文件，不看 CLI 自己的输出。
 - `--preflight`：用同样的 CLI、模型、推理强度和沙箱发一次最短的调用，确认能答、能读出模型和 session id、模型家族可识别；给了 `--owner-family` 时还要求与 owner 不同家族。deliver 开工时就跑一次。codex 的预检在临时目录里运行，加 `--skip-git-repo-check`。
-- 验证时三个 CLI 都不带沙箱：codex 改用 `-s danger-full-access` 并关掉审批（`approval_policy=never`），claude 仍用 `bypassPermissions`，mcode 仍用 `--permission full`。调用记录写明 `sandbox`。最初的版本让 codex 默认带沙箱、要图形界面时再加 `--needs-gui --unsandboxed`；用户 2026-09-30 追加要求验证环节默认去掉沙箱，这两个选项随之删除。查漏（core-spec）只读代码，仍用 `-s read-only`。
-- `--effort`：显式设对方的推理强度（codex `model_reasoning_effort`、claude `--effort`、mcode `--effort`），写进调用记录。
+- 验证时三个 CLI 都不带沙箱：codex 改用 `-s danger-full-access` 并关掉审批（`approval_policy=never`），claude 仍用 `bypassPermissions`，第三个 CLI 仍用完全权限。调用记录写明 `sandbox`。最初的版本让 codex 默认带沙箱、要图形界面时再加 `--needs-gui --unsandboxed`；用户 2026-09-30 追加要求验证环节默认去掉沙箱，这两个选项随之删除。查漏（core-spec）只读代码，仍用 `-s read-only`。
+- `--effort`：显式设对方的推理强度（codex `model_reasoning_effort`、claude `--effort`、第三个 CLI `--effort`），写进调用记录。
 - codex 调用前先查 `codex login status`。
 - deliver 与跨模型调用说明相应改写；原先“沙箱挡住应用时不改用无沙箱”的写法按用户 2026-09-30 的决定取消。
 
@@ -318,17 +318,17 @@ core-spec 把用户确认的 sha256 记进交接提交，原因见 [core-spec �
 ### 验证
 
 - 用假 codex CLI 在临时仓库实跑 24 个断言，都符合预期：参数错误返回 2；预检通过并写明沙箱、推理强度；预检拒绝与 owner 同家族；正常运行的调用记录含 `completed`、`effort`、`sandbox`，codex 收到 `model_reasoning_effort`，并以 `danger-full-access`、`approval_policy=never` 运行；只打印输出、不写证据的运行在停滞上限后被结束，记录为 `stalled`，进程已被杀掉，状态文件为 `stalled`；运行中日志已有输出、状态为 `running`；持续写证据的慢运行正常完成；超过总时长记录为 `timed_out`。
-- 真实 CLI 的预检：codex 默认、codex `--effort high` 都在 10 秒左右通过；mcode `custom_provider:mafia/gpt-6-astra --effort high` 9 秒通过；mcode `mafia/gpt-6-astra`（试跑中写错的引用）3 秒内返回 3；本机 claude 未登录，返回 3。
+- 真实 CLI 的预检：codex 默认、codex `--effort high` 都在 10 秒左右通过；第三个 CLI 用带前缀的完整引用（`gpt-6-astra`，`--effort high`）9 秒通过，用试跑中写错的引用 3 秒内返回 3；本机 claude 未登录，返回 3。
 
 ### Codex 审查
 
-修改后由 Codex（`gpt-6-astra`，只读，session `01a0f272-a5e7-7e90-be8b-e88cf587b3ff`）审查 diff，报出 11 条（3 条 P1），都成立并已修正：
+修改后由 Codex（`gpt-6-astra`，只读）审查 diff，报出 11 条（3 条 P1），都成立并已修正：
 
 - P1：验证者退出后，忽略 SIGTERM 的后代可能留下，脚本随即退出、SIGKILL 不再执行 → 调用结束时无论怎样结束，都对整个进程组发 SIGKILL；
 - P1：脱离进程组的后代继续占着输出管道时，`close` 不来，结果一直不结算 → 进程退出后最多等 5 秒，停止后 SIGKILL 再等 5 秒，到时关掉管道结算，只结算一次；
 - P1：脚本收到 SIGINT、SIGTERM 时，独立进程组里的验证者不会跟着结束 → 捕获这两个信号，先结束验证者再退出（130、143）；
 - P2：输出按块解码，跨块的中文变成替换字符，报告里“验证模型”被破坏 → 用 `setEncoding("utf8")` 按流解码；
-- P2：claude、mcode 用 `--output-format json`，结束前没有日志 → 改用 `stream-json`（claude 加 `--verbose`），从最后的结果事件读报告、模型和 session；
+- P2：claude 和第三个 CLI 用 `--output-format json`，结束前没有日志 → 改用 `stream-json`（claude 加 `--verbose`），从最后的结果事件读报告、模型和 session；
 - P2：停止不是幂等的，停滞之后又超时会改写终止原因 → 首次停止时锁定原因、停止轮询；
 - P2：未来时间戳的文件会让“最近一次变化”停在未来，停滞永远不触发 → 用快照比较是否有变化，时长用单调时钟；
 - P2：只看最大 mtime，会漏掉深层、软链接目录里的改写和删除 → 按路径比较完整快照（新增、修改、删除），不限深度、不跟随软链接；
@@ -336,11 +336,11 @@ core-spec 把用户确认的 sha256 记进交接提交，原因见 [core-spec �
 - P2：deliver 里预检写成“参数同下文”，照抄会带上预检不接受的参数 → 写出完整的预检命令；
 - P2：强制带 `--owner-family` 与用户放宽跨模型要求的例外冲突 → 放宽时不加。
 
-补了 16 个用例（忽略 SIGTERM 的后代被清掉；脱离进程组的后代占着管道时 20 秒内结束；给脚本发 SIGTERM 后验证者被结束、返回 143；未来时间戳、经软链接给出的证据目录、深层改动、删除；claude、mcode 的 stream-json，跨块的中文不损坏），与前面 24 个都符合预期；真实 CLI 的预检结果不变（mcode 改用 stream-json 后仍通过）。修改后没有再送审。
+补了 16 个用例（忽略 SIGTERM 的后代被清掉；脱离进程组的后代占着管道时 20 秒内结束；给脚本发 SIGTERM 后验证者被结束、返回 143；未来时间戳、经软链接给出的证据目录、深层改动、删除；claude 和第三个 CLI 的 stream-json，跨块的中文不损坏），与前面 24 个都符合预期；真实 CLI 的预检结果不变（第三个 CLI 改用 stream-json 后仍通过）。修改后没有再送审。
 
-实际使用的佐证：试跑最后一次复验在用户同意下没有经本脚本，直接用 `codex exec --dangerously-bypass-approvals-and-sandbox`、`model_reasoning_effort=high` 运行（session `01a0f244-6650-73a0-b71f-5a5aff6e6df1`）：Electron 20:27 启动成功，20:21–20:32 用 11 分钟完成全部场景和代码审查，结论 PASS；同一个模型经 mcode 的那次跑了 2 小时 3 分钟没有报告。
+实际使用的佐证：试跑最后一次复验在用户同意下没有经本脚本，直接用 `codex exec --dangerously-bypass-approvals-and-sandbox`、`model_reasoning_effort=high` 运行：Electron 20:27 启动成功，20:21–20:32 用 11 分钟完成全部场景和代码审查，结论 PASS；同一个模型经第三个 CLI 的那次跑了 2 小时 3 分钟没有报告。
 
-去掉沙箱后的实测：codex 以本脚本使用的 `-s danger-full-access -c approval_policy=never` 在验证检出目录运行 verify-archon 的 `electron up`，成功启动（`mainUrl` 为 `app://./archon`），随后 `electron down` 成功，检出目录保持干净（session `01a0f28e-233b-7c70-8387-c259f080f8dd`）。
+去掉沙箱后的实测：codex 以本脚本使用的 `-s danger-full-access -c approval_policy=never` 在验证检出目录运行业务仓库的验证 Skill 的 `electron up`，成功启动（`mainUrl` 为应用的 `app://` 地址），随后 `electron down` 成功，检出目录保持干净。
 
 尚未验证：经本脚本跑完一次完整的图形界面验证。
 
@@ -357,13 +357,13 @@ core-spec 把用户确认的 sha256 记进交接提交，原因见 [core-spec �
 
 ## 里程碑检查记录经得起 rebase（2026-09-30）
 
-来源：把新版 deliver 同步给进行中的需求（agent-archon !7595）时，对照它的计划发现：需求分支最后要 rebase 到更新后的目标分支，而按上文“里程碑检查记录与报告沿用”的做法，一次没有冲突的 rebase 就能让记录作废。super-auto `discussions/2026-09-30-goal-final-delivery-trace-review.md` 记录了发现经过，用户确认后改。
+来源：把新版 deliver 同步给进行中的需求（第二个真实需求）时，对照它的计划发现：需求分支最后要 rebase 到更新后的目标分支，而按上文“里程碑检查记录与报告沿用”的做法，一次没有冲突的 rebase 就能让记录作废。super-auto `discussions/2026-09-30-goal-final-delivery-trace-review.md` 记录了发现经过，用户确认后改。
 
 ### 问题
 
 在临时仓库复现，两种情况都让整条记录不再计入：
 
-- 记录里的一个提交在 rebase 时被 git 去掉，因为目标分支已经有同样的改动（`patch contents already upstream`）。!7595 带着另一个 MR 的 runtime 提交，那个 MR 先合入后就会这样。
+- 记录里的一个提交在 rebase 时被 git 去掉，因为目标分支已经有同样的改动（`patch contents already upstream`）。第二个真实需求的分支带着另一个 MR 的 runtime 提交，那个 MR 先合入后就会这样。
 - 目标分支改了某个已检查提交改动附近的一行。rebase 没有冲突，增删的行也没变，但 `git show` 带出的上下文行变了，逐字比较对不上。
 
 记录作废后，门禁报“里程碑没有检查记录”和“提交未被覆盖”；重做的检查晚于之后的提交，只能由用户放行。owner 按规定做了每一步，仍然过不了门禁。
@@ -414,7 +414,7 @@ core-spec 把用户确认的 sha256 记进交接提交，原因见 [core-spec �
 
 ## 重新交接后，之前的里程碑检查仍然计入（2026-10-01）
 
-来源：agent-archon !7595 交付到一半，用户决定修改 verify 的 S04，按 deliver“停下”一节用 core-spec 重新确认、在需求分支上提交新的交接提交，owner 把 `read-handoff.mjs` 输出的新交接行写进 plan.md。之后 `check-delivery.mjs` 报 M1–M4 都没有检查记录：M1 已存的两轮记录都不再计入。owner 会话报告了这个问题，用户确认后改。
+来源：第二个真实需求交付到一半，用户决定修改 verify 的 S04，按 deliver“停下”一节用 core-spec 重新确认、在需求分支上提交新的交接提交，owner 把 `read-handoff.mjs` 输出的新交接行写进 plan.md。之后 `check-delivery.mjs` 报 M1–M4 都没有检查记录：M1 已存的两轮记录都不再计入。owner 会话报告了这个问题，用户确认后改。
 
 ### 问题
 
@@ -443,7 +443,7 @@ core-spec 把用户确认的 sha256 记进交接提交，原因见 [core-spec �
 - 只有基线行的计划：结果不变，交接提交照常算作 owner 的提交。
 - 合并形式的交接提交顺带带进代码：返回 1，要求覆盖；trailer 写成 `./` 路径：与普通路径一样跳过；交接之前有一个折行 trailer 的提交：不当作交接，从真正的交接起算。
 
-改前的脚本在这组用例上有 11 个断言不通过。原有四组用例（37、23、33 个，run-verifier 22、16 个）全部通过。在 !7595 的真实 plan 上（head 为新交接提交 `9d998c8968`），M1 的两轮记录重新计入，剩下的问题只有 M2–M4 还没检查。
+改前的脚本在这组用例上有 11 个断言不通过。原有四组用例（37、23、33 个，run-verifier 22、16 个）全部通过。在第二个真实需求的真实 plan 上（head 为新交接提交 `9d998c8968`），M1 的两轮记录重新计入，剩下的问题只有 M2–M4 还没检查。
 
 ### Codex 审查
 
@@ -474,7 +474,7 @@ core-spec 把用户确认的 sha256 记进交接提交，原因见 [core-spec �
 
 - Codex 审查后补的：没有交接行时照样发现改动并要求确认；基线分支没拉取时报错；只改 spec 的重新交接、verify 换了路径时，验证者都被告知；目标分支上旧需求用过同样路径、同一分支上有两个需求时，不误报；调用记录的 `first_handoff` 不对时完整检查返回 1。
 
-共 29 个断言。其余各组用例（37、23、33、16 个，run-verifier 22、16 个）全部通过。在 !7595 的真实 plan 上，`--frozen-only` 指出 verify 自第一次交接后改过、缺少确认行。
+共 29 个断言。其余各组用例（37、23、33、16 个，run-verifier 22、16 个）全部通过。在第二个真实需求的真实 plan 上，`--frozen-only` 指出 verify 自第一次交接后改过、缺少确认行。
 
 Codex 审查（`gpt-6-astra`，推理强度 high）第一版报出 5 条（1 条 P1），都成立并已修正：
 
@@ -488,7 +488,7 @@ Codex 审查（`gpt-6-astra`，推理强度 high）第一版报出 5 条（1 条
 
 ## 验收口径偏差由 owner 自定，验证者判断是否放宽（2026-10-01）
 
-来源：agent-archon !7595 交付中三次停下问用户（S04、S05、S09），6 次提问，用户等了约 52 分钟，verify 中途冻结两次。三处都是同一类：spec 规定的产品行为清楚，实现也符合 spec，只是 verify 的检查方法与观测工具对不上。S04、S05 拿“产品计数”对“Inspector 条数”，而 Inspector 只保存成功的调用，暂停打断已发出的请求时 spec R20 要计数；S09 的“hold 期间没有新的模型请求”把会话标题的辅助请求也算了进去。用户同意改为 owner 自定、记录，由验证者把关。
+来源：第二个真实需求交付中三次停下问用户（S04、S05、S09），6 次提问，用户等了约 52 分钟，verify 中途冻结两次。三处都是同一类：spec 规定的产品行为清楚，实现也符合 spec，只是 verify 的检查方法与观测工具对不上。S04、S05 拿“产品计数”对“观测工具里的调用条数”，而这个工具只保存成功的调用，暂停打断已发出的请求时 spec R20 要计数；S09 的“挂起期间没有新的模型请求”把会话标题的辅助请求也算了进去。用户同意改为 owner 自定、记录，由验证者把关。
 
 ### 问题
 
@@ -541,7 +541,7 @@ Codex 审查（`gpt-6-astra`，推理强度 high）第一版报出 5 条（1 条
 
 ## 里程碑检查先审代码；修复后的重跑由脚本选（2026-10-01）
 
-来源：agent-archon !7595 的交付复盘。M2 从提交到第二轮检查通过用了约 4 小时 50 分钟，其中场景跑了三轮（80、36、72 分钟）。第一轮检查在两轮场景之后才开始，报出的两个代码问题（取消且无用量的请求按 0 计、旧总结项启动后仍算待处理）都不依赖场景结果，修完又跑了第三轮。M3 修复后，owner 凭判断挑了 11 个场景重跑，漏了 S34：它经过的 token 预算路径被其中一个修复改了，M3 的第一轮检查才指出来。
+来源：第二个真实需求的交付复盘。M2 从提交到第二轮检查通过用了约 4 小时 50 分钟，其中场景跑了三轮（80、36、72 分钟）。第一轮检查在两轮场景之后才开始，报出的两个代码问题（取消且无用量的请求按 0 计、旧总结项启动后仍算待处理）都不依赖场景结果，修完又跑了第三轮。M3 修复后，owner 凭判断挑了 11 个场景重跑，漏了 S34：它经过的 token 预算路径被其中一个修复改了，M3 的第一轮检查才指出来。
 
 ### 改动
 
@@ -563,7 +563,7 @@ Codex 审查（`gpt-6-astra`，推理强度 high）第一版报出 5 条（1 条
 ### 验证
 
 - `select-scenarios.mjs`：新增 47 个断言（临时仓库实跑，super-auto `deliver-select-cases.sh`），覆盖用法错误、缺节、缺列、行没有场景 ID、无改动、只改测试和文档、`**` 与 `*` 的区别、目录模式不误配同名前缀（`pkg/ui` 不匹配 `pkg/uix`）、一行多个场景、没人认领的文件、`.harness/docs/` 下的冻结 verify、`--failed`、`--json`、空涉及路径与 `*`。故意改坏三处（冻结文件按普通文件处理、目录模式按前缀匹配、没人认领的文件不触发全选），各有断言失败。
-- 在 !7595 的真实提交上回放（super-auto `deliver-select-replay-7595.sh`，按入口给 32 个场景配了粗粒度的涉及路径，只读 git）：M3 场景跑在 `512fd9792f` 上，修到 `69696e4f2c` 时改了 agent-core、Goal 账本与执行器、TUI 共 19 个产品文件，脚本选出全部 32 个场景，包括 owner 手工漏掉的 S34。这次回放也说明：修复改到运行时核心时，脚本不会比全量少跑；它省的是只碰个别目录的修复，主要作用是不漏选。
+- 在第二个真实需求的真实提交上回放（super-auto `deliver-select-replay-7595.sh`，按入口给 32 个场景配了粗粒度的涉及路径，只读 git）：M3 场景跑在 `512fd9792f` 上，修到 `69696e4f2c` 时改了 agent 核心、长任务功能的账本与执行器、TUI 共 19 个产品文件，脚本选出全部 32 个场景，包括 owner 手工漏掉的 S34。这次回放也说明：修复改到运行时核心时，脚本不会比全量少跑；它省的是只碰个别目录的修复，主要作用是不漏选。
 - `report-reuse.mjs` 的改动：同一脚本另有 8 个断言直接调用 `reuseCheck()`（只改测试与根目录 README 时沿用；改了产品文件、改了冻结的 verify、报告的 head 不是祖先时不沿用），在重构前后结果相同；原有各组用例（rebase 33、重新交接 16、重新冻结 29、口径偏差 58 个断言）全部通过。
 - 未验证：两部分检查在真实交付中的效果；owner 写涉及路径的粒度是否够细。下一个需求观察。
 
@@ -571,12 +571,12 @@ Codex 审查（`gpt-6-astra`，推理强度 high）第一版报出 5 条（1 条
 
 ### 起因
 
-dev-skills#26 之后对开发流程类 Skill 做了一次一致性检查，同时复盘了 agent-archon !7595 的交付。主要发现：
+dev-skills#26 之后对开发流程类 Skill 做了一次一致性检查，同时复盘了第二个真实需求的交付。主要发现：
 
 - **越改越重。** 正文从 #15 的 4,687 字长到 7,945 字，含限制词的句子从 30 句到 50 句，脚本从 3 个到 11 个（2,399 行）。每次试跑暴露一个问题，就加一段正文和一道脚本检查，只有 #23 删过。这正是 Anthropic prompt-audit 说的 patch accretion。
 - **规则互相矛盾。** 里程碑检查两轮后能不能往下做，正文两处说法相反；最终 head 全量重跑还是只重跑受影响的，两处说法不一；“涉及路径写漏只会让重跑变多”与 `select-scenarios.mjs` 的实际行为不符（写漏会少选，已复现）。
-- **过程门禁挡错了地方。** 门禁的场景解析认不出 !7595 verify 里的 `S12b` 和机械检查 M01–M17，报告少了这 20 项也能过；独立验证 90 分钟到点按“CLI 用不了”处理，换一家 CLI 一样会超时。
-- **为决定停下的代价大。** !7595 的 S24：spec 把现有的“立即发送”快捷键写错，owner 按当时的规则（改 spec 要用户原话）停下问了两次并重新冻结。
+- **过程门禁挡错了地方。** 门禁的场景解析认不出第二个真实需求 verify 里的 `S12b` 和机械检查 M01–M17，报告少了这 20 项也能过；独立验证 90 分钟到点按“CLI 用不了”处理，换一家 CLI 一样会超时。
+- **为决定停下的代价大。** 第二个真实需求的 S24：spec 把现有的“立即发送”快捷键写错，owner 按当时的规则（改 spec 要用户原话）停下问了两次并重新冻结。
 
 ### 用户的决定（2026-10-01）
 
@@ -620,7 +620,7 @@ dev-skills#26 之后对开发流程类 Skill 做了一次一致性检查，同�
 ### 验证
 
 - `scripts/check-delivery.test.mjs`：20 条用例（临时 git 仓库实跑，零依赖），全部通过。故意改坏 10 处（不比哈希、在整条历史里找交接、放过报告之后的代码改动、放过非祖先、不查 verdict、放过同家族、不查工作区、不要求报告包含最近一次交接、任意层级的 `tests/` 都算测试、不用 `-z` 读路径），每处都有用例失败。
-- 在 !7595 的真实分支上只读运行 `--frozen`：认出最近一次交接 `9a596da696`，两份文件与记录一致，通过。
+- 在第二个真实需求的真实分支上只读运行 `--frozen`：认出最近一次交接 `9a596da696`，两份文件与记录一致，通过。
 - 行为探针：新开一个 Claude 子代理和一个 Codex 会话（`gpt-6-astra`），只给新版 deliver 和 core-grill，问 6 个情境：快捷键写错、两种交互二选一、验证到 60 分钟、准备合入、只影响实现的存储选择、grill 结束时交什么。两边的回答都符合这次的决定：不停下、不改冻结文件、按代码更正并写进决定清单、产品选择先问另一家模型、同一会话续接、合入前停、存储选择记成默认决定、交出决定汇总请用户确认一次。探针暴露两处缺口，已修：验证说明的 PASS 条件仍写“符合 spec 字面预期”，与决定清单的更正冲突，改为按验证者认可的决定判；正文没写验证之后只改 plan 要不要重验，补了一句。
 - `check-links.mjs` 通过。
 
@@ -632,7 +632,7 @@ dev-skills#26 之后对开发流程类 Skill 做了一次一致性检查，同�
 - P1：任意层级名为 `tests` 的目录都算测试，`src/app/tests/page.tsx` 这类产品代码会漏过重验 → 只认仓库根或包根下的 `test/`、`tests/`、`e2e/`；
 - P2：中文路径被 git 加引号，只改了中文名的文档也被要求重验 → 用 `git diff -z` 读路径；
 - P2：事实更正、改用的判定方法可以不问另一家模型 → 咨询范围改为决定清单里会影响结果或判定的三类；
-- P2：`cross-model.md` 把 `mcode --cwd` 写成加证据目录 → `--cwd` 指向验证检出目录，证据目录写在验证输入里；
+- P2：`cross-model.md` 把第三个 CLI 的 `--cwd` 写成加证据目录 → `--cwd` 指向验证检出目录，证据目录写在验证输入里；
 - P2：只交本地路径时 plan.md 不再记确认的 sha256，中断后接手的 session 无法核对 → 冻结输入在这种情况下写绝对路径和用户给的 sha256。
 
 修正后没有再送审。
@@ -646,7 +646,7 @@ dev-skills#26 之后对开发流程类 Skill 做了一次一致性检查，同�
 
 ### 起因
 
-agent-archon !7595 的主会话和 62 个 subagent 全部跑在 `claude-opus-5-5`。按公开价粗算约 $1,390：主会话 $574，检查与评审（24 个）$304，写代码与集成（18 个）$224，跑场景（11 个）$221。同样 token 换成 Sonnet 5.5，只换跑场景的约省 $79（6%），连检查一起换约省 $200（14%）；两家缓存读同价，长会话的输入大多是缓存读，所以省得比价目表少。同时本机另行把所有通用 subagent 默认到了 Sonnet 5.5，与“里程碑检查继承 owner”冲突。
+第二个真实需求的主会话和 62 个 subagent 全部跑在 `claude-opus-5-5`，按公开价粗算花费明显偏高：主会话最多，其次依次是检查与评审（24 个）、写代码与集成（18 个）、跑场景（11 个）。同样 token 换成 Sonnet 5.5，只换跑场景的约省 6%，连检查一起换约省 14%；两家缓存读同价，长会话的输入大多是缓存读，所以省得比价目表少。同时本机另行把所有通用 subagent 默认到了 Sonnet 5.5，与“里程碑检查继承 owner”冲突。
 
 ### 用户的决定（2026-10-01）
 
@@ -665,7 +665,7 @@ deliver“里程碑”一节加一段：写代码、集成、里程碑检查用�
 
 ### 接受的代价与未验证
 
-- 跑场景降级后，执行或读回出错要到最终验证才暴露；里程碑检查不降级，正是为了不让判断类问题（如 !7595 的 S26、S34）漏到最后。
+- 跑场景降级后，执行或读回出错要到最终验证才暴露；里程碑检查不降级，正是为了不让判断类问题（如第二个真实需求的 S26、S34）漏到最后。
 - 降级的效果没有对照数据；下一个需求可让两种模型各跑同一批场景对比。
 - 行为探针：新开 Codex 会话（`gpt-6-astra`）只读新版 SKILL.md，问派里程碑检查和跑场景各用什么类型：答 `general-purpose`、不传模型参数；跑场景派 `verify-runner`，本机没有时回退到 `general-purpose`。与决定一致。
 
@@ -673,7 +673,7 @@ deliver“里程碑”一节加一段：写代码、集成、里程碑检查用�
 
 ### 起因
 
-agent-archon !7595 的交付复盘（super-auto `research/flow-review-2026-10-03/`）里，最终验证的 6 个 Codex 周期中有三个没给出 PASS，原因都是开工前就能发现的事：
+第二个真实需求的交付复盘（super-auto `research/flow-review-2026-10-03/`）里，最终验证的 6 个 Codex 周期中有三个没给出 PASS，原因都是开工前就能发现的事：
 
 - verify 的完成条件里有一条“每个覆盖盲区指定的替代测试都必须通过”。owner 三轮自验和 Codex 前三个周期都只看了场景表，没有人照着这一条判；验证说明自己转述了一遍完成条件，转述里漏了这一条。
 - 覆盖盲区 B01 写明要用“进程中断注入”测试，实际写成了同一进程内关闭再重开，到第 5 周期才被指出。
@@ -705,16 +705,16 @@ agent-archon !7595 的交付复盘（super-auto `research/flow-review-2026-10-03
 
 ### 接受的代价
 
-- 开工预判多一次只读跨模型调用，7595 规模约 3.5 分钟；代码审查约 10 分钟。
+- 开工预判多一次只读跨模型调用，第二个真实需求的规模下约 3.5 分钟；代码审查约 10 分钟。
 - 自验与独立验证并行：owner 的自验如果发现产品问题，要改代码，验证者在旧 head 上那一轮就白跑了。先过里程碑检查和代码审查，就是为了降低这种情况。
 - 完成条件靠文字指向 verify 原文，没有脚本核对报告是否逐条写全，结果由 owner 读报告时自行判断。
 
 ### 验证
 
-用 7595 的材料在新的 Codex 会话里做对照（`codex exec -s read-only`，模型 `gpt-6-astra`，2026-10-07）：
+用第二个真实需求的材料在新的 Codex 会话里做对照（`codex exec -s read-only`，模型 `gpt-6-astra`，2026-10-07）：
 
 - **验证说明（改前、改后各一次）**：在 `2cf29eaefb` 上只判完成条件和决定清单，沿用第 3 周期的场景结果。两次都判 UNVERIFIED，都指出覆盖盲区的替代测试没有证据证明通过。改后的报告按 verify 原文逐条写了 4 条完成条件，并逐个列出 21 个盲区，owner 能直接对着补；改前只用一行带过。这说明改后结构更好用，但不能说明“改后才抓得到”：在只判这一项的条件下，改前的版本也读到了 verify 原文。
-- **开工预判（新增步骤，没有改前版本）**：拿 7595 最早的 plan（9-30 开工时）和当时的 verify 预判，用时 3.5 分钟。指出 21 个覆盖盲区都没有安排替代判断，B01 需要真实进程中断，RG3 没有排进任何里程碑，验证与验收一节为空。这些问题在实际交付中要到两天后的第 4、5 周期才被发现。
+- **开工预判（新增步骤，没有改前版本）**：拿第二个真实需求最早的 plan（9-30 开工时）和当时的 verify 预判，用时 3.5 分钟。指出 21 个覆盖盲区都没有安排替代判断，B01 需要真实进程中断，RG3 没有排进任何里程碑，验证与验收一节为空。这些问题在实际交付中要到两天后的第 4、5 周期才被发现。
 
 ### 未验证
 
