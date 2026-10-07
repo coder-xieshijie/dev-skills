@@ -52,7 +52,7 @@ Before writing, read and apply [the body rules of explain-as-fool](../explain-as
 
 - Enter the technical design through a concrete scenario. When a term first appears, explain its responsibility and role where it is used.
 - Organize the body around design and behavior. Use directories, classes, functions and code snippets only to explain key mechanisms or to support a judgment.
-- Use one complete flow to connect the trigger, the participating modules, the changes in data and state, and the final result; explain each related error case where it occurs.
+- Use one complete flow to connect the initiating actor, the participating modules, the changes in data and state, and the final result; explain each related error case where it occurs.
 - Choose architecture diagrams, flowcharts, sequence diagrams or state diagrams as the explanation needs; use Mermaid by default.
 - Module names, relationships, directions and states in diagrams must match the body; what is new, modified and reused must be directly recognizable.
 - For interfaces and data models, give the fields, meanings and constraints needed to understand the interactions, in enough detail to review the design.

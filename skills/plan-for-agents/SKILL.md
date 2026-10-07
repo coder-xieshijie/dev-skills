@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 Write the plan so that an agent that did not take part in the earlier discussion, after reading the plan and the materials it explicitly references, knows the goal, the basis, how to carry out the work, its decision authority and the done criteria, without guessing key agreements from chat history.
 
-Judge completeness by the requirements in effect and the boundaries of execution, not by length, number of sections, or agreement among models. Keep the information execution needs, and merge repeated statements; a simple task may use a short plan that covers everything necessary. By default, write the plan in the user's language.
+Judge completeness by the requirements in effect and the boundaries of execution, not by length, number of sections, or agreement among models. Keep the information execution needs, and merge repeated statements; a simple task may use a short plan that covers everything necessary. By default, write the plan, check findings and your final reply in the user's language.
 
 ## 1. Determine this piece of work and its basis
 
@@ -42,7 +42,7 @@ When open items exist, you may deliver a draft pending confirmation, but the aff
 
 ## 3. Expand the approach to executable granularity
 
-Split steps into units that "can be executed on their own and judged complete", and give stable identifiers to steps that others depend on or that are handed off. Avoid having only phase names like "analyze, implement, test", and there is no need to write out ordinary mechanical operations one by one in advance.
+Split steps into units that "can be executed on their own and judged complete", and give stable identifiers to steps that involve dependencies or handoffs. Avoid having only phase names like "analyze, implement, test", and there is no need to write out ordinary mechanical operations one by one in advance.
 
 For each substantive step, write out the following; simple steps may be merged into one paragraph:
 
@@ -71,7 +71,7 @@ Write only what the task actually needs; do not bring in new mechanisms, extra p
 
 ## 4. Keep the plan complete when revising
 
-Take the existing complete plan as what you revise, and update the relevant parts using new facts, user rulings and valid review comments. When the user changes only one decision, first check that decision and what depends on it; do not read it as authorization to rewrite or compress the whole plan.
+Take the existing complete plan as what you revise, and update the relevant parts using new facts, user rulings and valid review comments. When the user changes only one decision, first check that decision and its dependencies; do not read it as authorization to rewrite or compress the whole plan.
 
 - Keep requirements, interface agreements, boundaries, steps and acceptance details that are still valid.
 - Replace a design overturned by a new conclusion in its own place, and update the dependent steps, error handling and verification requirements to match.
