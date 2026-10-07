@@ -4,11 +4,14 @@ These tasks are done by a model from another family in a new session: the gap ch
 
 ## Which family to call
 
+Go by the family of the current session's model, not by the client: MCode runs whichever model you configure in it.
+
 | Model of the current session | Call |
 |---|---|
-| Claude (in Claude Code) | Codex: `codex exec` |
-| GPT (in Codex) | Claude Code: `claude -p` |
-| Either of the above | Any other CLI that runs a model from another family and can take a prompt and write its reply to a file |
+| Claude (in Claude Code, or in MCode with a Claude model) | Codex: `codex exec` |
+| GPT (in Codex, or in MCode with a GPT model) | Claude Code: `claude -p` |
+| Another family (for example a MiniMax model in MCode) | Either: `codex exec` or `claude -p` |
+| Any of the above | Any other CLI that runs a model from another family and can take a prompt and write its reply to a file |
 
 Use the model and effort currently configured in the other CLI; when the user specifies otherwise, follow the user. The report states the actual model. When the other CLI cannot be used (not installed, not logged in, or still failing after a retry), switch to another CLI of a different family; when none can be used, do not substitute the same family, and handle it as the place that makes the call says. `claude -p` requires being logged in: `loggedIn` is `true` in `claude auth status`.
 
