@@ -43,7 +43,7 @@ Must not appear: a retry making the count +2; a blocked request being counted
 Baseline expectation: fails (the old counting basis does not count by logical requests)
 Decoy implementation: count every HTTP attempt (the count is +2 after a retry); count before sending (a blocked request is also +1)
 Test double: the external provider is replaced by a test double at the integration layer, which controls failures, retries and blocking
-Evidence: the result of the read-only quota query; the request log the test double received
+Evidence: the result of the read-only quota query; a log of the requests the test double received
 Execution status: needs verification capability (gap G1)
 ```
 

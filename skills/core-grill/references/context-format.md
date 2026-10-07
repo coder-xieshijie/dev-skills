@@ -9,7 +9,7 @@ Adapted from [mattpocock/skills](https://github.com/mattpocock/skills) `skills/e
 
 {One or two sentences: what this context is and why it exists.}
 
-## Language
+## Terms
 
 **Order**:
 A purchase request placed by a customer.

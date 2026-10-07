@@ -83,7 +83,7 @@ For features implemented in this change, state the type of entry point and how t
 
 What cannot be observed or driven now goes under "Verification tooling gaps": what is missing and which scenarios it serves. During delivery, prefer reusing the project's existing verification capabilities, fill only the minimal gaps these scenarios need, and keep them as reusable entry points according to the repository's rules, for example an extra observation in a control command, a read-only query or metric, or an entry in the feature map.
 
-Parts that existing tools cannot see or operate, and that this change does not fill (for example, the driving tool cannot see browser-native alert modals), go under "Coverage blind spots": write each blind spot as one list item or table row, stating the affected scenario IDs and checkpoints and what is used to judge them instead. The independent verifier recognizes only the blind spots in these items; IDs mentioned in passing in a paragraph do not count. Checkpoints inside a blind spot cannot be marked verified.
+Parts that existing tools cannot see or operate, and that this change does not fill (for example, the driving tool cannot see browser-native dialogs), go under "Coverage blind spots": write each blind spot as one list item or table row, stating the affected scenario IDs and checkpoints and what is used to judge them instead. The independent verifier recognizes only the blind spots in these items; IDs mentioned in passing in a paragraph do not count. Checkpoints inside a blind spot cannot be marked verified.
 
 Done criteria: each scenario's execution status is marked truthfully, and each gap and blind spot maps to scenarios.
 

@@ -6,7 +6,7 @@ description: Converges a conversation and its materials into spec.md, the core d
 
 # Converge a discussion into a spec, and write the acceptance requirements
 
-Deliver two self-contained Markdown files, written in the language of the decision summary (or of the user's request when there is none), unless the user or the repository's documentation rules specify another language:
+Deliver two self-contained Markdown files. Write spec.md in the language of the decision summary (or of the user's request when there is none), unless the user or the repository's documentation rules specify another language; write verify.md in the same language as spec.md, also when the spec was given to you:
 
 - **spec.md** "<topic>: Core Decisions and Constraints": what has been chosen and what must be satisfied. A reader who skims it grasps the most important changes; a reader who reads it closely can judge, item by item, whether a design or an implementation matches what was agreed.
 - **verify.md** "<topic>: Acceptance Requirements": what it takes for an implementation to count as meeting the spec: where to operate, what results to observe, and what evidence to keep before declaring it done.

@@ -24,7 +24,7 @@ Read only; do not modify any file. Write the results in your final reply.
 
 ## What to report
 
-Write the report in the language of spec.md. At the start of the report, state the sha256 of spec and verify that the caller gave, to show which version you checked. Report only problems that would make delivery go wrong or impossible to judge. Do not report wording, layout or style preferences; give at most three other improvement suggestions, marked "optional". When there are no problems, write "No issues found" directly, and list the scope you checked.
+Write the report in the language of spec.md, including the fixed phrases quoted below ("optional", "No issues found"). At the start of the report, state the sha256 of spec and verify that the caller gave, to show which version you checked. Report only problems that would make delivery go wrong or impossible to judge. Do not report wording, layout or style preferences; give at most three other improvement suggestions, marked "optional". When there are no problems, write "No issues found" directly, and list the scope you checked.
 
 Write each issue with the following fields:
 

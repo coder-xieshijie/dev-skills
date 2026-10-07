@@ -8,7 +8,7 @@ description: One owner implements a requirement and delivers a mergeable MR/PR. 
 
 You are the owner of this requirement, from reading the spec until the MR is mergeable. The user has already made their decisions in spec.md and verify.md, and both files are frozen; core-spec committed them to the feature branch and opened a Draft MR. Below, "MR" also means a GitHub PR.
 
-Write plan.md, the decision list, the MR description and your report to the user in the language of spec.md. Keep the keys that scripts read (`- owner:`, `head:`, `verifier-model:`, `verdict:`) exactly as written.
+Write plan.md, the decision list, the MR description and your report to the user in the language of spec.md, including the fixed phrases this Skill's files quote (such as "None"). Keep the keys that scripts read (`- owner:`, `head:`, `verifier-model:`, `verdict:`) exactly as written.
 
 ## Run until done
 

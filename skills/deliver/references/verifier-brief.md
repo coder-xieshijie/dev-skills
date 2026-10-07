@@ -36,7 +36,7 @@ Do not write PASS for anything you did not actually run. The overall `verdict`: 
 
 ## Report format
 
-Output the report as your final reply; the caller saves it as the report file. Write it in the language of spec.md. The first three lines have a fixed format, and `check-delivery.mjs` reads them; keep the `head:`, `verifier-model:` and `verdict:` lines exactly as shown:
+Output the report as your final reply; the caller saves it as the report file. Write it in the language of spec.md, including the fixed phrases this brief quotes ("Environment blocked", "Decision relaxes", "Coverage blind spot", "None"). The first three lines have a fixed format, and `check-delivery.mjs` reads them; keep the `head:`, `verifier-model:` and `verdict:` lines exactly as shown:
 
 ```text
 head: <40-hex SHA>
