@@ -24,4 +24,4 @@ Write one only when all three of these are true:
 
 If a decision is easy to reverse, skip it: you will just reverse it. If it is not surprising, nobody will ask. If there was no alternative, you just did the obvious thing.
 
-What qualifies: architectural shape; integration patterns between contexts; technology choices that carry lock-in (the ones that would take a quarter to swap out, not every library); boundary and scope decisions, including what is explicitly not done; deliberate deviations from the obvious path; constraints not visible in the code; rejected alternatives when the rejection is non-obvious.
+What qualifies: architectural shape; integration patterns between contexts; technology choices that carry lock-in (the ones that would take a quarter to swap out, not every library); boundary and scope decisions, including what is explicitly not done; deliberate departures from conventional practice; constraints not visible in the code; rejected alternatives when the rejection is non-obvious.

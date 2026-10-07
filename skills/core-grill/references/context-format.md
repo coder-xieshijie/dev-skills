@@ -13,7 +13,7 @@ Adapted from [mattpocock/skills](https://github.com/mattpocock/skills) `skills/e
 
 **Order**:
 A purchase request placed by a customer.
-_Avoid_: Purchase, transaction
+_Avoid_: Purchase order, transaction
 
 **Invoice**:
 A request for payment sent to a customer after delivery.
