@@ -86,13 +86,15 @@ function anchorsOf(text) {
 
 const INLINE_LINK =
   /!?\[[^\]]*\]\(([^()\s]+(?:\([^()]*\)[^()\s]*)?)(?:\s+"[^"]*")?\)/g;
-// A top-level reference definition, `[label]: target` or `[label]: <target>`
-// with an optional title, which `[text][label]`, `[label][]` and `[label]`
-// link to; the target may sit on the next line. Definitions inside block
-// quotes or indented under list items are not checked: telling them from
-// code needs a full Markdown parser, and a missed check is better than
-// failing a valid file. Four spaces of indent make a code block, and
-// `[^…]:` starts a footnote.
+// A reference definition, `[label]: target` or `[label]: <target>` with an
+// optional title, which `[text][label]`, `[label][]` and `[label]` link to;
+// the target may sit on the next line. A line is taken as a definition only
+// at the start of a block (after a blank line, at the top of the file, or
+// right after another definition), not starting with `>` and indented at
+// most three spaces. Definitions that need more context to tell from
+// paragraph text or code, such as those in block quotes or indented further
+// under list items, go unchecked: a missed check is better than failing a
+// valid file without a full Markdown parser. `[^…]:` starts a footnote.
 const DEFINITION = /^ {0,3}\[(?!\^)(?:[^[\]\\]|\\.)+\]:[ \t]*(.*)$/;
 const DESTINATION =
   /^[ \t]*(?:<([^<>]*)>|(\S+))(?:[ \t]+(?:"[^"]*"|'[^']*'|\([^()]*\)))?[ \t]*$/;
@@ -179,18 +181,25 @@ export function checkLinks({
   for (const file of files) {
     if (archivedOriginals.some((prefix) => file.startsWith(prefix))) continue;
     const lines = stripCode(contents.get(file)).split("\n");
+    // Index of the line after the last definition, where another may start.
+    let afterDefinition = -1;
     lines.forEach((line, index) => {
       const where = `${file}:${index + 1}`;
       for (const match of line.matchAll(INLINE_LINK))
         checkTarget(file, where, match[1]);
-      const definition = line.match(DEFINITION);
+      const blockStart =
+        index === 0 || !lines[index - 1].trim() || index === afterDefinition;
+      const definition = blockStart && line.match(DEFINITION);
       if (!definition) return;
       // A block quote on the next line starts a new block, not the target.
       const next = lines[index + 1] ?? "";
-      const destination = (
-        definition[1] || (/^\s*>/.test(next) ? "" : next)
-      ).match(DESTINATION);
-      if (destination) checkTarget(file, where, destination[1] ?? destination[2]);
+      const onNext = !definition[1] && !/^\s*>/.test(next);
+      const destination = (definition[1] || (onNext ? next : "")).match(
+        DESTINATION,
+      );
+      if (!destination) return;
+      afterDefinition = index + (onNext ? 2 : 1);
+      checkTarget(file, where, destination[1] ?? destination[2]);
     });
   }
   return { fileCount: files.length, errors };

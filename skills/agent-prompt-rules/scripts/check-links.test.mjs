@@ -234,7 +234,7 @@ test("a definition's target may be on the next line; indented code is not a defi
   ]);
 });
 
-test("definitions in block quotes and under list items are not checked", () => {
+test("lines starting with > or indented four spaces, and paragraph lines, are not definitions", () => {
   const result = check({
     "a.md": [
       "> [a]: missing.md",
@@ -242,6 +242,9 @@ test("definitions in block quotes and under list items are not checked", () => {
       "- Item",
       "",
       "    [c]: ../out.md",
+      "",
+      "Example:",
+      "[d]: missing.md",
       "",
     ].join("\n"),
   });
