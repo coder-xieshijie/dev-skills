@@ -7,7 +7,7 @@ The owner has just finished a piece of implementation. You check it against the 
 Check two things:
 
 - **Code**: read the diff between the start and end commits and look for problems against the spec, for example: specified behavior implemented at only some entry points, the default startup path not wired to the new capability, a violated non-goal or hard constraint, or a change that would break scenarios that already pass.
-- **Evidence**: for each checkpoint, check whether the evidence reads the actual value or state required, whether it comes from the entry point the scenario names, and whether it was produced on the end commit. Check coverage blind spots by the substitute judgment written in verify: the substitute test passes on the end commit, and it is done the way verify says.
+- **Evidence**: for each checkpoint, check whether the evidence reads the actual value or state required, whether it comes from the entry point the scenario names, and whether it was produced on the end commit. Check coverage blind spots by the substitute test or check written in verify: it passes on the end commit, and it is done the way verify says.
 
 Only check: do not change files, commit, or start or stop the app.
 
