@@ -1,0 +1,44 @@
+name: Installation or setup problem
+description: Installing, updating or calling the Skills does not work.
+body:
+  - type: dropdown
+    id: agent
+    attributes:
+      label: Agent
+      options:
+        - Claude Code
+        - Codex
+        - Another agent
+    validations:
+      required: true
+  - type: dropdown
+    id: method
+    attributes:
+      label: How you installed
+      options:
+        - Plugin
+        - Links from a clone
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions and operating system
+      description: Output of `claude --version` or `codex --version`, and your OS.
+      placeholder: Claude Code 2.1.287 on macOS 26
+    validations:
+      required: true
+  - type: textarea
+    id: commands
+    attributes:
+      label: Commands you ran
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: What happened
+      description: The error or output, and what you expected instead.
+    validations:
+      required: true
