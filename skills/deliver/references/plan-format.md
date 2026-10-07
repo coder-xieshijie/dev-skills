@@ -60,7 +60,7 @@ Files and modules relevant to this task (full paths), non-obvious conventions, a
 
 ### Milestones
 
-One paragraph per milestone, starting with its number (M1, M2, ...): the scope, what will exist at the end that did not exist before, which scenarios in verify it covers, and which quality commands to run. A scenario that depends on a verification capability is placed after the capability is added.
+One paragraph per milestone, starting with its number (M1, M2, ...): the scope, what will exist at the end that did not exist before, which scenarios and coverage blind spots in verify it covers, and which quality commands to run. A scenario that depends on a verification capability is placed after the capability is added.
 
 ### Validation and Acceptance
 

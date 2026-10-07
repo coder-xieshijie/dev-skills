@@ -33,7 +33,7 @@ Do not change spec.md or verify.md during delivery.
 
 ## Done criteria
 
-1. Every scenario in verify has actually run and passed on the final code; the smoke set, regression scope and quality commands (lint, type check, tests) pass. Checkpoints in coverage blind spots are marked UNVERIFIED and listed separately in the MR.
+1. Every item in the "Done criteria" section of verify.md is met, by actually running on the final code; the quality commands (lint, type check, tests) pass. Checkpoints in coverage blind spots are marked UNVERIFIED and listed separately in the MR.
 2. A model from another family has independently verified the final code, with the verdict PASS.
 3. Run the check below against the MR's actual head on the platform, and it passes:
 
@@ -52,6 +52,8 @@ Run `check-delivery.mjs --repo <worktree> --base <remote ref of the target branc
 
 Write plan.md following the [plan format](references/plan-format.md), in the same directory as the spec, and commit it with the code. After an interruption, a new session can continue from only plan.md and the git history.
 
+Before starting the first milestone, ask a model from another family, with a read-only command, to read plan.md against verify and the [verifier brief](references/verifier-brief.md): item by item, write how the final verification will judge each done criterion and each coverage blind spot in verify, and point out where, following this plan, the result would be a fail or could not be judged. The done criteria are written in verify; knowing at the start how each will be judged lets substitute tests and missing verification capability be scheduled into milestones instead of added at the end. Save its reply in the evidence directory; where you disagree, you decide and record it in the decision list. verify does not change, and requirements beyond verify are not adopted.
+
 ## Milestones
 
 Each milestone is a piece of behavior that can be verified on its own and maps to some scenarios in verify. After implementing it, run those scenarios on the running app from the entry points the scenarios name, run the quality commands, and fix failures before moving on. If a verification capability a scenario depends on is missing, add it first: prefer reusing what the project already has, add only the smallest piece needed, and leave it as a reusable entry point that follows the repository's rules. Store evidence in `evidence/` in the same directory as plan.md; plan.md holds only the path and a one-sentence conclusion.
@@ -62,7 +64,9 @@ When each milestone is done, have a fresh-context subagent check it against the 
 
 ## Independent verification
 
-After all scenarios pass your own verification, ask a model from another family to verify the final code in a separate session: in a dedicated directory where this head is checked out, run it as described in "independent verification" in [Cross-model calls](../core-spec/references/cross-model.md), and give it the [verifier brief](references/verifier-brief.md) and a verification input. The verifier needs to start the app; give it an instance you do not share (profile, port, data directory).
+Once every milestone has been checked and the affected scenarios pass, first ask a model from another family to review the code read-only: in a dedicated directory where this head is checked out, run it as described in "read-only" in [Cross-model calls](../core-spec/references/cross-model.md), and have it do only steps 1, 4, 5 and 6 of the [verifier brief](references/verifier-brief.md), without starting the app; its report gives the results of these steps and no verdict. Check each item against the code: fix those that hold, and add tests that fail before the fix and pass after it; for those that do not hold, write down why. Fix this one round only, and save the review report in the evidence directory. Finding code problems here costs less than in independent verification: if the code changes during independent verification, the new head has to be verified again.
+
+Then your full self-verification and the independent verification start at the same time, on the same head. Ask a model from another family to verify in a separate session: in a dedicated directory where this head is checked out, run it as described in "independent verification" in Cross-model calls, and give it the verifier brief and a verification input. You and the verifier both start the app, each with your own checkout directory and instance (profile, port, data directory).
 
 Verification runs in 60-minute cycles. When a cycle ends, look at its output and the evidence directory: if it has not finished, have it continue in the same session; if it failed, decide the next step from the cause.
 

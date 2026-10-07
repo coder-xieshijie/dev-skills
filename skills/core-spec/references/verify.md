@@ -14,7 +14,7 @@ Done criteria: every item of the spec's normative content has a place: it become
 
 ## 2. Write agreements as requirements that can be judged
 
-Give each requirement a stable ID (R01, R02, ...), write it as an observable conclusion, and note its location in the spec. When one agreement carries several conditions or exceptions, split it so that each exception can be judged on its own.
+Give each requirement a stable ID (R01, R02, ...), write it as an observable conclusion, and note its location in the spec, down to the specific clause (a list item or sentence within a section): a section that already has other requirements does not mean every provision in that section has a place. When one agreement carries several conditions or exceptions, split it so that each exception can be judged on its own.
 
 Choose a proof method for each requirement:
 
@@ -83,7 +83,7 @@ For features implemented in this change, state the type of entry point and how t
 
 What cannot be observed or driven now goes under "Verification tooling gaps": what is missing and which scenarios it serves. During delivery, prefer reusing the project's existing verification capabilities, fill only the minimal gaps these scenarios need, and keep them as reusable entry points according to the repository's rules, for example an extra observation in a control command, a read-only query or metric, or an entry in the feature map.
 
-Parts that existing tools cannot see or operate, and that this change does not fill (for example, the driving tool cannot see browser-native dialogs), go under "Coverage blind spots": write each blind spot as one list item or table row, stating the affected scenario IDs and checkpoints and what is used to judge them instead. The independent verifier recognizes only the blind spots in these items; IDs mentioned in passing in a paragraph do not count. Checkpoints inside a blind spot cannot be marked verified.
+Parts that existing tools cannot see or operate, and that this change does not fill (for example, the driving tool cannot see browser-native dialogs), go under "Coverage blind spots": write each blind spot as one list item or table row, stating the affected scenario IDs and checkpoints and which test or check is used to judge them instead; when the test does not exist yet, write what it must assert and in what environment it runs (for example, a real process or an in-process simulation). Delivery writes the test by this item, and independent verification judges by it. The independent verifier recognizes only the blind spots in these items; IDs mentioned in passing in a paragraph do not count. Checkpoints inside a blind spot cannot be marked verified.
 
 Done criteria: each scenario's execution status is marked truthfully, and each gap and blind spot maps to scenarios.
 
@@ -103,7 +103,7 @@ The document contains, in order:
 6. **Regression scope**: existing behavior this change touches that the spec does not ask to change, covered by the repository's existing tests or additional scenarios; these scenarios should pass both on the baseline and after the change. Behavior the spec explicitly changes is not a regression; its old tests are updated with it.
 7. **Verification tooling gaps**.
 8. **Coverage blind spots**.
-9. **Done criteria**: all scenarios pass by actually running, except checkpoints in coverage blind spots; checkpoints in blind spots are marked UNVERIFIED and listed separately; the evidence matches the code and running instance of the delivered version; scenarios that lack tools are truthfully marked blocked, not replaced by unit tests or other lower-level checks.
+9. **Done criteria**, written as a list, one item each: the smoke set, the regression scope and all scenarios (except checkpoints in coverage blind spots) pass by actually running; checkpoints in blind spots are marked UNVERIFIED and listed separately, and the substitute judgment written for each has been carried out and passed; the evidence matches the code and running instance of the delivered version; scenarios that lack tools are truthfully marked blocked, not replaced by unit tests or other lower-level checks. When the requirement has other done criteria, add them here. Both the implementation and the independent verification are judged against this section item by item.
 
 When deciding split granularity, how tight checkpoints should be, the proof method, or how to write a decoy implementation, read [the example and check cases](verify-example.md).
 

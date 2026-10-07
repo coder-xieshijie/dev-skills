@@ -1,6 +1,6 @@
 # Gap check brief
 
-For the gap checker. In the command, the caller gives the paths and sha256 of spec and verify, and the paths of the source agreements and the related repository. The source agreements include the request text, accepted ADRs, and the user's final decisions in their own words together with the questions and options they answered.
+For the gap checker. In the command, the caller gives the paths and sha256 of spec and verify, the spec's clause list, and the paths of the source agreements and the related repository. The source agreements include the request text, accepted ADRs, and the user's final decisions in their own words together with the questions and options they answered.
 
 ## Purpose
 
@@ -15,7 +15,7 @@ Read only; do not modify any file. Write the results in your final reply.
    - Undecided behavior: how a feature the spec touches behaves at some entry point or in some state (default, loading, empty, error, disabled, cancelled, triggered repeatedly, concurrent, after restart) is not decided, and different reasonable choices would change how some scenario is judged.
    - Ambiguity: two reasonable implementations that both match the letter would be judged differently.
    - Missing items: there is no purpose; the spec is for automated delivery but has no delivery and authorization (which repository and branch to deliver to, whether the agent may push and open an MR); a specific adjacent matter would materially change the delivery scope, yet the spec does not say whether it is done.
-2. **spec → verify**: every normative item in the spec (behavior, defaults, conditions and exceptions, things that must not happen, existing behavior that must be kept, non-goals, accepted costs) maps to a requirement and a way to prove it; every relevant entry point has a scenario, or the reason none is needed is stated.
+2. **spec → verify**: every normative item in the spec (behavior, defaults, conditions and exceptions, things that must not happen, existing behavior that must be kept, non-goals, accepted costs) maps to a requirement and a way to prove it; every relevant entry point has a scenario, or the reason none is needed is stated. Compare clause by clause using the clause list, not section by section: a section that already has other requirements does not mean every provision in that section has a place. When one clause contains several provisions, each needs a place.
 3. **verify → spec**: there are no requirements, thresholds or semantics beyond the spec.
 4. **Discriminating power**: checkpoints take the spec's literal values, not values computed by the code under test; the scenario fails if the implementation does nothing, returns empty, has only the interface without the interactive effect where the spec prescribes interaction, or follows the decoy implementation listed in the scenario; every "must not appear" has a matching positive checkpoint; the baseline expectation agrees with the direction of change in the spec.
 5. **Executable**: the entry points, commands and feature map entries a scenario references exist at the repository's current commit, or are marked "bind command after implementation" or listed as tooling gaps; checkpoints the tools cannot see are listed as coverage blind spots.
@@ -24,7 +24,7 @@ Read only; do not modify any file. Write the results in your final reply.
 
 ## What to report
 
-Write the report in the language of spec.md, including the fixed phrases quoted below ("optional", "No issues found"). At the start of the report, state the sha256 of spec and verify that the caller gave, to show which version you checked. Report only problems that would make delivery go wrong or impossible to judge. Do not report wording, layout or style preferences; give at most three other improvement suggestions, marked "optional". When there are no problems, write "No issues found" directly, and list the scope you checked.
+Write the report in the language of spec.md, including the fixed phrases quoted below ("None", "optional", "No issues found"). At the start of the report, state the sha256 of spec and verify that the caller gave, to show which version you checked; then state how many clauses the clause list has and how many of them have no corresponding requirement in verify. At the end of the report, attach a clause mapping table: one row per clause in the clause list, with the IDs of the corresponding requirements; when one clause contains several provisions, one row per provision; write "None" where there is no corresponding requirement. The author fills the gaps from this table. Report only problems that would make delivery go wrong or impossible to judge. Do not report wording, layout or style preferences; give at most three other improvement suggestions, marked "optional". When there are no problems, write "No issues found" directly, and list the scope you checked.
 
 Write each issue with the following fields:
 

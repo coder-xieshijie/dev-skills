@@ -125,11 +125,11 @@ export function renderClauses(specPath, text, units) {
   const hash = createHash("sha256").update(text).digest("hex");
   const rows = units.map((u) => `| ${u.id} | ${u.line} | ${escapePipes(u.text)} |`);
   return [
-    "# spec 条款清单",
+    "# Spec clause list",
     "",
-    `spec：${specPath}，sha256 ${hash}，共 ${units.length} 条。`,
+    `spec: ${specPath}, sha256 ${hash}, ${units.length} clauses.`,
     "",
-    "| 条款 | 行 | 内容 |",
+    "| Clause | Line | Text |",
     "|---|---|---|",
     ...rows,
     "",

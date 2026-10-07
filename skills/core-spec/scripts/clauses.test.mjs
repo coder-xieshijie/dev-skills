@@ -9,6 +9,7 @@ import { listClauses } from "./clauses.mjs";
 
 const script = path.join(path.dirname(fileURLToPath(import.meta.url)), "clauses.mjs");
 
+// The fixture spec is in Chinese on purpose: spec.md follows the user's language.
 const spec = `# 主题：核心决策与约束
 
 > 用途说明，不算条款。
@@ -77,7 +78,7 @@ test("CLI writes the list with the spec hash and count", () => {
   writeFileSync(file, spec);
   execFileSync(process.execPath, [script, "--spec", file, "--out", out]);
   const text = readFileSync(out, "utf8");
-  assert.match(text, /sha256 [0-9a-f]{64}，共 7 条。/);
+  assert.match(text, /sha256 [0-9a-f]{64}, 7 clauses\./);
   assert.match(text, /\| §4\.1-3 \| 14 \| 嵌套的规定。 \|/);
   const row = text.split("\n").find((l) => l.startsWith("| §4.1-5 |"));
   assert.equal(row.split(" | ").length, 3, row);

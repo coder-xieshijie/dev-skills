@@ -1,6 +1,6 @@
 # Cross-model calls
 
-Three tasks are done by a model from another family in a new session: the gap check in core-spec step 7, consultation on decisions during delivery in deliver, and deliver's independent verification. Models from the same family with similar context tend to make the same mistakes; a new session gets only the files the caller gives it and cannot see the caller's conversation.
+These tasks are done by a model from another family in a new session: the gap check in core-spec step 7; in deliver, the up-front review at the start, consultation on decisions during delivery, the code review before independent verification, and independent verification. Models from the same family with similar context tend to make the same mistakes; a new session gets only the files the caller gives it and cannot see the caller's conversation.
 
 ## Which family to call
 
@@ -24,19 +24,21 @@ To continue talking or working in the same session, record the session id (`code
 | Claude Code | `claude -p --resume <session id> "<next turn>"`, with the same permission flags as the first call |
 | MiniMax Code | `mcode exec --session <session id> "<next turn>"` |
 
-### Read-only: gap check, decisions during delivery
+### Read-only: gap check, up-front review, decisions during delivery, code review
 
 ```bash
-codex exec -C <repository> -s read-only -o <reply file> "Run a gap check per <absolute path of gap-check.md>. spec: <path>, sha256 <value>; verify: <path>, sha256 <value>; source agreements: <path>; repository: <path>." < /dev/null
+codex exec -C <repository> -s read-only -o <reply file> "Run a gap check per <absolute path of gap-check.md>. spec: <path>, sha256 <value>; verify: <path>, sha256 <value>; clause list: <path>; source agreements: <path>; repository: <path>." < /dev/null
 ```
 
 ```bash
-claude -p "Run a gap check per <absolute path of gap-check.md>. spec: <path>, sha256 <value>; verify: <path>, sha256 <value>; source agreements: <path>; repository: <path>." --permission-mode dontAsk --allowedTools Read Grep Glob "Bash(git log:*)" "Bash(git show:*)" "Bash(ls:*)" > <reply file>
+claude -p "Run a gap check per <absolute path of gap-check.md>. spec: <path>, sha256 <value>; verify: <path>, sha256 <value>; clause list: <path>; source agreements: <path>; repository: <path>." --permission-mode dontAsk --allowedTools Read Grep Glob "Bash(git log:*)" "Bash(git show:*)" "Bash(ls:*)" > <reply file>
 ```
 
 `dontAsk` denies every tool that is not listed, so it cannot write files. `--allowedTools` and `--add-dir` take all the arguments after them as their own values, so the prompt goes right after `-p`.
 
 For decisions during delivery, use the same commands with the prompt replaced by: the question to decide, the relevant spec text, the possible approaches and the evidence for each, asking it to give a choice and the reason. Do not write the caller's leaning.
+
+The up-front review and the code review also use read-only commands; the prompt gives the absolute path of deliver's verifier brief, the parts to do this time and the paths of the input files. The code review runs in a directory that has the head under review checked out.
 
 ### Running the app: independent verification
 
