@@ -13,14 +13,15 @@
 | 阶段 | Skill | agent 做什么 | 用户做什么 |
 |---|---|---|---|
 | A 仓库准备 | 项目自己的验证 Skill | 让 agent 能在 worktree 里启动、操作、观察应用：控制命令、功能地图、冒烟集、质量命令 | 按需补齐，每个仓库一次 |
-| B 定义 | [core-grill](skills/core-grill/SKILL.md) → [core-spec](skills/core-spec/SKILL.md) | 逐轮追问，整理决定汇总；写 spec.md 和 verify.md，请另一家模型查漏；冻结后提交到需求分支，开 Draft MR | 回答问题；确认一次决定汇总；确认一次 spec 和 verify |
-| C 交付 | [deliver](skills/deliver/SKILL.md) | 一个 owner 全程不停：逐个里程碑实现并在应用里跑场景，请另一家模型独立验证，处理 CI 和评审，做到可合入；要定的事先问另一家模型，决定列在 plan.md 和 MR 描述最前面 | 合入前看决定清单，合入 |
+| B 定义 | [core-grill](skills/core-grill/SKILL.md) → [core-spec](skills/core-spec/SKILL.md) | 逐轮追问，整理决定汇总；相关功能地图先与产品对齐；写 spec.md 和 verify.md，请另一家模型逐条款查漏；冻结后提交到需求分支，开 Draft MR | 回答问题；确认一次决定汇总；确认一次 spec 和 verify |
+| C 交付 | [deliver](skills/deliver/SKILL.md) | 一个 owner 全程不停：开工时请另一家模型预判最终验证怎样判；逐个里程碑实现并在应用里跑场景；另一家模型先只读审代码，owner 修一轮，再与 owner 的全量自验同时做独立验证；处理 CI 和评审，做到可合入；要定的事先问另一家模型，决定列在 plan.md 和 MR 描述最前面 | 合入前看决定清单，合入 |
 | D 回流 | — | MR 和 plan.md 的复盘里列出这次暴露的仓库缺口 | 决定哪些补回 A 或 Skill |
 
 几条贯穿全程的约定：
 
+- **约束放在两端**：定义阶段把要人决定的事和验收要求定全；交付结尾由另一家模型按 verify 的完成条件验证。中间交给 owner 自动完成，有分歧记进决定清单、不停下，合入前交给用户看。
 - **不可逆操作留给用户**：合入、强推共享分支、删除共享数据、对外发消息、改共享环境。其余工作 agent 自己做完，做不了的写明原因。
-- **检查交给另一家模型**：spec 的查漏、交付中的决定、最终验证，都请另一家模型在新 session 里做（[跨模型调用](skills/core-spec/references/cross-model.md)）。
+- **检查交给另一家模型**：spec 的查漏、交付开工时的预判、交付中的决定、最终验证前的代码审查和最终验证，都请另一家模型在新 session 里做（[跨模型调用](skills/core-spec/references/cross-model.md)）。
 - **查结果，不查过程**：脚本只核对两件事：spec、verify 是用户确认的版本；最终代码由另一家模型验证通过。其余由说明文字约定，交给模型判断。
 
 一次完整的用法：
