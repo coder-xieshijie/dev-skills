@@ -1,151 +1,153 @@
 ---
 name: recon-to-contract
-description: 把多方对标调研收敛成一份可执行契约：三条定律、并行流程、记分卡。
-argument-hint: "要产出什么方案？"
+description: Converges benchmarking research across several references into one executable contract: three laws, a parallel process, a scorecard.
+argument-hint: "What plan do you want to produce?"
 disable-model-invocation: true
 ---
 
 # recon-to-contract
 
-**先验形状**，两条都成立才往下走：
+**Check the shape first**; continue only when both hold:
 
-1. 手上有 ≥2 个外部参照物要横向对比
-2. 终点是别人（或没有本次上下文的未来自己）要照着执行的东西
+1. You have ≥2 external references to compare side by side
+2. The end point is something that someone else (or your future self, without this session's context) will execute as written
 
-技术选型、架构评审、竞品对标、迁移方案、feature 设计通常两条都满足。只满足一条就退出并说明是哪条不成立 —— 纯探索、缺陷定位、增量开发的瓶颈不在结论载体，这套流程对它们是纯开销。
+Technology selection, architecture review, competitor benchmarking, migration plans and feature design usually meet both. If only one holds, exit and say which one does not — for pure exploration, bug localization and incremental development, the bottleneck is not the carrier of the conclusions, and for them this process is pure overhead.
 
----
-
-## 定律一 · 契约
-
-**上下文丢失靠写契约解决，不靠写文档解决。**
-
-文档需要被**理解**，契约只需要被**执行**。理解要上下文，执行不要 —— 这就是契约免疫上下文丢失的原因。
-
-**零上下文测试** —— 判定一份产出是不是契约：
-
-> 把它交给一个没有任何背景的执行者，它能直接产出结果、不问任何问题吗？
-
-不能，就还是文档。补到能，或者别往下游传。
-
-一份契约携带：目标 / 现状锚点（`文件:行号` 或等价坐标）/ 分工作包的改动面 / 每个工作包的验收 / 已拍板的约束。用内容哈希锁住版本，下游引用哈希而非文件名。
-
-**精简一份契约时，删叙述、删交叉引用、删过程记录；出处锚点与置信度标注（已核验 / 推断 / 待确认）活到交付。** 锚点是执行者的坐标系，标注是它判断"哪些能信"的依据 —— 两者都是"可执行"的组成部分，删掉就退回成文档，下游必须重新考古一遍。而标注被删时，所有"待确认"会静默升格为断言。
+By default, write in the user's language.
 
 ---
 
-## 定律二 · 负空间
+## Law 1 · Contract
 
-**对标的最高价值输出不是"谁有什么"，是"所有参照物都没有什么"。**
+**Context loss is solved by writing a contract, not by writing a document.**
 
-填满的格子告诉你行业共识，**负空间** —— 一个参照物都没填的那一格 —— 告诉你创新空间在哪。方案的立足点通常就是那一格。
+A document needs to be **understood**; a contract only needs to be **executed**. Understanding takes context, execution does not — that is why a contract is immune to context loss.
 
-**所以表结构用差集视图，让负空间自己占一列：**
+**Zero-context test** — to judge whether an output is a contract:
+
+> Give it to an executor with no background at all. Can it produce the result directly, without asking a single question?
+
+If not, it is still a document. Fill it in until it can, or do not pass it downstream.
+
+A contract carries: the goal / anchors to the current state (`file:line` or equivalent coordinates) / the surface of change, split into work packages / the acceptance for each work package / the constraints already decided. Lock the version with a content hash; downstream references the hash, not the file name.
+
+**When trimming a contract, cut the narration, cut the cross-references, cut the process records; source anchors and confidence labels (verified / inferred / pending confirmation) survive until delivery.** The anchors are the executor's coordinate system, and the labels are what it uses to judge "what can be trusted" — both are part of being "executable"; delete them and it falls back into a document, and downstream has to dig everything up again. And when the labels are deleted, every "pending confirmation" is silently promoted to an assertion.
+
+---
+
+## Law 2 · Negative space
+
+**The most valuable output of benchmarking is not "who has what", but "what none of the references have".**
+
+Filled cells tell you the industry consensus; the **negative space** — the cell that not a single reference fills — tells you where the room for innovation is. The footing of the plan is usually that very cell.
+
+**So structure the table as a difference view, and give the negative space a column of its own:**
 
 ```
-维度 | 我有他无 | 他有我无 | 全都没有
+Dimension | We have, they don't | They have, we don't | None have it
 ```
 
-矩阵视图（维度 × 参照物）能表达负空间 —— 一行全空 —— 但那要人扫一行去**推导**。差集视图直接**陈述**。
+A matrix view (dimension × reference) can express negative space — a row that is all empty — but a person has to scan the row to **infer** it. A difference view **states** it directly.
 
-先读负空间那一列，再读其余两列。
+Read the negative-space column first, then the other two columns.
 
 ---
 
-## 定律三 · 三载体
+## Law 3 · Three carriers
 
-**结论恰好分三类，各有各的载体。混在一份散文里，下游每次使用都得重读全部 —— 于是又写一份新的。**
+**Conclusions fall into exactly three types, each with its own carrier. Mix them in one piece of prose, and downstream has to reread the whole thing every time it uses them — so it writes yet another new one.**
 
-| 类型 | 载体 | 并行性 |
+| Type | Carrier | Parallelism |
 |---|---|---|
-| **值** — 谁有什么 | 差集表 | 完全并行，可机械生成 |
-| **命题** — 哪些前提是假的 | 账本 | 并行发现，串行归并 |
-| **关系** — 为什么 / 值不值 / 彼此怎么牵连 | 接缝笔记 | 不可按单维并行 |
+| **Values** — who has what | Difference table | Fully parallel, can be generated mechanically |
+| **Propositions** — which premises are false | Ledger | Discovered in parallel, merged serially |
+| **Relations** — why / whether it is worth it / how things are tied to each other | Seam notes | Cannot be parallelized along a single dimension |
 
-实测一份对标语料的构成：**值 ≈44% / 命题 ≈12% / 关系 ≈45%**。近一半价值在关系里，按这个比例分配精力。
+Measured composition of one benchmarking corpus: **values ≈44% / propositions ≈12% / relations ≈45%**. Nearly half the value is in the relations; allocate effort in this proportion.
 
-**值**进差集表，一格一个值。
+**Values** go into the difference table, one value per cell.
 
-**命题**进账本，append-only，一条一记录：
+**Propositions** go into the ledger, append-only, one record per proposition:
 
 ```
-断言原文 | 来源 | verdict(推翻|修正|确认|待确认) | 真实情况 |
-证据锚点 | 核验强度 | 生效时段 | 下游影响(哪些结论需重估)
+original claim | source | verdict(overturned|corrected|confirmed|pending confirmation) | actual situation |
+evidence anchor | verification strength | period in effect | downstream impact(which conclusions need re-evaluation)
 ```
 
-命题会互相修正 —— 一次对抗核验可以翻掉前一条的判断。所以并行发现、**串行归并**。
+Propositions correct one another — one adversarial check can overturn the judgment of an earlier entry. So discover in parallel, and **merge serially**.
 
-**关系**进接缝笔记，散文短条，一条一句因果。表格的单元格只能放一个值；关系需要一句因果，压进单元格就退化成一个标签，符号、归因、依赖排序全部蒸发。**它不可压缩。**
+**Relations** go into seam notes: short prose entries, one causal sentence each. A table cell can hold only one value; a relation needs a causal sentence, and squeezed into a cell it degrades into a label — sign, attribution and dependency order all evaporate. **It cannot be compressed.**
 
-接缝就是两个维度交界处的知识。**只看单一维度的子代理，定义上看不见接缝** —— 所以关系类要按**维度对**派活，不按维度派活。不必穷举 `C(n,2)`，挑 3–5 个高价值对。
+A seam is the knowledge where two dimensions meet. **A subagent that looks at a single dimension cannot, by definition, see a seam** — so assign relation work by **dimension pair**, not by dimension. There is no need to enumerate all `C(n,2)`; pick 3–5 high-value pairs.
 
 ---
 
-## 流程
+## Process
 
-### 0 · 冻结（人做，不派子代理）
+### 0 · Freeze (done by a person, no subagents)
 
-写下三份清单：
+Write down three lists:
 
-- **维度词表** —— 列名与枚举值。所有子代理共用这一张表头，否则产出无法 join，必须加一轮人工归并。
-- **参照集** —— 含"不看什么"。冻结在派活之前；冻结在产出之后，作废的是已经花掉的调研。
-- **可证伪判据** —— 逐条能判 yes/no。判据模糊，产出必然偏航。
+- **Dimension vocabulary** — column names and enumerated values. All subagents share this one table header; otherwise their outputs cannot be joined, and an extra round of manual merging is needed.
+- **Reference set** — including "what not to look at". Freeze it before assigning work; freeze it after the outputs come in, and what gets voided is research already spent.
+- **Falsifiable criteria** — each one can be judged yes/no. With vague criteria, the outputs are bound to drift off course.
 
-同时挑好关系类要扫的维度对。
+At the same time, pick the dimension pairs to scan for relations.
 
-*完成判据*：三份清单落在文件里；每个枚举值穷举；每条判据能判 yes/no。
+*Done criteria*: the three lists are written to files; every enumeration is exhaustive; every criterion can be judged yes/no.
 
-### 1 · 三载体并行
+### 1 · Three carriers in parallel
 
-- **值**：每维度一个子代理 → 一行差集表
-- **命题**：每组前提一个子代理 → 若干账本条目
-- **关系**：每个维度对一个子代理 → 一份接缝笔记
+- **Values**: one subagent per dimension → one row of the difference table
+- **Propositions**: one subagent per group of premises → several ledger entries
+- **Relations**: one subagent per dimension pair → one seam note
 
-**原始语料留在子代理的上下文里。主会话只读这三份载体文件。** 子代理返回值是它那一行 / 那几条 / 那一份笔记，不是正文摘要。长报告落盘做 audit trail，不进下游。
+**The raw corpus stays in the subagents' context. The main session reads only these three carrier files.** What a subagent returns is its row / its entries / its note, not a summary of the full text. Long reports are written to disk as an audit trail and do not go downstream.
 
-每条并行线的 prompt 各不相同 —— 切片不同、载体不同。同一个 prompt 投多条线是重跑，不是并行。
+Each parallel line gets a different prompt — a different slice, a different carrier. The same prompt sent down several lines is a rerun, not parallelism.
 
-*完成判据*：三份文件都存在；差集表负空间列已填（无则记 `—`）；账本每条有 verdict 与证据锚点；预定的维度对全部有笔记；三者合计 30KB 以内。
+*Done criteria*: all three files exist; the negative-space column of the difference table is filled (write `—` when there is none); every ledger entry has a verdict and an evidence anchor; every planned dimension pair has a note; the three together are within 30KB.
 
-### 2 · 决策（人做）
+### 2 · Decide (done by a person)
 
-从差集表的负空间列读**创新空间**，从接缝笔记读**落地依赖排序**，形成决策表：
+Read the **room for innovation** from the negative-space column of the difference table, and the **dependency order for implementation** from the seam notes, and form a decision table:
 
 ```
-决策点 | 各参照物的选择 | 我的裁定 | 理由
+decision point | what each reference chose | my ruling | reason
 ```
 
-**决策先于文档。** 决策藏在散文里，就得靠人逐点挖出来 —— 每条 30 秒能拍的事会花掉几天。
+**Decisions come before documents.** When decisions are hidden in prose, a person has to dig them out point by point — things that each take 30 seconds to decide end up taking days.
 
-一次拍完：产出唯一收敛的东西（大纲、scope、优先级、命名）人定；产出多样有价值的东西（调研、审查视角、形态投影、工作包）派子代理。
+Decide everything in one go: where the output converges to a single answer (outline, scope, priorities, naming), a person decides; where diverse outputs are valuable (research, review perspectives, projections into different forms, work packages), assign subagents.
 
-*完成判据*：决策表零空行，每行有裁定。
+*Done criteria*: the decision table has no empty rows; every row has a ruling.
 
-### 3 · 契约
+### 3 · Contract
 
-输入只有三样：冻结清单 + 三载体 + 决策表。**不经过"设计文档"这个中间产物。**
+There are only three inputs: the frozen lists + the three carriers + the decision table. **Do not go through a "design document" as an intermediate product.**
 
-*完成判据*：过零上下文测试；锚点与置信度标注在位；内容哈希已记录。
+*Done criteria*: it passes the zero-context test; anchors and confidence labels are in place; the content hash is recorded.
 
-### 4 · 扇出
+### 4 · Fan out
 
-给人看的产物 —— 评审稿、精简版、分层讲解、变更描述、实现工作包 —— 全部从契约**投影**，同源、互不依赖、并行产出。
+Outputs for people — review drafts, trimmed versions, layered explanations, change descriptions, implementation work packages — are all **projected** from the contract: same source, independent of one another, produced in parallel.
 
-反过来做（先写给人看的，再从里面提炼给机器执行的）会把一次扇出拉成一条串行长链。
+Doing it the other way round (first writing what people read, then distilling from it what machines execute) stretches one fan-out into a long serial chain.
 
-*完成判据*：每份产物都能追到契约的某一节。
+*Done criteria*: every output can be traced to a section of the contract.
 
 ---
 
-## 记分卡
+## Scorecard
 
-| 指标 | 目标 |
+| Metric | Target |
 |---|---|
-| 下游必读的事实底座体积 | < 30KB |
-| 存活率（最终交付 ÷ 总产出） | > 50% |
-| 上下文压缩次数 | < 3 |
-| 锚点保留率 | 100% |
-| 归并轮数 | 1 |
-| 决策前置率（文档前拍板 ÷ 全部决策） | > 80% |
+| Size of the factual base downstream must read | < 30KB |
+| Survival rate (final delivery ÷ total output) | > 50% |
+| Number of context compactions | < 3 |
+| Anchor retention rate | 100% |
+| Merge rounds | 1 |
+| Up-front decision rate (decided before the document ÷ all decisions) | > 80% |
 
-最后一项是根因指标。它从 0 提到 80%，就是把几天变成几小时。
+The last one is the root-cause metric. Raising it from 0 to 80% is what turns days into hours.
