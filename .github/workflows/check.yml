@@ -15,6 +15,7 @@ jobs:
         with:
           node-version: 24
       - run: node skills/agent-prompt-rules/scripts/check-links.mjs
+      - run: node scripts/check-links.mjs
   deliver-check:
     runs-on: ubuntu-latest
     timeout-minutes: 5
