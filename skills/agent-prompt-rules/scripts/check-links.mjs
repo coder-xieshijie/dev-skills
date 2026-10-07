@@ -88,9 +88,12 @@ const INLINE_LINK =
   /!?\[[^\]]*\]\(([^()\s]+(?:\([^()]*\)[^()\s]*)?)(?:\s+"[^"]*")?\)/g;
 // A reference definition, `[label]: target` or `[label]: <target>` with an
 // optional title, which `[text][label]`, `[label][]` and `[label]` link to.
-// `[^…]:` starts a footnote, not a definition.
+// The target may sit on the next line. Four spaces of indent make a code
+// block, not a definition. `[^…]:` starts a footnote, not a definition.
 const DEFINITION =
-  /^[ \t]*(?:>[ \t]*)*\[(?!\^)(?:[^[\]\\]|\\.)+\]:[ \t]*(?:<([^<>]*)>|(\S+))(?:[ \t]+(?:"[^"]*"|'[^']*'|\([^()]*\)))?[ \t]*$/;
+  /^ {0,3}(?:>[ \t]*)*\[(?!\^)(?:[^[\]\\]|\\.)+\]:[ \t]*(.*)$/;
+const DESTINATION =
+  /^[ \t]*(?:>[ \t]*)*(?:<([^<>]*)>|(\S+))(?:[ \t]+(?:"[^"]*"|'[^']*'|\([^()]*\)))?[ \t]*$/;
 
 /**
  * Check every Markdown file under `root`. `scope` is "skill" (links may not
@@ -179,7 +182,11 @@ export function checkLinks({
       for (const match of line.matchAll(INLINE_LINK))
         checkTarget(file, where, match[1]);
       const definition = line.match(DEFINITION);
-      if (definition) checkTarget(file, where, definition[1] ?? definition[2]);
+      if (!definition) return;
+      const destination = (definition[1] || lines[index + 1] || "").match(
+        DESTINATION,
+      );
+      if (destination) checkTarget(file, where, destination[1] ?? destination[2]);
     });
   }
   return { fileCount: files.length, errors };

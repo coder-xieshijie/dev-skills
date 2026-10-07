@@ -208,6 +208,27 @@ test("reference-style definitions are checked like inline links", () => {
   ]);
 });
 
+test("a definition's target may be on the next line; indented code is not a definition", () => {
+  const result = check({
+    "a.md": [
+      "See [h], [i], [j] and [k].",
+      "",
+      "[h]:",
+      "  ../out.md",
+      "[i]:",
+      "  missing.md 'Title'",
+      "",
+      "    [j]: missing.md",
+      "\t[k]: missing.md",
+      "",
+    ].join("\n"),
+  });
+  assert.deepEqual(result.errors, [
+    "a.md:3: link leaves the Skill directory -> ../out.md",
+    "a.md:5: broken link -> missing.md (missing missing.md)",
+  ]);
+});
+
 test("run through a symlink, the CLI checks the Skill directory it sits in", () => {
   const skill = fixture({ "SKILL.md": "[x](missing.md)\n" });
   mkdirSync(path.join(skill, "scripts"));
