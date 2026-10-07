@@ -35,13 +35,15 @@ flowchart LR
 
 ## 前提
 
-- **两家模型。** 两个不同家族模型的 CLI，都装好并登录；默认是 [Claude Code](https://code.claude.com/docs) 和 [Codex](https://developers.openai.com/codex)，其他能调用另一家模型、能把回复写进文件的 CLI 也可以（[跨模型调用](skills/core-spec/references/cross-model.md)）。查漏和最终验证要用与干活的模型不同家族的模型；只有一家可用时，流程会停在那一步，不会降级成同家族检查。
+- **两家模型。** 两个不同家族模型的 CLI，都装好并登录；默认是 [Claude Code](https://code.claude.com/docs) 和 [Codex](https://developers.openai.com/codex)，其他能调用另一家模型、能把回复写进文件的 CLI 也可以（[跨模型调用](skills/core-spec/references/cross-model.md)）。也可以在 MCode（MiniMax 的 coding agent）里工作，它运行你在其中配置的模型；检查交给上面 CLI 中与它不同家族的那一个。查漏和最终验证要用与干活的模型不同家族的模型；只有一家可用时，流程会停在那一步，不会降级成同家族检查。
 - **Node.js 24**（运行脚本）、**git**，以及开 MR/PR 用的平台 CLI：GitHub 用 `gh`，GitLab 用 `glab`。
 - **agent 能驱动的应用。** agent 要能在 worktree 里从用户实际使用的入口启动、操作、观察应用。见[仓库准备](docs/repository-readiness.md)。
 
 ## 安装
 
-所有 Skill 都只能手动调用，不会自动触发。
+在 Claude Code 和 Codex 里，所有 Skill 都只能手动调用，不会自动触发。MCode 目前不读这项设置，请求和 Skill 的描述对得上时也可能自动加载；要确定用的是哪个，就按名字调用。
+
+**MCode**（插件，从 Git 导入）：在桌面应用里打开插件页，选择 **Create → Import from a Git repository**（中文界面为“创建 → 从 Git 仓库导入”），粘贴 `https://github.com/coder-xieshijie/dev-skills`，再点 **Preview**、**Import**。MCode 一次导入一个插件，不读 marketplace 文件；它读取仓库根目录的插件清单和 `skills/` 下的所有 Skill。插件里的 Skill 带命名空间，调用写成 `/dev-skills:core-grill`、`/dev-skills:core-spec` 等。
 
 **Claude Code**（插件）：
 
@@ -61,7 +63,7 @@ codex plugin add dev-skills@dev-skills
 
 调用写成 `$dev-skills:core-grill` 等。取新版本运行 `codex plugin marketplace upgrade dev-skills`。
 
-**从克隆安装**（用于修改 Skill）：把每个 Skill 目录链接到两个客户端都会读取的 Skill 目录。Skill 之间用相对路径互相引用（例如 deliver 读 `../core-spec/references/cross-model.md`），所以要全部并排链接：
+**从克隆安装**（用于修改 Skill）：把每个 Skill 目录链接到各客户端读取的 Skill 目录：Codex 和 MCode 读 `~/.agents/skills`，Claude Code 读 `~/.claude/skills`。Skill 之间用相对路径互相引用（例如 deliver 读 `../core-spec/references/cross-model.md`），所以要全部并排链接：
 
 ```bash
 git clone https://github.com/coder-xieshijie/dev-skills.git
@@ -80,7 +82,7 @@ done
 2. 同一个 session 里：`/dev-skills:core-spec 依据决定汇总写 spec.md 和 verify.md`。看查漏结果，确认 spec 和 verify；它会提交到需求分支并开 Draft MR。
 3. 新开一个 session：`/dev-skills:deliver 接手 <Draft MR 链接>`。等它说可以合入，看 MR 最前面的决定清单，再合入。
 
-Codex 里把 `/dev-skills:` 换成 `$dev-skills:`。默认情况下，问题、决定汇总和 spec 用你提需求时的语言，verify、plan.md、决定清单和 MR 描述跟随 spec.md 的语言；你或仓库的文档规则可以另行指定。
+上面的命令在 MCode 和 Claude Code 里照写即可；Codex 里把 `/dev-skills:` 换成 `$dev-skills:`。默认情况下，问题、决定汇总和 spec 用你提需求时的语言，verify、plan.md、决定清单和 MR 描述跟随 spec.md 的语言；你或仓库的文档规则可以另行指定。
 
 ## Skill 列表
 
