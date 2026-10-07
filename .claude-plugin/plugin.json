@@ -1,5 +1,7 @@
 {
   "name": "dev-skills",
+  "displayName": "Dev Skills",
+  "version": "0.1.0",
   "description": "A self-verifying development workflow for coding agents: core-grill settles the decisions, core-spec writes and freezes spec and verify, deliver takes them to a mergeable MR.",
   "author": {
     "name": "Xie Shijie",
@@ -8,5 +10,16 @@
   "homepage": "https://github.com/coder-xieshijie/dev-skills",
   "repository": "https://github.com/coder-xieshijie/dev-skills",
   "license": "MIT",
-  "keywords": ["workflow", "spec", "verification", "skills"]
+  "keywords": [
+    "workflow",
+    "spec",
+    "verification",
+    "code-review",
+    "cross-model-review",
+    "coding-agents",
+    "agent-skills",
+    "skills",
+    "claude-code",
+    "codex"
+  ]
 }
