@@ -9,7 +9,7 @@ Each excerpt file has:
 - every heading of the full text, unchanged and in order, so that every anchor that points into the file still resolves (including GitHub's `-1`, `-2` suffixes for repeated headings);
 - under the headings that are cited, the passages the citing text relies on, copied verbatim. Headings nobody cites have no text under them.
 
-`[…]` on its own line marks an omission inside a kept passage, including inside a code block. After a table it means that rows were left out; a partial table keeps its header rows so that it still renders. [`scripts/check-links.mjs`](../../scripts/check-links.mjs) does not check links inside the excerpt files, but it checks every anchor that points into them.
+`[…]` on its own line marks an omission inside a kept passage, including inside a code block. After a table it means that rows were left out; a partial table keeps its header rows so that it still renders. Neither link checker, this Skill's [`scripts/check-links.mjs`](../../scripts/check-links.mjs) nor the repository's `scripts/check-links.mjs`, checks links inside the excerpt files, but both check the anchors that point into them: this Skill's from files within the Skill, the repository's from every Markdown file, including the design notes in `docs/`.
 
 ## Full text
 
@@ -83,5 +83,5 @@ When a vendor publishes a new model or a new prompting guide:
 2. Commit the full text to the private repository: replace or add the file under `sources/`, update `SHA256SUMS`, and note the new commit.
 3. Re-check the rules in [SKILL.md](../../SKILL.md) that cite the changed document, and the design notes in `docs/` that link to it (search the repository for the file name). Change what conflicts with the new text; cite a new document where it supports a rule.
 4. Update the excerpt here: keep every heading of the new full text, keep verbatim the passages that the citing text relies on, and update the note's sha256 and fetch date. Update the document's row in the table above, or add a row for a new document.
-5. Run `node scripts/check-links.mjs` (the path is relative to the Skill directory) and confirm that every anchor pointing into these files still exists.
+5. From the repository root, run `node scripts/check-links.mjs`. It checks every Markdown file in the repository, including the design notes in `docs/`, and confirms that every anchor pointing into these files still exists.
 6. Following section 4 of SKILL.md, review again the prompts, pipelines and Skills written according to these rules.
