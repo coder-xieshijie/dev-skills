@@ -233,7 +233,7 @@ Each table lists a Skill's rules in short paraphrase, the principle or failure e
 
 ## 6. How the Skills are written
 
-The Skills follow [agent-prompt-rules](../skills/agent-prompt-rules/SKILL.md), our rules for writing prompts, multi-agent pipelines and SKILL.md files. That Skill is written in Chinese; an English translation is in progress. Four ideas carry most of the weight.
+The Skills follow [agent-prompt-rules](../skills/agent-prompt-rules/SKILL.md), our rules for writing prompts, multi-agent pipelines and SKILL.md files. Four ideas carry most of the weight.
 
 **Outcomes and boundaries, not steps.**
 
@@ -299,5 +299,5 @@ Three lessons stand out (our judgment):
 ## Read next
 
 - The Skills: [core-grill](../skills/core-grill/SKILL.md), [core-spec](../skills/core-spec/SKILL.md) and its [verify rules](../skills/core-spec/references/verify.md), [deliver](../skills/deliver/SKILL.md), and the [delivery check](../skills/deliver/scripts/check-delivery.mjs).
-- The prompt rules: [agent-prompt-rules](../skills/agent-prompt-rules/SKILL.md) (Chinese; English translation in progress).
+- The prompt rules: [agent-prompt-rules](../skills/agent-prompt-rules/SKILL.md).
 - Terms: [glossary](glossary.md).

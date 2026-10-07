@@ -2,7 +2,7 @@
 // Link gate for this Skill: every relative link and anchor in its Markdown
 // files resolves inside the Skill directory. The Skill is installed by
 // linking this directory alone, so a link that leaves it breaks on install.
-// Archived third-party originals keep their links as published, so links
+// The archived third-party excerpts keep their links as published, so links
 // inside them are not checked; anchors pointing into them are.
 // Zero dependencies; run with `node scripts/check-links.mjs` from anywhere.
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
-// Archived copies of official source documents (see references/sources/README.md).
+// Excerpts of official source documents (see references/sources/README.md).
 const ARCHIVED_ORIGINALS = [
   "references/sources/anthropic/",
   "references/sources/openai/",

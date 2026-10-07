@@ -2,7 +2,7 @@
 // Link gate for the whole repository: every relative link and anchor in its
 // Markdown files resolves inside the repository. Each Skill also checks its
 // own directory where it needs to (agent-prompt-rules has its own gate).
-// Archived third-party excerpts keep their links as published, so links
+// The archived third-party excerpts keep their links as published, so links
 // inside them are not checked; anchors pointing into them are.
 // Zero dependencies; run with `node scripts/check-links.mjs` from anywhere.
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";

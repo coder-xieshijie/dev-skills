@@ -20,12 +20,12 @@ The Skills in this repository use these terms with one meaning each. The Chinese
 | verify | verify | `verify.md`, the acceptance requirements: how to prove an implementation meets the spec |
 | gap check | 查漏 | A model from another family reads spec, verify, source agreements and the repository in a new session and reports gaps |
 | freeze | 冻结 | After the user confirms, spec and verify are fixed by their sha256 and no longer change during delivery |
-| handoff, handoff commit | 交接、交接提交 | The commit that adds the frozen spec and verify to the feature branch, with `Frozen-Spec` and `Frozen-Verify` trailers |
+| handoff, handoff commit | 交接、交接提交 | The commit that adds the frozen spec and verify to the feature branch, with `Frozen-Spec` and `Frozen-Verify` trailers. In agent-prompt-rules, "handoff" has its general sense: passing work between roles or sessions |
 | feature branch | 需求分支 | The branch the handoff commit and the delivery go to |
 | decision list | 决定清单 | The list at the top of plan.md and the MR description: product choices, changed judging methods, fact corrections, and parts that could not be done |
 | irreversible operation | 不可逆操作 | Merging, force-pushing a shared branch, deleting shared data, sending messages outside, changing a shared environment. Always left to the user |
 | a model from another family | 另一家模型 | A model from a different vendor than the one that wrote the work, e.g. GPT checking Claude's work |
-| independent verification | 独立验证 | A model from another family runs the scenarios on the final code in its own session and gives a verdict |
+| independent verification | 独立验证 | A model from another family runs the scenarios on the final code in its own session and gives a verdict. In agent-prompt-rules the phrase has its general sense: verification by an agent other than the author |
 | milestone, milestone check | 里程碑、里程碑检查 | A piece of behavior that can be verified on its own; after each one, a fresh-context subagent checks it against the spec |
 | check results, not process | 只查结果，不查过程 | The only script check is on results: frozen files unchanged, a passing verification of the final code by another family |
 
@@ -51,3 +51,48 @@ The Skills in this repository use these terms with one meaning each. The Chinese
 | integration layer | 对接层 | The code that connects the change to the rest of the system |
 | evidence | 证据 | Files that show what happened: screenshots, logs, outputs |
 | verdict: PASS, FAIL, UNVERIFIED | 结论 | PASS: verified; FAIL: a check failed or there is a code problem; UNVERIFIED: could not be verified |
+
+## agent-prompt-rules numbering
+
+Older documents cite [agent-prompt-rules](../skills/agent-prompt-rules/SKILL.md) by its Chinese numbering: a rule as "一-4" or "第一节第 4 条" (section 一, item 4), a section as "第一节". The English Skill numbers the sections 1 to 5 and each rule as section.item.
+
+| Chinese | English | Section or rule |
+|---|---|---|
+| 总原则 | General principles | Unnumbered principles at the top |
+| 一（第一节） | 1 | Prompts from the dispatcher to the executor |
+| 一-1 | 1.1 | Describe the result, the purpose and the done criteria, not the steps |
+| 一-2 | 1.2 | Done criteria as observable results and evidence; real checks, no verification rituals |
+| 一-3 | 1.3 | Say what each material is for and when to use it |
+| 一-4 | 1.4 | Only the one or two real boundaries, each with its reason |
+| 一-5 | 1.5 | Authorize the executor to finish the work unattended |
+| 一-6 | 1.6 | Do not prescribe the method |
+| 一-7 | 1.7 | Do not ask the executor to reproduce its reasoning |
+| 一-8 | 1.8 | A text-only end of turn is a report, not completion |
+| 一-9 | 1.9 | Do not describe the grader; state every requirement it checks |
+| 二（第二节） | 2 | Pipeline design |
+| 二-1 | 2.1 | Start with one agent; split only for a clear benefit |
+| 二-2 | 2.2 | Split along context boundaries, not by type of work |
+| 二-3 | 2.3 | Hand checks to a new session, not to the author |
+| 二-4 | 2.4 | The verifier's prompt states what to check and what counts as a failure |
+| 二-5 | 2.5 | Independent verification as the task needs it; no repeated checks by the same author |
+| 二-6 | 2.6 | In reviews, report everything first, then filter |
+| 二-7 | 2.7 | Independent perspectives must really differ; evidence settles the conclusion |
+| 二-8 | 2.8 | Every loop has a convergence condition and a round limit |
+| 二-9 | 2.9 | Stop to ask only when the user must decide |
+| 二-10 | 2.10 | The runtime or a tool enforces what must happen every time |
+| 二-11 | 2.11 | Continue in the same session by default |
+| 三（第三节） | 3 | SKILL.md and the description |
+| 三-1 | 3.1 | The description says only what the Skill does and when to use it |
+| 三-2 | 3.2 | SKILL.md as a router |
+| 三-3 | 3.3 | Write only what the model does not know |
+| 三-4 | 3.4 | Match the degree of freedom to the risk |
+| 三-5 | 3.5 | Say each thing in one place; emphasis only for the line that is ignored |
+| 三-6 | 3.6 | Review Skills the executor will read against these rules too |
+| 三-7 | 3.7 | Rules state current requirements, without their history |
+| 四（第四节） | 4 | Change process |
+| 四-1 | 4.1 | List the changes |
+| 四-2 | 4.2 | Check the related existing content |
+| 四-3 | 4.3 | Remove one component at a time |
+| 四-4 | 4.4 | Record the basis |
+| 四-5 | 4.5 | Compare runs |
+| 五（第五节） | 5 | Updating these rules |
