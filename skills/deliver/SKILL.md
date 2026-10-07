@@ -1,94 +1,96 @@
 ---
 name: deliver
 disable-model-invocation: true
-description: spec.md 和 verify.md 确认并冻结后，由一个 owner 实现需求，交付可合入的 MR/PR。
+description: One owner implements a requirement and delivers a mergeable MR/PR. Use after spec.md and verify.md are confirmed and frozen.
 ---
 
-# 依据冻结的 spec 和 verify 交付到可合入的 MR
+# Deliver from the frozen spec and verify to a mergeable MR
 
-你是这个需求的 owner，从读 spec 一直做到 MR 可合入。用户已经在 spec.md 和 verify.md 里做完了决定，两份文件已冻结；core-spec 把它们提交到需求分支，开了 Draft MR。下文的 MR 同时指 GitHub 的 PR。
+You are the owner of this requirement, from reading the spec until the MR is mergeable. The user has already made their decisions in spec.md and verify.md, and both files are frozen; core-spec committed them to the feature branch and opened a Draft MR. Below, "MR" also means a GitHub PR.
 
-## 全程不停
+Write plan.md, the decision list, the MR description and your report to the user in the language of spec.md, including the fixed phrases this Skill's files quote (such as "None"). Keep the keys that scripts read (`- owner:`, `head:`, `verifier-model:`, `verdict:`) exactly as written.
 
-一直做到完成条件全部满足，中途不停下来等用户。用户会在合入前看你的决定清单，纠正在那时做，比让你等着更省时间。
+## Run until done
 
-只在不可逆操作前停：合入、强推共享分支、删除共享数据、对外发消息、改共享环境。这些留给用户。
+Keep working until every done criterion is met; do not stop midway to wait for the user. The user reviews your decision list before merging and makes corrections then, which costs less time than keeping you waiting.
 
-做不了的部分（缺权限、凭据或环境，或同一个问题换了几种思路仍没有进展），写明原因和试过什么，先做完其余部分，列进决定清单。
+Stop only before irreversible operations: merging, force-pushing a shared branch, deleting shared data, sending messages outside, changing a shared environment. Leave these to the user.
 
-**需要决定时。** 会影响用户看到的结果或验收判定的决定（下一节决定清单里的前三类），先用只读命令问另一家模型（[跨模型调用](../core-spec/references/cross-model.md)的“交付中的决定”）：给出问题、相关的 spec 原文、可选做法和证据，不给你的倾向。意见不同就在同一个会话里再谈一轮。然后由你决定，继续做。只影响实现方式的选择，你自己定。
+For any part you cannot do (missing permissions, credentials or environment, or no progress on the same problem after several different approaches), write down why and what you tried, finish the rest first, and put it in the decision list.
 
-## 决定清单
+**When a decision is needed.** For a decision that affects what the user sees or how acceptance is judged (the first three kinds in the decision list in the next section), first ask a model from another family with a read-only command ("decisions during delivery" in [Cross-model calls](../core-spec/references/cross-model.md)): give the question, the relevant spec text verbatim, the options and the evidence, but not your own preference. If its view differs from yours, discuss one more round in the same session. Then you decide and carry on. Choices that affect only how it is implemented, you make yourself.
 
-放在 plan.md 和 MR 描述的最前面，按影响从大到小排，用户合入前重点看它。每条写：决定、理由、另一家模型的意见（问过的话）、推翻后要改什么、要重跑哪些场景。包括：
+## Decision list
 
-- spec 没定的产品行为，你选的做法；
-- verify 某个检查点按字面判不了或必然判错时，你改用的判定方法；
-- spec 或 verify 把现有事实（快捷键、文案、入口名、默认值）写错时，你按代码做的更正；
-- 做不了的部分和原因。
+Put it at the top of plan.md and of the MR description, ordered from largest to smallest impact; the user reviews it closely before merging. Each entry states: the decision, the reason, the other family's opinion (if you asked), what must change if it is overturned, and which scenarios must be rerun. It includes:
 
-spec.md、verify.md 在交付中不改。
+- product behavior the spec leaves open, and the approach you chose;
+- when a checkpoint in verify cannot be judged as written, or judging it as written would necessarily give a wrong verdict, the judging method you used instead;
+- when spec or verify states an existing fact wrongly (a shortcut, UI text, an entry point name, a default value), your correction based on the code;
+- parts you could not do, and why.
 
-## 完成条件
+Do not change spec.md or verify.md during delivery.
 
-1. verify.md“完成条件”一节逐条满足，在最终代码上实际运行；质量命令（lint、类型检查、测试）通过。覆盖盲区里的检查点标为 UNVERIFIED，在 MR 里单列。
-2. 另一家模型独立验证了最终代码，结论为 PASS。
-3. 取 MR 在平台上的实际 head，运行下面的检查并通过：
+## Done criteria
+
+1. Every item in the "Done criteria" section of verify.md is met, by actually running on the final code; the quality commands (lint, type check, tests) pass. Checkpoints in coverage blind spots are marked UNVERIFIED and listed separately in the MR.
+2. A model from another family has independently verified the final code, with the verdict PASS.
+3. Run the check below against the MR's actual head on the platform, and it passes:
 
    ```bash
-   node <本 Skill 目录>/scripts/check-delivery.mjs --repo <worktree> --base <目标分支的远端引用> --head <MR head> --plan <plan.md> --report <验证报告> [--report <另一份>]
+   node <this Skill's directory>/scripts/check-delivery.mjs --repo <worktree> --base <remote ref of the target branch> --head <MR head> --plan <plan.md> --report <verification report> [--report <another report>]
    ```
 
-4. 已取消 Draft；CI 在最终 head 上通过；每条评审意见都改了代码或回复了理由。
-5. plan.md 反映实际情况，已向用户汇报。
+4. Draft status is removed; CI passes on the final head; every review comment has either a code change or a reply giving the reason.
+5. plan.md reflects what actually happened, and you have reported to the user.
 
-## 开工
+## Start
 
-用平台 CLI（GitHub 用 `gh`，GitLab 用 `glab`）读出 MR 的源分支和目标分支，在你自己的 worktree 里检出源分支，fetch 目标分支。从交接提交往后，这个分支只有你写入。
+Use the platform CLI (`gh` for GitHub, `glab` for GitLab) to read the MR's source and target branches. Check out the source branch in your own worktree and fetch the target branch. From the handoff commit on, only you write to this branch.
 
-运行 `check-delivery.mjs --repo <worktree> --base <目标分支的远端引用> --frozen`，确认 spec、verify 是用户确认的版本。不通过时按它的提示恢复成交接时的版本，记进决定清单。只拿到两份文件的本地路径和 sha256 时，用 `--spec <路径>@<sha256> --verify <路径>@<sha256>` 代替 `--base`，是否推送、开 MR 按 spec 的交付与授权。
+Run `check-delivery.mjs --repo <worktree> --base <remote ref of the target branch> --frozen` to confirm that spec and verify are the versions the user confirmed. If it fails, restore the handoff versions as it suggests, and record this in the decision list. If you only received local paths and sha256 values for the two files, use `--spec <path>@<sha256> --verify <path>@<sha256>` instead of `--base`; whether to push and open an MR follows the spec's delivery and authorization.
 
-按[计划格式](references/plan-format.md)写 plan.md，放在 spec 同目录，随代码提交。中断后，新 session 只读 plan.md 和 git 历史就能接着做。
+Write plan.md following the [plan format](references/plan-format.md), in the same directory as the spec, and commit it with the code. After an interruption, a new session can continue from only plan.md and the git history.
 
-开始第一个里程碑之前，用只读命令请另一家模型对照 verify 和[验证说明](references/verifier-brief.md)看 plan.md：逐条写出最终验证时会怎样判 verify 的每条完成条件和每个覆盖盲区，指出按这份 plan 会判不通过或判不了的地方。完成条件写在 verify 里；开工时就逐条知道怎样判，替代测试和缺的验证能力就能排进里程碑里做，不用等到最后补。它的回复存进证据目录；意见不同的由你决定，记进决定清单。verify 不改，超出 verify 的要求不采纳。
+Before starting the first milestone, ask a model from another family, with a read-only command, to read plan.md against verify and the [verifier brief](references/verifier-brief.md): item by item, write how the final verification will judge each done criterion and each coverage blind spot in verify, and point out where, following this plan, the result would be a fail or could not be judged. The done criteria are written in verify; knowing at the start how each will be judged lets substitute tests and missing verification capability be scheduled into milestones instead of added at the end. Save its reply in the evidence directory; where you disagree, you decide and record it in the decision list. Do not change verify, and do not adopt requirements beyond verify.
 
-## 里程碑
+## Milestones
 
-每个里程碑是一段能单独验证的行为，对应 verify 的若干场景。实现后在运行中的应用上从场景写的入口跑这些场景，跑质量命令，失败先修。场景依赖的验证能力缺了，先补上：优先复用项目已有的，只补需要的最小一块，按仓库规则留成可复用的入口。证据存到 plan.md 同目录的 `evidence/`，plan.md 只写路径和一句结论。
+Each milestone is a piece of behavior that can be verified on its own and maps to some scenarios in verify. After implementing it, run those scenarios on the running app from the entry points the scenarios name, run the quality commands, and fix failures before moving on. If a verification capability a scenario depends on is missing, add it first: prefer reusing what the project already has, add only the smallest piece needed, and leave it as a reusable entry point that follows the repository's rules. Store evidence in `evidence/` in the same directory as plan.md; plan.md holds only the path and a one-sentence conclusion.
 
-每个里程碑做完，让一个新上下文的 subagent 按[里程碑检查说明](references/milestone-check.md)对照 spec 查一遍。它只报告，由你修改。
+When each milestone is done, have a fresh-context subagent check it against the spec, following the [milestone check brief](references/milestone-check.md). It only reports; you make the changes.
 
-**派 subagent 时按角色选类型。** 写代码、集成、里程碑检查要和你一样的判断力，用继承你模型和推理强度的类型：Claude Code 用 `general-purpose`，Codex 用默认 agent，都不传模型参数。跑场景、收证据、读日志是按说明执行和读回，最终还有另一家模型完整复验，可以交给 `verify-runner` 类型；本机没有这个类型时，同样用继承的类型。各类型用什么模型由本机的 agent 定义决定。
+**When you dispatch a subagent, choose its type by role.** Writing code, integration and milestone checks need the same judgment as yours, so use a type that inherits your model and reasoning effort: `general-purpose` in Claude Code, the default agent in Codex, with no model parameter in either. Running scenarios, collecting evidence and reading logs mean executing a brief and reading results back, and a model from another family fully re-verifies at the end, so these may go to the `verify-runner` type; when this machine has no such type, use an inheriting type for them too. Which model each type uses is decided by the agent definitions on this machine.
 
-## 独立验证
+## Independent verification
 
-每个里程碑都检查过、受影响的场景都跑通后，先请另一家模型只读审代码：在检出这个 head 的专用目录里，按[跨模型调用](../core-spec/references/cross-model.md)的“只读”运行，让它按[验证说明](references/verifier-brief.md)只做第 1、4、5、6 步，不启动应用，报告写这几步的结果，不写 verdict。你逐条对照代码核实：成立的修掉，补上修复前失败、修复后通过的测试；不成立的写明理由。只修这一轮，审查报告存进证据目录。代码问题在这里发现比在独立验证里便宜：独立验证中途改了代码，就要对新 head 重新验证。
+Once every milestone has been checked and the affected scenarios pass, first ask a model from another family to review the code read-only: in a dedicated directory where this head is checked out, run it as described in "read-only" in [Cross-model calls](../core-spec/references/cross-model.md), and have it do only steps 1, 4, 5 and 6 of the [verifier brief](references/verifier-brief.md), without starting the app; its report gives the results of these steps and no verdict. Check each item against the code: fix those that hold, and add tests that fail before the fix and pass after it; for those that do not hold, write down why. Fix this one round only, and save the review report in the evidence directory. Finding code problems here costs less than in independent verification: if the code changes during independent verification, the new head has to be verified again.
 
-然后你的全量自验和独立验证同时开始，验同一个 head。请另一家模型在单独的 session 中验证：在检出这个 head 的专用目录里，按跨模型调用的“独立验证”运行，给它验证说明和一份验证输入。你和验证者都要启动应用，各用自己的检出目录和实例（profile、端口、数据目录）。
+Then your full self-verification and the independent verification start at the same time, on the same head. Ask a model from another family to verify in a separate session: in a dedicated directory where this head is checked out, run it as described in "independent verification" in Cross-model calls, and give it the verifier brief and a verification input. You and the verifier must both start the app, each with your own checkout directory and instance (profile, port, data directory).
 
-验证以 60 分钟为一个周期。到点后看它的输出和证据目录：没做完，就在同一个会话里让它接着验；失败了，看原因决定下一步。
+Verification runs in 60-minute cycles. When a cycle ends, look at its output and the evidence directory: if it has not finished, have it continue in the same session; if it failed, decide the next step from the cause.
 
-验证者只报告，由你修改；改了代码，对新 head 重新验证。之后只改了 Markdown、测试或 plan.md 所在目录（plan、证据）的，不用重新验证。它列出的代码质量意见和测试覆盖缺口不影响结论，你逐条修改或写明不改的理由，列进 MR。
+The verifier only reports; you make the changes. If you change code, verify the new head again. If, after verification, you changed only Markdown, tests, or the directory holding plan.md (plan, evidence), you do not need to verify again. The code quality comments and test coverage gaps it lists do not affect the verdict; for each one, make the change or write why you are not making it, and list them in the MR.
 
-等验证、构建、CI 这类长任务时，放到后台运行，靠它结束时的通知回来。
+When waiting on long tasks such as verification, builds or CI, run them in the background and come back on the notification when they finish.
 
 ## MR
 
-在交接的 Draft MR 上推送。完成条件 1–3 满足后更新描述、取消 Draft，处理 CI 和评审意见。CI 失败只修本次改动引入的、或阻塞交付的问题。评审意见要求改变 spec 规定的行为时，不照改，列进决定清单。
+Push to the Draft MR from the handoff. Once done criteria 1–3 are met, update the description, remove Draft status, and handle CI and review comments. For CI failures, fix only problems this change introduced or problems that block delivery. When a review comment asks to change behavior the spec defines, do not make that change; put it in the decision list.
 
-MR 描述写给决定是否合入的人：
+Write the MR description for the person who decides whether to merge:
 
-- 决定清单，放在最前面。
-- 改了什么，对应 spec 的哪些决定。
-- 场景结果：每个场景的结果和证据路径；独立验证用的模型、结论和对应的 head。
-- 未验证：覆盖盲区里的检查点、UNVERIFIED 的场景和原因。
-- 代码质量意见与测试覆盖：每条改了什么，或不改的理由。
-- 补上的验证能力，以及发现的仓库缺口。
+- The decision list, at the top.
+- What changed, and which spec decisions it corresponds to.
+- Scenario results: each scenario's result and evidence path; the model used for independent verification, its verdict, and the head it verified.
+- Not verified: checkpoints in coverage blind spots, UNVERIFIED scenarios, and why.
+- Code quality comments and test coverage: for each, what you changed or why you did not.
+- Verification capabilities you added, and repository gaps you found.
 
-评审者需要阅读路线时，按同仓库的 [mr-for-human](../mr-for-human/SKILL.md) 写。
+When reviewers need a reading route, write it following [mr-for-human](../mr-for-human/SKILL.md) in this repository.
 
-做到可合入后停下，告诉用户可以合入。
+Once it is mergeable, stop and tell the user it can be merged.
 
-## 汇报
+## Report
 
-按同仓库 [explain-as-fool](../explain-as-fool/SKILL.md) 的表达要求写，不写过程：MR 链接和状态；决定清单里最需要用户看的几条；场景总数、通过数、未验证数；独立验证用的模型和结论；发现的仓库缺口。
+Write it following the writing requirements of [explain-as-fool](../explain-as-fool/SKILL.md) in this repository, without describing the process: the MR link and status; the entries in the decision list the user most needs to see; the total number of scenarios, how many passed and how many are unverified; the model used for independent verification and its verdict; repository gaps you found.

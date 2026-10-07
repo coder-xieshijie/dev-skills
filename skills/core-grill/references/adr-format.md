@@ -1,27 +1,27 @@
-# ADR 格式
+# ADR format
 
-改写自 [mattpocock/skills](https://github.com/mattpocock/skills) `skills/engineering/domain-modeling/ADR-FORMAT.md`（`74ca5fe`，MIT 许可）。
+Adapted from [mattpocock/skills](https://github.com/mattpocock/skills) `skills/engineering/domain-modeling/ADR-FORMAT.md` (`74ca5fe`, MIT License).
 
-ADR 放在 `docs/adr/`，按顺序编号：`0001-slug.md`、`0002-slug.md`。目录在第一次需要时再建；编号取目录里最大的号加一。有多个上下文时，只涉及一个上下文的 ADR 放在该上下文目录的 `docs/adr/`。
+ADRs live in `docs/adr/` and use sequential numbering: `0001-slug.md`, `0002-slug.md`. Create the directory lazily, only when the first ADR is needed; for the number, take the highest existing number in the directory and add one. With multiple contexts, an ADR that concerns only one context goes in that context directory's `docs/adr/`.
 
-## 模板
+## Template
 
 ```md
-# {决定的简短标题}
+# {Short title of the decision}
 
-{一到三句：背景是什么，决定了什么，为什么。}
+{1-3 sentences: what's the context, what did we decide, and why.}
 ```
 
-一段话就够。价值在于记下“做了这个决定、为什么”，不在于填满各节。只有确有必要时才加：状态（`proposed`、`accepted`、`deprecated`、`superseded by ADR-NNNN`），被否决的方案（否决理由不明显时），后果（下游影响不明显时）。
+A single paragraph is enough. The value is in recording that a decision was made and why, not in filling out sections. Add the following only when genuinely needed: status (`proposed`, `accepted`, `deprecated`, `superseded by ADR-NNNN`), rejected alternatives (when the reason for rejecting them is not obvious), consequences (when the downstream effects are not obvious).
 
-## 什么时候写
+## When to write an ADR
 
-三条同时成立才写：
+Write one only when all three of these are true:
 
-1. **难以反悔**：以后改主意的代价不小。
-2. **没有上下文会让人意外**：以后的读者看到代码会问“为什么这样做”。
-3. **确有取舍**：有真正的备选方案，因为具体原因选了这一个。
+1. **Hard to reverse**: the cost of changing your mind later is meaningful.
+2. **Surprising without context**: a future reader will look at the code and ask "why did they do it this way?"
+3. **The result of a real trade-off**: there were genuine alternatives and this one was picked for specific reasons.
 
-容易反悔的不写，反悔就是了；不意外的没人会问；没有备选的，只是做了显而易见的事。
+If a decision is easy to reverse, skip it: you will just reverse it. If it is not surprising, nobody will ask. If there was no alternative, you just did the obvious thing.
 
-适合写的：架构形态；上下文之间的集成方式；带锁定的技术选型（换掉要花一个季度的那种，不是每个库）；边界与范围的决定，包括明确不做的；有意偏离常规做法的地方；代码里看不出的约束；理由不明显的被否决方案。
+What qualifies: architectural shape; integration patterns between contexts; technology choices that carry lock-in (the ones that would take a quarter to swap out, not every library); boundary and scope decisions, including what is explicitly not done; deliberate departures from conventional practice; constraints not visible in the code; rejected alternatives when the rejection is non-obvious.

@@ -58,7 +58,7 @@ function check(r, ...args) {
 }
 
 const report = (head, { verdict = "PASS", model = "gpt-6.1-sol" } = {}) =>
-  `head: ${head}\n验证模型：${model}\nverdict: ${verdict}\n\n| 项 | 结果 | 证据 | 说明 |\n|---|---|---|---|\n| S01 | PASS | evidence/s01.txt | |\n`;
+  `head: ${head}\nverifier-model: ${model}\nverdict: ${verdict}\n\n| Item | Result | Evidence | Note |\n|---|---|---|---|\n| S01 | PASS | evidence/s01.txt | |\n`;
 
 // A delivered branch: handoff, code, plan, and a report for the head.
 function delivered(reportOptions) {
@@ -225,6 +225,16 @@ test("full: verifier line names no model", () => {
   assert.match(out, /names no model ID/);
 });
 
+test("full: a legacy report with a 验证模型 line still passes", () => {
+  const r = delivered();
+  for (const key of ["验证模型：", "验证模型:"]) {
+    r.write(`${REQ}/evidence/verification-a.md`, `head: ${r.head}\n${key}gpt-6.1-sol\nverdict: PASS\n\n| 项 | 结果 | 证据 | 说明 |\n|---|---|---|---|\n| S01 | PASS | evidence/s01.txt | |\n`);
+    const { code, out } = full(r);
+    assert.equal(code, 0, out);
+    assert.match(out, /verifier openai, owner anthropic/);
+  }
+});
+
 test("full: spec changed after the handoff fails even with a good report", () => {
   const r = delivered();
   r.commit("edit spec", { [`${REQ}/spec.md`]: "spec v1, edited\n" });
@@ -236,7 +246,7 @@ test("full: spec changed after the handoff fails even with a good report", () =>
 test("full: several reports, each must pass", () => {
   const r = delivered();
   const second = path.join(r.dir, REQ, "evidence/verification-b.md");
-  r.write(`${REQ}/evidence/verification-b.md`, report(r.head, { model: "mcode minimax-m3" }));
+  r.write(`${REQ}/evidence/verification-b.md`, report(r.head, { model: "gemini-3-pro" }));
   assert.equal(full(r, "--report", second).code, 0);
   r.write(`${REQ}/evidence/verification-b.md`, report(r.head, { verdict: "UNVERIFIED" }));
   const { code, out } = full(r, "--report", second);

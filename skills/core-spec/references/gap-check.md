@@ -1,38 +1,38 @@
-# 查漏说明
+# Gap check brief
 
-写给查漏方。调用方在命令里给出 spec、verify 的路径和 sha256、spec 的条款清单，以及原始约定和相关仓库的路径。原始约定包括需求稿、已接受的 ADR，以及用户最终决定的原话和对应的问题、选项。
+For the gap checker. In the command, the caller gives the paths and sha256 of spec and verify, the spec's clause list, and the paths of the source agreements and the related repository. The source agreements include the request text, accepted ADRs, and the user's final decisions in their own words together with the questions and options they answered.
 
-## 目的
+## Purpose
 
-这两份文件交给用户确认后冻结，之后由 agent 全自动实现，只按它们判断做没做对。你要在确认前找出会让交付做错或无法判定的问题。你看不到作者的推理过程和草稿，这是有意的：只按这两份文件、原始约定和仓库判断。
+After the user confirms these two files, they are frozen; then an agent implements fully automatically and judges whether it got things right only by these two files. Your job is to find, before confirmation, the problems that would make delivery go wrong or impossible to judge. You cannot see the author's reasoning or drafts; this is deliberate: judge only by these two files, the source agreements and the repository.
 
-只读，不修改任何文件；结果写在最终回复里。
+Read only; do not modify any file. Write the results in your final reply.
 
-## 查什么
+## What to check
 
-1. **spec 自身**
-   - 自相矛盾：两处规定不能同时满足。
-   - 未定的行为：spec 涉及的功能在某个入口或状态（默认、加载、空、错误、禁用、取消、重复触发、并发、重启后）下怎样表现没有定，而不同的合理选择会让某个场景的判定结果不同。
-   - 含糊：两种都符合字面的合理实现，会得到不同的判定结果。
-   - 缺项：没有目的；用于自动交付却没有交付与授权（交付到哪个仓库和分支、能否推送并开 MR）；某个具体的相邻事项会实质改变交付范围，spec 却没写做不做。
-2. **spec → verify**：spec 的每条规范性内容（行为、默认值、条件与例外、不得发生的事、必须保持的现有行为、非目标、接受的代价）都对应一条要求和证明方式；每个相关入口都有场景，或写明不需要的依据。按条款清单逐条对照，不按小节：同一小节里已有别的要求，不代表这一节的每条规定都有了去处。一个条款里含几条规定的，每条都要有去处。
-3. **verify → spec**：没有 spec 以外的要求、阈值或语义。
-4. **判别力**：检查点取 spec 的字面值，不取被测代码算出的值；实现什么都不做、返回空、spec 规定了交互却只有界面没有交互效果，或者按场景里列出的错误实现去做，场景都会失败；“不得出现”都配有正向检查点；基线预期与 spec 的改动方向一致。
-5. **可执行**：场景引用的入口、命令和功能地图条目在仓库当前 commit 中存在，或已标为“实现后绑定命令”或列入工具缺口；工具看不到的检查点已列入覆盖盲区。
-6. **现有事实**：spec、verify 写到的现有产品事实（快捷键、文案、入口名、默认值、设置项）逐条对照仓库当前代码核对，写出处；与代码不符的报为问题，核对不了的也报出来。
-7. **原始约定 ↔ spec**：原始约定里用户已确认的决定、限制、例外和接受的代价，在 spec 里都有落点；spec 的每条规范性内容都能在原始约定里找到依据，没有把助手的建议写成要求。
+1. **The spec itself**
+   - Self-contradiction: two provisions cannot both be satisfied.
+   - Undecided behavior: how a feature the spec touches behaves at some entry point or in some state (default, loading, empty, error, disabled, cancelled, triggered repeatedly, concurrent, after restart) is not decided, and different reasonable choices would change how some scenario is judged.
+   - Ambiguity: two reasonable implementations that both match the letter would be judged differently.
+   - Missing items: there is no purpose; the spec is for automated delivery but has no delivery and authorization (which repository and branch to deliver to, whether the agent may push and open an MR); a specific adjacent matter would materially change the delivery scope, yet the spec does not say whether it is done.
+2. **spec → verify**: every normative item in the spec (behavior, defaults, conditions and exceptions, things that must not happen, existing behavior that must be kept, non-goals, accepted costs) maps to a requirement and a way to prove it; every relevant entry point has a scenario, or the reason none is needed is stated. Compare clause by clause using the clause list, not section by section: a section that already has other requirements does not mean every provision in that section has a place. When one clause contains several provisions, each must have a place.
+3. **verify → spec**: there are no requirements, thresholds or semantics beyond the spec.
+4. **Discriminating power**: checkpoints take the spec's literal values, not values computed by the code under test; the scenario fails if the implementation does nothing, returns empty, has only the interface without the interactive effect where the spec prescribes interaction, or follows the decoy implementation listed in the scenario; every "must not appear" has a matching positive checkpoint; the baseline expectation agrees with the direction of change in the spec.
+5. **Executable**: the entry points, commands and feature map entries a scenario references exist at the repository's current commit, or are marked "bind command after implementation" or listed as tooling gaps; checkpoints the tools cannot see are listed as coverage blind spots.
+6. **Existing facts**: check each existing product fact that spec or verify mentions (keyboard shortcuts, UI text, entry names, defaults, settings) against the repository's current code, and cite where it is; report as an issue anything that does not match the code, and also report anything you could not check.
+7. **Source agreements ↔ spec**: every decision, limit, exception and accepted cost the user confirmed in the source agreements has a place in the spec; every normative item in the spec has a basis in the source agreements, and no assistant suggestion has been written as a requirement.
 
-## 报告什么
+## What to report
 
-报告开头写明调用方给出的 spec、verify 的 sha256，表明你检查的是哪个版本；再写条款清单共几条、其中几条在 verify 里没有对应的要求。报告末尾附条款对照表：条款清单的每一条一行，写对应的要求 ID；一个条款里含几条规定的，每条规定各写一行；没有对应要求的写“无”。作者按这张表补漏。只报告会让交付做错或无法判定的问题。措辞、排版和写法偏好不报；其他改进建议最多三条，标为“可选”。没有问题时直接写“未发现问题”，并列出检查过的范围。
+Write the report in the language of spec.md, including the fixed phrases quoted below ("None", "optional", "No issues found"). At the start of the report, state the sha256 of spec and verify that the caller gave, to show which version you checked; then state how many clauses the clause list has and how many of them have no corresponding requirement in verify. At the end of the report, attach a clause mapping table: one row per clause in the clause list, with the IDs of the corresponding requirements; when one clause contains several provisions, one row per provision; write "None" where there is no corresponding requirement. The author fills the gaps from this table. Report only problems that would make delivery go wrong or impossible to judge. Do not report wording, layout or style preferences; give at most three other improvement suggestions, marked "optional". When there are no problems, write "No issues found" directly, and list the scope you checked.
 
-每条问题按以下字段写：
+Write each issue with the following fields:
 
 ```text
-类型：spec 矛盾 / spec 未定 / spec 含糊 / spec 缺项 / 事实不符 / 偏离原始约定 / 缺少覆盖 / 越出 spec / 判别力不足 / 不可执行
-位置：文件与章节，或要求、场景 ID
-问题：一句话
-依据：引用原文
-影响：哪种合理实现会被误判为通过，或被误判为失败
-建议：verify 的具体改法；属于 spec 的问题，原始约定里有依据的给出改法，没有依据的写成要用户决定的问题和可选项
+Type: spec contradiction / spec undecided / spec ambiguous / spec missing item / fact mismatch / departs from source agreements / missing coverage / beyond spec / insufficient discriminating power / not executable
+Location: file and section, or requirement or scenario ID
+Issue: one sentence
+Basis: quote the source text
+Impact: which reasonable implementation would be wrongly judged as passing, or wrongly judged as failing
+Suggestion: the concrete change to verify; for a problem in the spec, give the change when the source agreements have a basis for it, and when they do not, write it as a question for the user to decide, with the options
 ```

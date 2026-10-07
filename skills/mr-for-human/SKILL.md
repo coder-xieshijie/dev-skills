@@ -1,73 +1,73 @@
 ---
 name: mr-for-human
-description: 把 MR、PR 或代码差异整理成面向人的阅读指南，先讲重要决定，再给出到源码的阅读路线。用于要读懂一个改动、知道重点看哪里时。
+description: Turns an MR, PR or code diff into a reading guide for people, with the important decisions first and then a reading route into the source code. Use when someone needs to understand a change and know where to focus.
 disable-model-invocation: true
 ---
 
 # MR for Human
 
-让读者理解改动、只决策最重要的事情，并能找到对应源码。默认交付中文 Markdown。
+Help the reader understand the change, decide only on what matters most, and find the matching source code. By default, write Markdown in the user's language.
 
-## 三条核心原则
+## Three core principles
 
-1. **金字塔贯穿始终。**全文、章节和每个重点都先给结论，再给必要解释和证据。第一屏只放最影响需求是否满足、改动范围是否合理及关键取舍的事项；需要人决定时给出建议、影响与具体选择。可查明的事实由 Agent 查明，普通实现细节在下层展开；没有待决事项时明确说明。
-2. **目录改动可核对。**用变更目录树建立职责地图，再按功能串起这些目录的协作，落到具体文件改了什么、为什么与本次目标有关。每个变更文件都须有去向，目录摘要和重点选择不能隐藏额外行为。尤其检查混入的清理、重构、默认值调整与共享行为变化；关系无法证明的单独标注。
-3. **边界与失败降级讲到底。**说明正常行为在哪些条件下成立，越过边界或中途失败时已完成什么、谁负责收尾、如何降级或恢复，以及用户最终看到什么。按实际代码描述拒绝、抛错、重试、回退或补偿；降级方案也要核实适用条件与剩余保证。
+1. **The pyramid runs throughout.** The whole guide, each section and each key point give the conclusion first, then the necessary explanation and evidence. The first screen holds only the items that most affect whether the requirement is met, whether the scope of the change is reasonable, and the key trade-offs; when a person needs to decide, give a recommendation, its impact and the concrete options. Facts that can be established are established by the agent, and ordinary implementation details are expanded in the lower layers; when nothing awaits a decision, say so explicitly.
+2. **Changes can be checked directory by directory.** Use the tree of changed directories to build a map of responsibilities, then follow each feature to show how these directories work together, down to what changed in each specific file and why it relates to the goal of this change. Every changed file must be accounted for; directory summaries and the choice of key points must not hide additional behavior. In particular, check for cleanup, refactoring, default-value changes and shared-behavior changes mixed in; mark separately any change whose relation to the goal cannot be proven.
+3. **Boundaries and failure degradation are explained all the way through.** State the conditions under which the normal behavior holds; when a boundary is crossed or something fails midway, state what has already been done, who is responsible for finishing up, how it degrades or recovers, and what the user finally sees. Describe rejection, thrown errors, retries, fallback or compensation as the actual code does them; for a degradation approach, also verify the conditions under which it applies and the guarantees that remain.
 
-## 1. 固定对象与改动范围
+## 1. Pin down the subject and the scope of the change
 
-从请求和已确认材料确定目标行为、比较范围与输出位置。业务意图未知时标为假设。
+From the request and confirmed materials, determine the target behavior, the comparison range and where the output goes. When the business intent is unknown, mark it as an assumption.
 
-- MR/PR：取得项目、目标分支、base/head SHA 与 diff 完整性；区分平台 diff base、目标分支 tip 和 merge-base。优先使用已认证的平台 CLI/API，以固定 SHA 的源码补足上下文。
-- 本地差异：明确 staged、unstaged、untracked 或指定 commits；未提交内容记录快照标识或内容哈希。区分工作区与远端 head。
-- 先获取全部变更路径、增删/重命名状态与规模，再读取语义差异；记录 diff 口径与截断情况。用户限定范围时明确该限制，必要的跨范围依赖标作上下文。
-- 用变更目录树展示本次涉及的层级，每个展示目录注释其本次实现功能；职责不清的继续查源码或标缺口。展开到能区分责任的子目录，单一路径可压缩，关键文件按需列出。说明生产实现、测试、生成契约、文档与打包的作用；若标文件数，注明统计口径。大树可放附件，正文保留主要职责与入口；单目录小改动可用简短路径加职责表达。
-- 建立按目录组织的文件清单：**路径及状态 / 具体变化 / 与目标的关系**。关系分为目标内修改、必要配套、额外改动、待确认；必要配套需说明依赖关系。文件内包含多种目的时分别说明。
-- 同类文件可合并一行，但路径必须可枚举并覆盖全部变更；大型清单可放附件。权限、配置与默认值、迁移、协议/IDL、共享工具函数的语义变化单独点出。generated、test、搬移、type-only 等分类须核实，生成来源与测试断言也可能是重点。
+- MR/PR: get the project, the target branch, the base/head SHA and whether the diff is complete; distinguish the platform's diff base, the tip of the target branch and the merge-base. Prefer the authenticated platform CLI/API, and fill in context from the source at the pinned SHA.
+- Local diff: state whether it is staged, unstaged, untracked or specific commits; for uncommitted content, record a snapshot identifier or a content hash. Distinguish the working tree from the remote head.
+- First get all changed paths, their added/deleted/renamed status and their size, then read the semantic diff; record how the diff was taken and whether it was truncated. When the user limits the scope, state that limit, and mark necessary dependencies outside the scope as context.
+- Show the levels this change touches with a tree of changed directories, annotating each directory shown with the feature it implements in this change; where the responsibility is unclear, keep reading the source or mark a gap. Expand down to the subdirectories that separate responsibilities; a path with a single branch may be collapsed, and key files are listed as needed. State the role of the production implementation, tests, generated contracts, documentation and packaging; if you give file counts, state how they were counted. A large tree may go in an appendix, with the main responsibilities and entry points kept in the body; a small change in a single directory may be expressed as a short path plus its responsibility.
+- Build a file list organized by directory: **path and status / specific change / relation to the goal**. The relation is one of: within the goal, necessary supporting change, extra change, to be confirmed; for a necessary supporting change, state the dependency. When a file serves several purposes, describe each one separately.
+- Files of the same kind may share one row, but the paths must be enumerable and cover every change; a large list may go in an appendix. Call out separately any semantic change to permissions, configuration and default values, migrations, protocols/IDL, or shared utility functions. Classifications such as generated, test, moved and type-only must be verified; the generation source and test assertions may also be key points.
 
-完成条件：分析快照和目标明确，目录树与文件清单范围对应，读者能知道各目录在本次改动中的职责，所有已知变更文件均有记录。材料不全时区分“已读但未展开”和“尚未读取/不可见”；只对已读取范围给结论，保留缺口并继续可完成的分析。
+Done criteria: the analysis snapshot and the goal are clear, the directory tree and the file list cover the same scope, the reader can tell each directory's responsibility in this change, and every known changed file is recorded. When materials are incomplete, distinguish "read but not expanded" from "not yet read / not visible"; draw conclusions only about what you have read, keep the gaps, and continue the analysis that can be completed.
 
-## 2. 还原行为与边界
+## 2. Reconstruct behavior and boundaries
 
-对照旧行为与新行为，追一条“谁触发 → 谁决定 → 状态或外部系统如何变化 → 谁看到结果”的正常路径。纯重构说明应保持的行为与改变的责任。结合输入前提、输出保证、状态归属解释关键抽象隐藏了什么决定，调用者仍需知道什么。
+Compare the old and the new behavior, and trace one normal path: "who triggers → who decides → how state or external systems change → who sees the result". For a pure refactor, state the behavior that must be preserved and the responsibilities that changed. Using the input preconditions, output guarantees and state ownership, explain what decision each key abstraction hides and what callers still need to know.
 
-按功能串起来读：从用户场景或关键操作出发，把上述路径映射到真实目录和关键入口，用简短箭头链或文字解释每一步负责什么、向下一步传递什么。多条独立主线分别表达，共用步骤交叉引用；调用、数据传递、构建或生成依赖须分清。核实跨目录连接，将未接线、条件分支与未知标在对应连接处；模块和局部测试存在不等于生产路径已贯通。单文件可给函数内路径，纯文档或配置按真实使用/生效关系说明。
+Follow each feature through: starting from a user scenario or a key operation, map the path above onto the real directories and key entry points, and use a short arrow chain or prose to explain what each step is responsible for and what it passes to the next. Express several independent main lines separately, and cross-reference shared steps; keep calls, data passing, and build or generation dependencies distinct. Verify cross-directory connections, and mark unwired parts, conditional branches and unknowns at the connection where they occur; the existence of modules and local tests does not mean the production path is connected end to end. For a single file you may give the path within a function; for pure documentation or configuration, describe how it is actually used or takes effect.
 
-沿路径检查本次相关的边界：空值/缺失与极值、权限与租户、重复/并发、超时/取消、版本兼容。对关键失败点追到可见结果：
+Along the path, check the boundaries relevant to this change: null/missing and extreme values, permissions and tenants, duplicates/concurrency, timeout/cancellation, version compatibility. For each key failure point, trace it to the visible result:
 
-- 触发条件；失败前哪些写入或副作用已完成。
-- 实际处理：拒绝、传播错误、重试、降级、补偿或清理；由谁执行、何时结束。
-- 降级后保留和失去的保证，是否使用过期/部分结果，是否保持权限隔离，是否可能重复副作用。
-- 调用方或用户看到的状态，恢复入口及相应证据。没有降级时说明实际失败行为，是否需要增加降级依据契约判断。
+- The trigger condition; which writes or side effects were already done before the failure.
+- The actual handling: reject, propagate the error, retry, degrade, compensate or clean up; who does it and when it ends.
+- The guarantees kept and lost after degrading; whether stale or partial results are used, whether permission isolation is kept, whether side effects may be repeated.
+- The state the caller or user sees, the entry point for recovery, and the matching evidence. When there is no degradation, state the actual failure behavior; whether degradation needs to be added is judged from the contract.
 
-内部核对六项运行维度：资源生命周期、规模与容量、并发一致性、部分失败、信任边界、可观测与恢复。只展开影响理解或判断的结果；适用但未查明的关键保证保留为缺口。涉及具体机制时读取 [design-lenses.md](references/design-lenses.md) 的相关条目。
+Check six runtime dimensions internally: resource lifecycle, scale and capacity, concurrency consistency, partial failure, trust boundaries, observability and recovery. Expand only the results that affect understanding or judgment; keep key guarantees that apply but have not been established as gaps. When a specific mechanism is involved, read the relevant entries in [design-lenses.md](references/design-lenses.md).
 
-依赖内部不可见时写清需要它提供的保证。调用次数固定仅能证明入口调用次数有界；约束、清理或日志未出现在入口，不能据此认定整个系统没有它们。
+When a dependency's internals are not visible, state the guarantees you need it to provide. A fixed number of calls only proves that the number of calls from the entry point is bounded; a constraint, cleanup or log that does not appear in the entry point is no ground for concluding that the whole system lacks it.
 
-完成条件：主要功能能沿目录职责追到入口与结果，关键连接、行为与失败后果有源码或契约依据；无法补足的链路明确停在证据边界，可继续形成有限指南。
+Done criteria: each main feature can be traced along the directory responsibilities to its entry point and result, and key connections, behaviors and failure consequences are backed by source code or a contract; a chain that cannot be completed stops explicitly at the evidence boundary, and you can go on to produce a guide of limited scope.
 
-## 3. 按重要性解释
+## 3. Explain in order of importance
 
-先选择支撑核心行为、划定责任边界或改变共享语义的决定，再突出会改变用户判断的缺陷、风险与额外改动。排序综合对目标的影响、影响范围、触发可能性和可恢复性；阅读顺序与缺陷严重等级分别表达。
+First select the decisions that carry the core behavior, draw responsibility boundaries or change shared semantics; then bring out the defects, risks and extra changes that would change the user's judgment. Rank by combining the impact on the goal, the breadth of impact, the likelihood of being triggered and recoverability; express reading order and defect severity separately.
 
-- 第一屏通常保留 3–5 条，少则按实际数量。每条给结论、重要影响和证据入口；仅对真实业务取舍、范围选择等提出决策。重大缺陷和重要范围偏离在第一屏可见，其余发现按主题下钻，相关问题可汇总链接。
-- 每个重点集中解释一次：实现选择、相关前提、正常/失败结果和证据。功能、抽象与运行约束围绕同一行为展开；有实质取舍时再比较替代方案，并优先核实现有能力。
-- 复杂逻辑才给核心伪代码或图。保留真实标识符、条件、顺序、事务范围、等待、取消、清理、权限及返回/抛错行为；显示部分成功窗口。未知被调函数标注所需保证，建议方案与当前实现分开。
-- 重要主张区分代码事实、已确认需求、推断与未知；验证状态另写静态核实、有测试未运行、已运行及结果或未验证。已证明的问题需有具体触发条件、违反的契约与后果；潜在风险写明尚未证实的依赖条件。
-- 重点与伪代码附文件、符号和可定位链接，定位到一致快照；新增引用 head、删除引用 base、重命名保留两侧路径，未改调用方标作上下文。长文需要交叉引用时再使用编号和映射表。引入提交仅在已查历史时填写。
+- The first screen usually holds 3–5 items, or fewer when there are fewer. Each item gives the conclusion, its important impact and an entry point to the evidence; ask for a decision only on real business trade-offs, scope choices and the like. Major defects and important scope deviations are visible on the first screen; other findings are drilled into by topic, and related issues may be collected and linked.
+- Explain each key point once, in one place: the implementation choice, the relevant preconditions, the normal/failure results and the evidence. Features, abstractions and runtime constraints are explained around the same behavior; compare alternatives only when there is a substantive trade-off, and prefer verifying existing capabilities first.
+- Give core pseudocode or a diagram only for complex logic. Keep the real identifiers, conditions, order, transaction scope, waits, cancellation, cleanup, permissions, and return/throw behavior; show partial-success windows. For an unknown callee, note the guarantees it must provide; keep proposed approaches separate from the current implementation.
+- For important claims, distinguish code fact, confirmed requirement, inference and unknown; write the verification status separately: statically verified, test exists but not run, run with its result, or unverified. A proven problem needs a concrete trigger condition, the contract it violates and the consequence; for a potential risk, state the unproven condition it depends on.
+- Attach files, symbols and links to the exact location to key points and pseudocode, pinned to a consistent snapshot; additions cite head, deletions cite base, renames keep both paths, and unchanged callers are marked as context. Use numbering and a mapping table only when a long document needs cross-references. Fill in the introducing commit only when you have checked the history.
 
-完成条件：读者先获得重要结论，只有必要事项需要其决策，其余内容能沿解释和链接下钻。
+Done criteria: the reader gets the important conclusions first, only necessary matters need their decision, and the rest can be drilled into through the explanations and links.
 
-## 4. 交付与核验
+## 4. Deliver and check
 
-使用 [output-template.md](references/output-template.md) 的轻量骨架，按规模合并章节。需要学习失败窗口保真，或如何写简短的正常实现指南时，读取 [worked-example.md](references/worked-example.md) 对应示例。
+Use the lightweight skeleton in [output-template.md](references/output-template.md), merging sections according to size. When you need to see how to keep a failure window faithful, or how to write a short guide for a sound implementation, read the matching example in [worked-example.md](references/worked-example.md).
 
-交付前核对：
+Before delivering, check:
 
-- 按已知变更清单逐文件对账，确认目录树、职责说明与功能路线相互对应；额外改动和待确认项没有被“必要配套”掩盖。
-- 正常路径、关键边界和失败降级的解释与源码一致；源文件、链接及伪代码属于同一快照。
-- 内部自检：读者能解释关键取舍、预测一次相关失败，并找到对应代码；缺失依据在正文补足或标为未知。
-- 给出简短源码阅读路线；排查请求再补观察字段、日志、断点及已核实的命令。测试存在、断言相关与执行通过分别说明。
-- MR/PR 声称最新前回读 head；变化后标为旧快照，更新分析后才称最新。只收到离线材料时注明无法回读。
+- Reconcile file by file against the list of known changes, and confirm that the directory tree, the responsibility notes and the feature routes correspond to each other; extra changes and items to be confirmed are not hidden under "necessary supporting change".
+- The explanations of the normal path, key boundaries and failure degradation match the source; source files, links and pseudocode belong to the same snapshot.
+- Internal self-check: the reader can explain the key trade-offs, predict one relevant failure, and find the corresponding code; missing support is supplied in the body or marked as unknown.
+- Give a short reading route through the source; for a troubleshooting request, add the fields to observe, logs, breakpoints and verified commands. State separately whether tests exist, whether their assertions are relevant, and whether they ran and passed.
+- Before calling an MR/PR guide current, re-read the head; if it has changed, mark the guide as an old snapshot, and call it current only after the analysis is updated. When you received only offline materials, note that re-reading was not possible.
 
-默认执行读取与文档生成。运行测试、修改实现、发布评论、批准或合并等动作沿用用户当前授权。交付指南与验证边界。
+By default, do the reading and generate the document. Actions such as running tests, changing the implementation, posting comments, approving or merging follow the user's current authorization. Deliver the guide and its verification boundaries.

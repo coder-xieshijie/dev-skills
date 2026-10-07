@@ -1,73 +1,73 @@
 ---
 name: design-for-review
-description: 将已有需求、设计讨论和技术材料整理成可独立阅读的技术评审文档，用于技术方案交给人评审时。
+description: Turns existing requirements, design discussions and technical materials into a self-contained technical review document. Use when a technical design goes to people for review.
 disable-model-invocation: true
 ---
 
-将已有需求、设计讨论和技术材料整理成面向人评审的技术方案。
+Turn existing requirements, design discussions and technical materials into a technical design for people to review.
 
-目标：评审者只读这一篇，就能理解为什么要做、方案如何运转、需要改动什么，以及有哪些取舍需要决定。
+Goal: by reading only this one document, a reviewer can understand why the work is needed, how the design works, what needs to change, and which trade-offs need a decision.
 
-## 确认依据
+## Confirm the basis
 
-优先使用用户指定的权威来源，沿用已经确认的需求、边界和设计决定。
+Prefer the authoritative sources the user specifies, and keep the requirements, boundaries and design decisions already confirmed.
 
-- 方案评审：以已确认的需求和设计讨论为依据，结合代码核实当前能力与约束。
-- 实现说明：用户明确要求介绍已实现方案时，以指定版本的实际代码为依据。
-- 材料存在冲突时，区分当前事实、已确认决定和待讨论方案，说明冲突及其影响。
-- 可以从现有材料和代码确定的信息直接补足；影响方案选择的未知项明确列出。
+- Design review: base the document on the confirmed requirements and design discussions, and verify current capabilities and constraints against the code.
+- Explaining an implementation: when the user explicitly asks you to present a design that is already implemented, base it on the actual code at the specified version.
+- When materials conflict, separate current facts, confirmed decisions and proposals still under discussion, and state the conflict and its impact.
+- Fill in directly whatever can be determined from existing materials and code; list explicitly the unknowns that affect the choice of design.
 
-## 组织文档
+## Organize the document
 
-已有大纲时沿用并完善。用户要求先看大纲时，先交付大纲；否则直接完成评审稿。
+When an outline exists, keep it and refine it. When the user asks to see the outline first, deliver the outline first; otherwise write the full review draft directly.
 
-没有既定结构时，按以下理解顺序组织，并根据任务规模合并或裁剪章节：
+When there is no set structure, organize the document in the order of understanding below, and merge or trim sections according to the size of the task:
 
-1. 问题、目标与范围
-   说明具体场景、当前问题、预期结果，以及本次解决到哪里。
+1. Problem, goal and scope
+   Describe the concrete scenario, the current problem, the expected result, and how far this work goes in solving it.
 
-2. 现状与约束
-   说明已有能力、当前运行方式，以及限制方案选择的关键条件。
+2. Current state and constraints
+   Describe existing capabilities, how things currently run, and the key conditions that limit the choice of design.
 
-3. 总体方案
-   给出总体架构和一条完整的业务流程，让读者先建立全局认识。
+3. Overall design
+   Give the overall architecture and one complete business flow, so the reader first builds a picture of the whole.
 
-4. 关键设计
-   展开影响方案理解和评审的接口、数据模型、状态变化与异常处理。
+4. Key design details
+   Expand the interfaces, data models, state changes and error handling that affect understanding and reviewing the design.
 
-5. 改动与复用
-   说明哪些能力沿用、哪些需要修改、哪些需要新增。
-   给出主要改动目录和模块职责，帮助读者建立实现范围的概念。
+5. Changes and reuse
+   Describe which capabilities are reused as they are, which need to be modified, and which need to be added.
+   Give the main directories changed and the responsibilities of the modules, to help the reader form an idea of the implementation scope.
 
-6. 取舍与待决事项
-   说明为什么选择当前方案、付出的代价，以及仍需评审者决定的问题。
-   只比较与当前决策有关的备选方案。
+6. Trade-offs and open items
+   Explain why the current design was chosen, the cost it pays, and the questions reviewers still need to decide.
+   Compare only alternatives relevant to the current decision.
 
-7. 验证方式
-   说明怎样验证关键行为，以及什么结果能够证明目标达成。
+7. How to verify
+   Describe how to verify the key behaviors, and what results prove that the goal is met.
 
-## 写作要求
+## Writing requirements
 
-写作前读取并应用 [explain-as-fool 的正文规则](../explain-as-fool/SKILL.md)，作为表达要求的唯一维护源。这里直接读取同仓库文件，不改变两个 Skill 的手动触发设置；安装时保留该相邻目录。
+Before writing, read and apply [the body rules of explain-as-fool](../explain-as-fool/SKILL.md), the single maintained source of the writing requirements. Read that file directly from this repository; this does not change the manual-invocation settings of either Skill. When installing, keep that neighboring directory.
 
-- 从具体场景进入技术方案。术语首次出现时，在使用位置解释其职责和作用。
-- 正文围绕设计与行为组织。目录、类、函数和代码片段只用于说明关键机制或支持判断。
-- 用一条完整流程串起触发方、参与模块、数据与状态变化、最终结果；相关异常放回发生的位置说明。
-- 按表达需要选择架构图、流程图、时序图或状态图，默认使用 Mermaid。
-- 图中的模块名称、关系、方向和状态必须与正文一致；新增、修改和复用要能直接辨认。
-- 接口和数据模型给出理解交互所必需的字段、含义与约束，详细程度以能评审方案为准。
-- 关键事实和设计依据附来源，正文保留理解主方案所需的信息，使读者无需翻阅聊天记录才能理解。
-- 修改已有文档时，在相关章节内更新表述，使整篇呈现一致的当前方案。
+- Enter the technical design through a concrete scenario. When a term first appears, explain its responsibility and role where it is used.
+- Organize the body around design and behavior. Use directories, classes, functions and code snippets only to explain key mechanisms or to support a judgment.
+- Use one complete flow to connect the initiating actor, the participating modules, the changes in data and state, and the final result; explain each related error case where it occurs.
+- Choose architecture diagrams, flowcharts, sequence diagrams or state diagrams as the explanation needs; use Mermaid by default.
+- Module names, relationships, directions and states in diagrams must match the body; what is new, modified and reused must be directly recognizable.
+- For interfaces and data models, give the fields, meanings and constraints needed to understand the interactions, in enough detail to review the design.
+- Attach sources to key facts and to the basis of the design; keep in the body the information needed to understand the main design, so the reader can understand it without going through chat history.
+- When revising an existing document, update the wording within the relevant sections, so the whole document presents one consistent current design.
 
-## 交付前检查
+## Check before delivery
 
-独立阅读成稿，确认：
+Read the finished draft on its own, and confirm:
 
-- 能说明问题、目标、方案和改动范围。
-- 能沿着完整流程理解各模块如何协作。
-- 能分辨已有能力、必要改造和新增机制。
-- 图文、接口、数据模型和状态描述相互一致。
-- 已确认决定与待决问题清晰分开。
-- 关键取舍有理由，关键行为有验证方式。
+- The problem, goal, design and scope of change can be explained from it.
+- The complete flow can be followed to understand how the modules work together.
+- Existing capabilities, necessary modifications and new mechanisms can be told apart.
+- Diagrams and text, interfaces, data models and state descriptions are consistent with one another.
+- Confirmed decisions are clearly separated from open questions.
+- Key trade-offs have reasons, and key behaviors have a way to be verified.
 
-默认交付一份中文 Markdown 技术评审文档。
+By default, deliver one technical review document, written in Markdown in the user's language.

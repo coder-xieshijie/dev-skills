@@ -1,67 +1,67 @@
-# 设计判断：从约束到证据
+# Design judgments: from constraints to evidence
 
-按当前行为选择相关行。这里的提问是定位证据的方法；模式名称本身不是合格结论。跨视角的问题可以落在同一个重点里。
+Pick the rows relevant to the behavior at hand. The questions here are a way to locate evidence; a pattern name by itself is not an acceptable conclusion. A question that spans perspectives may land in a single key point.
 
-按问题读取相关条目，表外约束同样追到实现、依赖和证据。检查结果放在对应行为下，仅展开影响理解或决策的内容。
+Read the entries that match the question; trace constraints outside these tables to implementation, dependencies and evidence in the same way. Put the results under the behavior they belong to, and expand only what affects understanding or decisions.
 
-## 顶层：调用者能依赖什么
+## Top level: what callers can rely on
 
-| 出发点 | 在本次改动中追问 | 需要读到的证据 | 成立的设计与代价 |
+| Starting point | Questions to ask of this change | Evidence to read | Sound design and its cost |
 |---|---|---|---|
-| 功能通过外部行为被使用 | 谁触发？成功是已接受、已持久化还是已执行？拒绝、失败、取消有什么区别？ | 用户入口、请求/响应、调用方分支、状态展示 | 契约描述可观察结果；同步完成直观但占用等待时间，异步接受需跟踪后续状态 |
-| 类型不能表达全部约束 | 调用前必须满足什么？返回后保证什么？哪些性质跨调用保持？ | 校验、状态机、异常、测试断言 | 前提、后置条件、不变量明确；内部契约不能替代不可信边界上的输入与鉴权检查 |
-| 抽象的价值在于减少必须知道的事 | 这个 interface 除参数与返回值外还隐含了什么顺序、权限、异常和副作用？这个 facade 是否减少了调用者要协调的步骤？这个 seam 能把哪种实际会发生的变化限制在边界内？ | 导出签名、调用方实际写法、装配点、边界测试 | 抽象隐藏了一个真实的设计决定；新增包装层若仍泄漏相同细节，只增加导航成本 |
-| 变化会沿依赖传播 | 哪项设计决定可能变化？谁被迫知道它？ | 导出接口、调用者、共享类型、隐式调用顺序 | 信息隐藏使内部替换局部化；按方法短或目录多判断设计好坏不成立 |
-| 一个业务决定需要可定位责任 | 谁拥有状态？谁决定转换？Facade 是否替调用者封装了完整用例？ | 权威存储、写入口、决策函数、错误归属 | 集中一致性责任，避免多个入口各自实现；避免把无关用例堆进单个服务 |
-| 外部设备与协议会变化 | 换 UI、存储或远端实现，哪些领域判断需要改？ | adapter、port、真实装配点、边界测试 | 对实际变化设接口接缝（seam），可替换且可测试；简单稳定调用未必需要额外接口 |
-| 新旧版本可能共存 | 字段、错误码、默认值、数据格式变化对旧调用者意味着什么？ | 兼容分支、迁移、消费者、部署顺序 | 保持语义兼容或明确迁移窗口；兼容层有维护成本，按实际发布约束选择 |
+| Features are used through external behavior | Who triggers it? Does success mean accepted, persisted or executed? How do rejection, failure and cancellation differ? | User entry points, request/response, caller branches, status display | The contract describes observable results; synchronous completion is intuitive but takes up waiting time, while asynchronous acceptance requires tracking the later state |
+| Types cannot express every constraint | What must be satisfied before the call? What is guaranteed on return? Which properties hold across calls? | Validation, state machines, exceptions, test assertions | Preconditions, postconditions and invariants are explicit; an internal contract cannot replace input and authorization checks at an untrusted boundary |
+| The value of an abstraction lies in reducing what must be known | Beyond parameters and return values, what order, permissions, exceptions and side effects does this interface imply? Does this facade reduce the steps the caller must coordinate? Which change that will actually happen can this seam confine within the boundary? | Exported signatures, how callers actually use it, wiring points, boundary tests | The abstraction hides a real design decision; a new wrapper layer that still leaks the same details only adds navigation cost |
+| Changes spread along dependencies | Which design decision may change? Who is forced to know it? | Exported interfaces, callers, shared types, implicit call order | Information hiding keeps internal replacement local; judging design quality by short methods or many directories does not hold |
+| A business decision needs a responsibility you can locate | Who owns the state? Who decides transitions? Does the facade encapsulate the complete use case for the caller? | Authoritative storage, write entry points, decision functions, error ownership | Responsibility for consistency is centralized, so multiple entry points do not each implement it; avoid piling unrelated use cases into a single service |
+| External devices and protocols change | If the UI, storage or remote implementation is replaced, which domain judgments need to change? | Adapters, ports, real wiring points, boundary tests | An interface seam is set up for actual change, so it can be replaced and tested; a simple, stable call does not necessarily need an extra interface |
+| Old and new versions may coexist | What do changes to fields, error codes, default values or data formats mean for old callers? | Compatibility branches, migrations, consumers, deployment order | Semantics stay compatible, or a migration window is defined; a compatibility layer has maintenance cost, so choose according to the actual release constraints |
 
-依据：[契约式设计](https://www.eiffel.org/doc/eiffelstudio/I2E-_Design_by_Contract_and_Assertions)、[Parnas 模块分解](https://doi.org/10.1145/361598.361623)、[Ousterhout 模块设计](https://web.stanford.edu/~ouster/cgi-bin/cs190-winter18/lecture.php?topic=modularDesign)、[Cockburn 原始文章](https://alistair.cockburn.us/hexagonal-architecture)。本表将这些依据转成 MR 阅读动作，属于本 Skill 的设计。
+Basis: [Design by Contract](https://www.eiffel.org/doc/eiffelstudio/I2E-_Design_by_Contract_and_Assertions), [Parnas on decomposing systems into modules](https://doi.org/10.1145/361598.361623), [Ousterhout on modular design](https://web.stanford.edu/~ouster/cgi-bin/cs190-winter18/lecture.php?topic=modularDesign), [Cockburn's original article](https://alistair.cockburn.us/hexagonal-architecture). This table turns these sources into actions for reading an MR; that is this Skill's own design.
 
-## 底层：实现依赖哪些运行事实
+## Bottom level: which runtime facts the implementation depends on
 
-六项用于内部核对。第四列给出有条件的后果，是否成立须结合实际机制；无需逐项输出说明。
+The six rows are for internal checking. The fourth column gives conditional consequences; whether they hold must be judged against the actual mechanism. There is no need to write out an explanation for each row.
 
-| 出发点（不可回避的事实） | 在本次改动中追问 | 需要读到的证据 | 依赖不成立时的后果 |
+| Starting point (unavoidable fact) | Questions to ask of this change | Evidence to read | Consequence if the dependency does not hold |
 |---|---|---|---|
-| 资源有限，分配需要结束条件 | 内存、连接、任务、监听器、临时文件、数据记录由谁创建和释放？异常/取消时如何结束？ | 生命周期、finally/dispose、取消传递、持有者、清理或过期路径 | 占用不归还，或留下没有任何组件会消费的数据；取消请求发出不等于资源已释放 |
-| 数据量和并发会放大工作 | 输入规模 n、并发 c、单项大小 b 是什么？是否全量加载、N+1、无限排队或重复扫描？ | 循环、查询、序列化、索引、队列、limits、profile | 规模增长后内存或请求数超出预算；批次和缓存本身引入一致性与额外内存成本 |
-| 共享可变状态允许交错 | 两个调用会在哪次读取后作同一决定？唯一性/版本检查在哪里生效？ | 读写顺序、唯一约束、条件更新、锁作用域、隔离级别 | 并发下重复创建或互相覆盖；本地锁只保护对应进程/作用域，事务也要核实隔离保证 |
-| 持久化与外部副作用可独立失败 | 先写后发、先发后写，任一点崩溃后谁知道结果？ | commit 点、外部调用、重试、恢复扫描、对账路径 | 出现只完成一半的事实且无人知晓；同库事务仅覆盖库内，跨系统需另行评估 outbox/幂等/补偿及其积压和恢复代价 |
-| 调用者与输入可能不可信 | 身份来自哪里？在哪个实际资源操作检查权限？恢复/后台入口是否同样受控？ | actor 传递、租户过滤、授权检查、执行身份、日志字段 | 越权读写或跨租户泄露；复用检查结果时需证明失效规则，日志避免泄露敏感输入 |
-| 系统事实需要被观察和恢复 | 执行、持久化、通知、UI 显示是否混为一个状态？如何定位丢失的一步？ | 状态字段、关联 ID、事件、日志、恢复与回滚流程 | 若缺少其他观测渠道，故障可能未被发现；代码回退不自动撤销已写数据或已发生的外部副作用 |
+| Resources are limited; an allocation needs an end condition | Who creates and releases memory, connections, tasks, listeners, temporary files and data records? How do they end on an exception/cancellation? | Lifecycle, finally/dispose, cancellation propagation, holder, cleanup or expiry path | Resources are taken and never returned, or data is left behind that no component will ever consume; sending a cancellation request does not mean the resource has been released |
+| Data volume and concurrency multiply work | What are the input size n, the concurrency c and the per-item size b? Is there full loading, N+1, unbounded queuing or repeated scanning? | Loops, queries, serialization, indexes, queues, limits, profiles | As scale grows, memory or the number of requests exceeds the budget; batches and caches themselves add consistency costs and extra memory |
+| Shared mutable state allows interleaving | After which read would two calls make the same decision? Where does the uniqueness/version check take effect? | Read/write order, unique constraints, conditional updates, lock scope, isolation level | Duplicate creation or mutual overwriting under concurrency; a local lock protects only its own process/scope, and for a transaction the isolation guarantee must also be verified |
+| Persistence and external side effects can fail independently | Write then send, or send then write: after a crash at any point, who knows the result? | Commit points, external calls, retries, recovery scans, reconciliation paths | Half-completed facts arise and nobody knows; a transaction in one database covers only that database, and across systems outbox/idempotency/compensation must be evaluated separately, including their backlog and recovery costs |
+| Callers and inputs may be untrusted | Where does identity come from? At which actual resource operation is permission checked? Are recovery/background entry points controlled in the same way? | Actor propagation, tenant filtering, authorization checks, execution identity, log fields | Unauthorized reads and writes or cross-tenant leaks; reusing a check result requires proving its invalidation rules, and logs avoid leaking sensitive input |
+| System facts need to be observed and recovered | Are execution, persistence, notification and UI display merged into one state? How do you locate a lost step? | Status fields, correlation IDs, events, logs, recovery and rollback procedures | Without other observation channels, a failure may go unnoticed; rolling back code does not automatically undo data already written or external side effects that already happened |
 
-依据：[Rust 所有权实例](https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html)、[PostgreSQL 隔离语义（14）](https://www.postgresql.org/docs/14/transaction-iso.html)、[Google SRE 级联故障](https://sre.google/sre-book/addressing-cascading-failures/)、[Saltzer 与 Schroeder 安全原则](https://www.mit.edu/~Saltzer/publications/protection/Basic.html)。数据库与语言行为需按目标项目版本核实。
+Basis: [Rust ownership as an example](https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html), [PostgreSQL isolation semantics (14)](https://www.postgresql.org/docs/14/transaction-iso.html), [Google SRE on cascading failures](https://sre.google/sre-book/addressing-cascading-failures/), [Saltzer and Schroeder's security principles](https://www.mit.edu/~Saltzer/publications/protection/Basic.html). Database and language behavior must be verified against the versions the target project uses.
 
-## 底层：触发式维度
+## Bottom level: triggered dimensions
 
-本次改动碰到才查，以下条目补充具体证据要求。不适用的条目无需列入交付。
+Check these only when this change touches them; the entries below add specific evidence requirements. Entries that do not apply need not be listed in the deliverable.
 
-| 触发条件 | 追问 | 需要读到的证据 |
+| Trigger | Questions | Evidence to read |
 |---|---|---|
-| 出现重试、去重、幂等键 | 重试用什么身份？同键不同意图如何处理？去重何时过期？去重记录与业务变更是否原子？ | 幂等键作用域、payload 比较、记录原子性、TTL、服务契约。一次本地去重不证明端到端 exactly-once（[AWS 幂等 API](https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/)） |
-| 改了超时、重试次数、连接池、并发上限 | 慢依赖会占住多少资源？重试由几层执行？过载时发生什么？ | deadline、重试预算、退避、队列、拒绝/降级机制。过早失败也可能降低可用性，阈值需工作负载验证 |
-| 出现超时计算、TTL、时间戳比较或排序、定时任务 | 用的是墙上时钟还是单调时钟？多机时钟不同步会怎样？跨时区的日期边界如何处理？ | 时间来源、时区表示、过期判断、排序键。墙上时钟会被调整甚至回拨，不能用它推导经过的时长 |
-| 引入或修改缓存 | 缓存键的作用域是否包含租户等隔离维度？失效由什么触发？能容忍多旧的数据？未命中会不会击穿下游？ | 键构造、写入与失效点、TTL、回源路径、并发回源保护 |
-| 数据跨进程传输或改了协议字段 | 数值精度、时区表示、字符集与截断、空值与字段缺失的区别如何处理？增删字段对旧消费者意味着什么？ | 编解码实现、协议定义、兼容分支、消费端。Mock 不证明真实 adapter 的序列化行为 |
-| 涉及数据库迁移或需要按序部署 | DDL 是否锁表、锁多久？回填要跑多久？双写期间读哪一边？新旧版本同时在线时对同一条数据的理解是否一致？部署顺序反了会怎样？ | 迁移脚本、回填任务、读写开关、版本兼容分支、发布顺序说明 |
-| 出现不可逆操作 | 扣款、发信、删除、外部支付在什么条件下执行？失败后能否重试？已发生的部分能否撤销？ | 执行点、幂等保护、确认与对账、补偿路径。代码回退不撤销已发生的外部副作用 |
+| Retries, deduplication or idempotency keys appear | What identity does a retry use? How is the same key with a different intent handled? When does deduplication expire? Is the deduplication record atomic with the business change? | Idempotency key scope, payload comparison, record atomicity, TTL, service contract. One local deduplication does not prove end-to-end exactly-once ([AWS idempotent APIs](https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/)) |
+| Timeouts, retry counts, connection pools or concurrency limits are changed | How many resources will a slow dependency hold? How many layers perform retries? What happens under overload? | Deadlines, retry budget, backoff, queues, rejection/degradation mechanisms. Failing too early can also reduce availability; thresholds need validation against the workload |
+| Timeout calculations, TTLs, timestamp comparison or ordering, or scheduled jobs appear | Is it the wall clock or a monotonic clock? What happens when clocks on several machines are out of sync? How are date boundaries across time zones handled? | Time source, time zone representation, expiry checks, sort keys. The wall clock can be adjusted or even set back, so it cannot be used to derive elapsed time |
+| A cache is introduced or changed | Does the scope of the cache key include isolation dimensions such as the tenant? What triggers invalidation? How stale may the data be? Could misses flood the downstream? | Key construction, write and invalidation points, TTL, path for loading from the source, protection against concurrent loads from the source |
+| Data crosses processes, or protocol fields are changed | How are numeric precision, time zone representation, character sets and truncation, and the difference between null and a missing field handled? What do added or removed fields mean for old consumers? | Encoding/decoding implementation, protocol definitions, compatibility branches, consumers. A mock does not prove the real adapter's serialization behavior |
+| Database migrations or an ordered deployment are involved | Does the DDL lock the table, and for how long? How long will the backfill run? During dual writes, which side is read? While old and new versions are live at the same time, do they understand the same record the same way? What happens if the deployment order is reversed? | Migration scripts, backfill jobs, read/write switches, version compatibility branches, release order notes |
+| Irreversible actions appear | Under what conditions do charges, sending messages, deletion and external payments run? Can they be retried after a failure? Can the part that already happened be undone? | Execution points, idempotency protection, confirmation and reconciliation, compensation paths. Rolling back code does not undo external side effects that already happened |
 
-数量推导使用可核实变量。例如全量持有 c 份、每份 n 项、每项 b 字节，仅数据本体约为 c×n×b；额外对象、缓冲、压缩和运行时开销另算。这是有前提的估算，不是实测峰值。无输入规模、配置或 profile 时报告证据缺口，不编造“性能提升百分比”。
+Derive quantities from variables that can be verified. For example, if c copies are held in full, each with n items of b bytes, the data alone is about c×n×b; extra objects, buffers, compression and runtime overhead are counted separately. This is an estimate with stated premises, not a measured peak. Without the input size, configuration or a profile, report the evidence gap; do not invent a "performance improvement percentage".
 
-## 边界与降级
+## Boundaries and degradation
 
-先查失败是否允许返回替代结果，再读实际异常分支和调用方。沿“触发条件 → 已完成的副作用 → 处理与清理 → 用户可见结果 → 恢复责任”核对：
+First check whether a failure is allowed to return a substitute result, then read the actual exception branches and callers. Check along "trigger condition → side effects already done → handling and cleanup → user-visible result → recovery responsibility":
 
-- 空值、缺失、极值：拒绝、截断、默认值是否符合契约；默认值是否改变共享行为。
-- 超时、取消、重试：回退由什么异常触发，是否误吞权限或校验错误；原操作是否仍在运行、已完成副作用能否确定。
-- 降级结果：缓存是否允许过期，部分结果如何标记，是否仍按租户和权限过滤，降级路径再次失败时如何结束。
-- 恢复：重试上限与终止条件、清理归属、补偿是否实际存在；返回成功需对应其宣称的完成状态。
+- Null, missing and extreme values: whether rejection, truncation and default values match the contract; whether a default value changes shared behavior.
+- Timeout, cancellation, retry: which exceptions trigger the fallback, and whether it wrongly swallows permission or validation errors; whether the original operation is still running, and whether the side effects already done can be determined.
+- Degraded results: whether the cache may be stale, how partial results are marked, whether they are still filtered by tenant and permission, how it ends when the degraded path fails again.
+- Recovery: whether retry limits and stop conditions, cleanup ownership and compensation actually exist; a success return must correspond to the completion state it claims.
 
-明确区分代码提供的行为、外部依赖保证和建议方案。没有降级可能是契约要求的拒绝或失败，不能仅凭缺少 fallback 判为缺陷。
+Clearly distinguish the behavior the code provides, the guarantees of external dependencies, and proposed approaches. The absence of degradation may be a rejection or failure that the contract requires; do not judge it a defect only because a fallback is missing.
 
-## 中间逻辑的保真核对
+## Fidelity check for the middle-level logic
 
-把真实实现的一条路径与伪代码并排走一遍：同一输入是否经过同样的判断、产生同样的写入、返回同样的结果？把失败注入在每个关键副作用之间，再检查抽象是否仍成立。没有执行时这是静态推演。
+Walk one path of the real implementation side by side with the pseudocode: does the same input go through the same decisions, produce the same writes and return the same result? Inject a failure between each pair of key side effects, then check whether the abstraction still holds. Without execution, this is static reasoning.
 
-对上层的“完成”持续追问它在下层是返回、写盘、远端响应还是用户可见。依据：[Dijkstra 的逐步细化](https://www.cs.utexas.edu/~EWD/transcriptions/EWD02xx/EWD249/EWD249.html)；这里采用其分层理解方法，不声称自然语言伪代码提供形式化正确性证明。
+For each "done" at an upper level, keep asking whether at the lower level it means returned, written to disk, answered by the remote side, or visible to the user. Basis: [Dijkstra's stepwise refinement](https://www.cs.utexas.edu/~EWD/transcriptions/EWD02xx/EWD249/EWD249.html); this adopts its layered way of understanding, and does not claim that natural-language pseudocode provides a formal proof of correctness.

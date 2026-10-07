@@ -276,7 +276,7 @@ Lauren Tan 公开的 pstack（固定到 `ecc249f`）把“让 agent 自己证明
 
 ## 五、随需求分支交接（2026-09-30）
 
-用户在第一个真实需求（Agent-Archon 的 Goal 最终结果与交付）试跑中提出：定义阶段的产出改成一个带 spec.md、verify.md 的 MR，deliver 就不用限定在某个 worktree 开工。此前交接靠本地路径，deliver 要开在写 spec 的那个 worktree，或者能访问存放 spec 的目录。试跑中桌面应用为 grill 会话另建了 worktree，与交接文件指定的目录不符，这个依赖已经出过一次问题。
+用户在第一个真实需求（业务仓库中一个长任务功能的最终结果与交付）试跑中提出：定义阶段的产出改成一个带 spec.md、verify.md 的 MR，deliver 就不用限定在某个 worktree 开工。此前交接靠本地路径，deliver 要开在写 spec 的那个 worktree，或者能访问存放 spec 的目录。试跑中桌面应用为 grill 会话另建了 worktree，与交接文件指定的目录不符，这个依赖已经出过一次问题。
 
 新增第 9 步：用户确认后，把 spec.md、verify.md 单独提交到需求分支（交接提交），推送并开 Draft MR/PR；交接信息给出 MR 链接、需求分支、交接提交、两份文件在仓库内的路径和两个 sha256。deliver 的对应修改见 [deliver 的来源与验证](deliver-design.md#从交接的-draft-mr-开工2026-09-30)。
 
@@ -286,7 +286,7 @@ Lauren Tan 公开的 pstack（固定到 `ecc249f`）把“让 agent 自己证明
 | 冻结仍以 sha256 为准，git 历史作为补充 | 需求分支 rebase 后交接提交的 SHA 会变，按 SHA 核对会误报 | 试跑中需求分支叠在另一个 MR 上，那个 MR 已 rebase 过一次 |
 | 本 session 在仓库里的其他改动（术语、ADR）交接前另行提交 | 改动留在旧 worktree 的工作区，deliver 看不到 | 试跑中 grill 写入 `CONTEXT.md` 的术语就是未提交的改动 |
 | 交接后本 session 的 worktree 切到 detached | git 不允许同一分支在两个 worktree 检出，deliver 检出失败 | git worktree 的行为 |
-| spec 不允许推送或开 MR，或仓库规则不允许提交这两份文件时，只交本地路径；deliver 是否推送、开 MR 仍按 spec 的授权 | 为了交接越过授权，或违反仓库规则；换一个 Skill 就多出发布授权 | 交付与授权只由用户决定；Agent-Archon 的 `AGENTS.md` 只要求临时计划、命令和验证记录不提交，仓库里 `.harness/docs/specs/` 已有行为 spec，其他仓库可能不同 |
+| spec 不允许推送或开 MR，或仓库规则不允许提交这两份文件时，只交本地路径；deliver 是否推送、开 MR 仍按 spec 的授权 | 为了交接越过授权，或违反仓库规则；换一个 Skill 就多出发布授权 | 交付与授权只由用户决定；业务仓库的 `AGENTS.md` 只要求临时计划、命令和验证记录不提交，仓库里 `.harness/docs/specs/` 已有行为 spec，其他仓库可能不同 |
 | 交接后要改 spec：deliver 停下；core-spec 更新、重新确认后按原来的交接方式交回（分支交接的提交并推送，本地路径的交回新路径和 sha256）；deliver 拉取或读取后更新冻结输入 | 两个 session 同时写一个分支；deliver 按旧哈希继续；本地交接的需求被迫推送 | deliver 的“分支只有 owner 写入”和冻结输入的核对 |
 
 第 9 步和 deliver 各写一句“MR 同时指 GitHub 的 PR”：用户追问 GitHub 仓库怎么办，正文原本多处只写 MR，在 GitHub 上执行的 agent 可能以为这一步只适用于 GitLab。两个平台都能开 draft 并取消（`gh pr create --draft`、`gh pr ready`；`glab mr create --draft`、`glab mr update --ready`），具体命令留给平台 CLI 的帮助，不写进 Skill。
@@ -326,24 +326,24 @@ deliver 改为全程不停、决定列进清单（见 [deliver 的来源与验�
 | 改动 | 原因 |
 |---|---|
 | 交付与授权不再问“能否合入”：合入和其他不可逆操作始终留给用户 | 用户 2026-10-01 决定交付中只在不可逆操作前停；合入是终点，由用户看过决定清单后做 |
-| 第 9 步末段：交付中 deliver 不回到本 Skill；只有用户看过决定清单后要改 spec、verify 时，才更新、查漏、重新确认并重新交接 | spec 没定的选择、口径偏差、事实更正都由 deliver 写进决定清单；!7595 的 S24 为一个写错的快捷键停下两次、重新冻结 |
+| 第 9 步末段：交付中 deliver 不回到本 Skill；只有用户看过决定清单后要改 spec、verify 时，才更新、查漏、重新确认并重新交接 | spec 没定的选择、口径偏差、事实更正都由 deliver 写进决定清单；第二个真实需求的 S24 为一个写错的快捷键停下两次、重新冻结 |
 | 查漏说明加一项“现有事实”：spec、verify 写到的快捷键、文案、入口名、默认值、设置项逐条对照代码核对 | S24 的错误在冻结前就能查出，交付中少一条决定 |
 | 第 7 步的原始约定直接用 core-grill 的决定汇总 | core-grill 结束时由用户确认这份汇总，其中的默认决定也算确认过，与第 1 步“用户没有反对不等于批准”不再冲突 |
-| `cross-model.md` 改为三类命令：查漏、交付中的决定咨询（只读，可续接）、独立验证（不带沙箱，60 分钟周期，同一会话续接）；删去 `run-verifier.mjs` 的说明和规则里夹着的实测经过与日期 | deliver 删了 `run-verifier.mjs`；三家 CLI 都能续接（`codex exec resume`、`claude -p --resume`、`mcode exec --session`），macOS 没有 `timeout`，用 `perl -e 'alarm 3600; exec @ARGV'`；规则只写当前要求，历史留在本记录（Anthropic prompt-audit） |
+| `cross-model.md` 改为三类命令：查漏、交付中的决定咨询（只读，可续接）、独立验证（不带沙箱，60 分钟周期，同一会话续接）；删去 `run-verifier.mjs` 的说明和规则里夹着的实测经过与日期 | deliver 删了 `run-verifier.mjs`；用到的 CLI 都能续接（如 `codex exec resume`、`claude -p --resume`），macOS 没有 `timeout`，用 `perl -e 'alarm 3600; exec @ARGV'`；规则只写当前要求，历史留在本记录（Anthropic prompt-audit） |
 | `verify.md` 写法：覆盖盲区“由门禁读取”改为“由独立验证者认” | 新的门禁不再解析 verify |
 
 `freeze.mjs` 的行为不变，只把注释里的 `read-handoff.mjs` 改成 `check-delivery.mjs`。
 
 ## 八、条款清单、完成条件模板、需求开始前对齐功能地图（2026-10-07）
 
-起因与用户的决定见 [deliver 的设计记录](deliver-design.md#约束放在两端开工预判验证前的代码审查自验与独立验证并行2026-10-07)。agent-archon !7595 的 spec 至少有 6 条规定在 verify 里没有对应的要求：§4.1 的计量归属、§7 的按新重置时间重排、§12 的云端标题前缀、§16 的共享字号层级、交付与授权里的先复现再修，以及 §1 的“不新增展示”。三轮跨模型查漏都没发现，原因是 verify 只把 spec 位置标到小节，查漏也按小节对照，一个小节里只要有别的要求，这一节就像是“已覆盖”。
+起因与用户的决定见 [deliver 的设计记录](deliver-design.md#约束放在两端开工预判验证前的代码审查自验与独立验证并行2026-10-07)。第二个真实需求的 spec 至少有 6 条规定在 verify 里没有对应的要求：§4.1 的计量归属、§7 的按新重置时间重排、§12 的云端标题前缀、§16 的共享字号层级、交付与授权里的先复现再修，以及 §1 的“不新增展示”。三轮跨模型查漏都没发现，原因是 verify 只把 spec 位置标到小节，查漏也按小节对照，一个小节里只要有别的要求，这一节就像是“已覆盖”。
 
 | 改动 | 原因 | 依据 |
 |---|---|---|
 | 新增 `scripts/clauses.mjs`：按列表项、段落和表格行给 spec 编号（`§4.1-9` 这类），输出条款清单；只列清单，不拦冻结 | 逐条对照两百多条，靠模型自己列容易漏；编号这类机械的部分交给脚本，“有没有对应要求”的判断留给查漏方 | coverage 适合做成可机械检查的形式（OpenAI harness engineering）；“Run validator → fix errors → repeat”（Anthropic skill authoring）；同一条指令写第二次就改成机制（pstack encode-lessons-in-structure）；窄桥用精确工具、判断留给模型（agent-prompt-rules 3.4）。用户前提是不加拦截式检查，所以只给结果 |
 | 第 7 步查漏时把条款清单交给查漏方；查漏说明第 2 项按清单逐条对照，报告开头写共几条、几条没有对应要求，末尾附逐条对照表 | 把粒度从小节改到条款；报告里的数字是作者自愈要用的结果 | 写出评分者要查的每一项（Anthropic prompt audit）；验证者逐项写明查什么（agent-prompt-rules 2.4） |
 | verify 写法第 2 节：spec 位置写到具体条款 | 同上 | 同上 |
-| verify 写法第 4 节：覆盖盲区写明用哪个测试判断；测试还没有时，写它要断言什么、在什么环境里运行 | !7595 的 B01 写了“进程中断注入”，测试仍写成了同一进程内重开；写清环境，交付和验证才有同一个判据 | “Check the real thing, not a proxy”（pstack prove-it-works） |
+| verify 写法第 4 节：覆盖盲区写明用哪个测试判断；测试还没有时，写它要断言什么、在什么环境里运行 | 第二个真实需求的 B01 写了“进程中断注入”，测试仍写成了同一进程内重开；写清环境，交付和验证才有同一个判据 | “Check the real thing, not a proxy”（pstack prove-it-works） |
 | verify 写法第 5 节第 9 项：完成条件写成列表，补上冒烟集、回归范围和“盲区的替代判断已执行并通过”；需求另有完成条件的加在这里；实现和独立验证都按这一节判 | 旧模板只写了场景，交付和验证各自转述完成条件时就漏了盲区那一条 | 完成条件只写在一处（agent-prompt-rules 3.5）；ExecPlan 的验收写成可观察行为（OpenAI） |
 | 第 5 步：涉及的功能有地图时，先把地图与产品对齐，再按地图过入口 | 地图过时，按它找出的入口和状态也会漏；用户定在每个需求开始前做 | “A feature map rots the moment the app changes.”（pstack maintain-verification-skill）；定期运行的 doc-gardening agent（OpenAI harness engineering）；实现新功能前先跑一次基本的端到端测试（Anthropic long-running harness） |
 | 跨模型调用的查漏命令加“条款清单” | 同上 | — |
@@ -352,7 +352,7 @@ deliver 改为全程不停、决定列进清单（见 [deliver 的来源与验�
 
 ### 验证
 
-用 7595 最终版的 spec（c6a945d5…）、verify（944fbc45…）在新的 Codex 会话里对照查漏（`codex exec -s read-only`，模型 `gpt-6-astra`，2026-10-07），以上面 6 条为判据：
+用第二个真实需求最终版的 spec（c6a945d5…）、verify（944fbc45…）在新的 Codex 会话里对照查漏（`codex exec -s read-only`，模型 `gpt-6-astra`，2026-10-07），以上面 6 条为判据：
 
 | 版本 | 报出的问题 | 6 条里报出 | 用时 |
 |---|---|---|---|

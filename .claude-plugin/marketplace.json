@@ -1,0 +1,15 @@
+{
+  "name": "dev-skills",
+  "description": "Development workflow Skills by Xie Shijie.",
+  "owner": {
+    "name": "Xie Shijie",
+    "url": "https://github.com/coder-xieshijie"
+  },
+  "plugins": [
+    {
+      "name": "dev-skills",
+      "source": "./",
+      "description": "A self-verifying development workflow for coding agents: core-grill, core-spec and deliver, plus the Skills they use."
+    }
+  ]
+}

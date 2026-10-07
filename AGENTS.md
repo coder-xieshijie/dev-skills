@@ -1,10 +1,11 @@
 # dev-skills
 
-这是个人开发 Skill 的维护仓库，Skill 入口统一放在 `skills/<skill-name>/SKILL.md`。
+This repository maintains personal development Skills. Each Skill's entry point is `skills/<skill-name>/SKILL.md`.
 
-- 新增 Skill 时，以用户给出的实际任务和使用场景确定范围；现有 Skill 的修改保持在请求范围内。
-- `name` 与目录名一致。`description` 写能力和触发条件，正文写执行时需要的判断依据与流程。
-- 按需添加参考资料、脚本和素材，并从入口说明何时读取它们。可直接观察的环境事实以实际文件或命令结果为准。
-- 使用真实请求核验触发和结果；新增或修改的脚本必须执行验证。说明哪些结果已验证，哪些仍待实际使用确认。
-- 仓库作为唯一维护源，客户端通过软链接引用完整 Skill 目录。安装或迁移现有 Skill 时沿用用户明确选择的范围。
-- 新增或删除 Skill 后更新 README 中的导航及初始化状态。提交内容应可独立理解，示例使用脱敏数据。
+- Scope a new Skill by the real task and use case the user gives; keep changes to existing Skills within the request.
+- `name` matches the directory name. `description` states what the Skill does and when to use it; the body holds the judgment criteria and procedure needed at run time.
+- Add references, scripts and assets as needed, and say in the entry point when to read them. Facts that can be observed directly come from the actual files or command output.
+- Check triggering and results with real requests; any new or changed script must be run to verify it. Say which results are verified and which still need confirmation in real use.
+- This repository is the single source; clients reference whole Skill directories through symlinks. When installing or migrating existing Skills, keep the scope the user explicitly chose.
+- After adding or removing a Skill, update the navigation and setup status in the README. Each commit should be understandable on its own; examples use de-identified data.
+- Write Skill content in English, using the terms in [docs/glossary.md](docs/glossary.md). Text a Skill produces for people (questions, decision summary, spec, verify, plan, decision list, MR description, reports) follows the user's language as each Skill states; keys that scripts read stay as written.

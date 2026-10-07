@@ -1,103 +1,103 @@
 ---
 name: plan-for-agents
-description: 创建、修订或检查供 agent 执行的完整 plan，将需求和已确认决策落实为方案、步骤、产物与验收证据，适用于实施、调研、创作、数据处理等任务。
+description: Creates, revises or checks a complete plan for agents to execute, turning requirements and confirmed decisions into an approach, steps, outputs and acceptance evidence. Use for implementation, research, content creation, data processing and similar tasks.
 disable-model-invocation: true
 ---
 
-# 面向 agent 的完整 plan
+# Complete plans for agents
 
-让未参与前期讨论的 agent 读完计划及明确引用的材料后，能知道目标、依据、执行方式、决策权限和完成判据，无需从聊天记录中猜测关键约定。
+Write the plan so that an agent that did not take part in the earlier discussion, after reading the plan and the materials it explicitly references, knows the goal, the basis, how to carry out the work, its decision authority and the done criteria, without guessing key agreements from chat history.
 
-完整性按有效要求与执行边界判断，不以篇幅、章节数量或模型意见一致为依据。保留执行所需的信息，合并重复表达；简单任务可以用短计划覆盖全部必要内容。
+Judge completeness by the requirements in effect and the boundaries of execution, not by length, number of sections, or agreement among models. Keep the information execution needs, and merge repeated statements; a simple task may use a short plan that covers everything necessary. By default, write the plan, check findings and your final reply in the user's language.
 
-## 1. 确定本次工作和依据
+## 1. Determine this piece of work and its basis
 
-先区分用户要求的是创建计划、修订已有计划，还是只检查完整性。只检查时交付问题与依据；创建或修订时交付可独立使用的当前方案。编写计划本身不授权实施、发布或启动其他 agent；沿用会话中已有的授权。
+First tell whether the user is asking you to create a plan, revise an existing plan, or only check completeness. When only checking, deliver the issues and their basis; when creating or revising, deliver a current plan that can be used on its own. Writing a plan does not by itself authorize implementing, publishing or starting other agents; carry over the authorization already given in the conversation.
 
-读取用户指定的需求、已确认决定、现有 plan 和与执行相关的事实材料。明确权威来源及适用范围；需要固定版本时记录 commit、文档版本、数据时间范围等可复核标识。“最新”应核实后指向具体版本。
+Read the requirements, confirmed decisions, existing plan and factual materials relevant to execution that the user specifies. Make clear the authoritative sources and the scope each applies to; when a version must be pinned, record an identifier that can be checked again, such as a commit, a document version or a data time range. Verify "latest" and then point it to a specific version.
 
-- 区分当前事实、目标要求、已确认决策、实现建议、假设和待决项。现状不能替代目标，助手建议不能自动升级为用户决定。
-- 用户已裁决的事项直接承接。常规执行细节可由 agent 根据约束选择，避免把命名、文件划分等都变成用户问题。
-- 材料冲突或缺口会改变范围、结果或重要取舍时，先查可取得的证据；仍无法确定的，列出影响和最小必要问题，并继续不受阻塞的部分。
+- Separate current facts, target requirements, confirmed decisions, implementation suggestions, assumptions and open items. The current state cannot stand in for the goal, and assistant suggestions do not automatically become user decisions.
+- Adopt directly what the user has already ruled on. The agent may choose routine execution details within the constraints; avoid turning naming, file layout and the like into questions for the user.
+- When a conflict or gap in the materials would change the scope, the result or an important trade-off, first look for the evidence you can get; for what still cannot be settled, list the impact and the minimum necessary question, and continue with the parts that are not blocked.
 
-完成条件：能说明本次计划的范围、依据和确认状态，并识别哪些工作受未决项阻塞。
+Done criteria: you can state the scope, basis and confirmation status of this plan, and identify which work is blocked by open items.
 
-## 2. 写清通用核心内容
+## 2. Write out the common core content
 
-以下是内容要求，不是固定九章模板。沿用合适的已有结构，按任务规模合并章节；不适用的内容无需空占标题。关键规则在正文说明，来源链接用于核实，不能代替规则本身。
+The following are content requirements, not a fixed nine-chapter template. Keep a suitable existing structure, and merge sections according to the size of the task; content that does not apply needs no empty heading. State key rules in the body; source links are for verification and cannot replace the rules themselves.
 
-| 内容 | 必须明确的信息 |
+| Content | Information that must be explicit |
 |---|---|
-| 目标与完成标准 | 预期结果、交付对象，以及可观察、可检查的完成条件。 |
-| 范围与约束 | 本次包含和排除的工作；用户要求、资源限制、权限边界和必须保持的行为。 |
-| 输入与事实依据 | 所需材料、已核实的当前状态、可复用能力、目标差距；来源版本、冲突处理依据和未核实信息。 |
-| 决策与待决事项 | 已确认选择及必要理由、接受的代价、可调整的执行细节；未决问题、决定者及受阻塞的步骤。 |
-| 总体方案 | 从当前状态到目标状态的方法；组成部分的职责、输入输出与协作关系；关键选择的理由。 |
-| 执行步骤与依赖 | 具体行动、前置条件、顺序、产物与完成判据；可独立推进的工作及交接条件。 |
-| 边界与异常处理 | 与任务相关的输入缺失、失败、冲突、打断等场景；重试、停止、回退、恢复或请求裁决的条件。 |
-| 验证与验收 | 各项要求对应的验证方法、预期结果、证据位置、失败处置，以及无法验证的范围。 |
-| 交付与接续 | 产物位置、格式、交付状态；发生中断或交接时，如何识别有效成果并继续剩余工作。 |
+| Goal and done criteria | The expected result, who it is delivered to, and done criteria that can be observed and checked. |
+| Scope and constraints | The work included in and excluded from this effort; user requirements, resource limits, permission boundaries and behavior that must be preserved. |
+| Inputs and factual basis | The materials needed, the verified current state, reusable capabilities, the gap to the goal; source versions, the basis for resolving conflicts, and unverified information. |
+| Decisions and open items | Confirmed choices with the necessary reasons, accepted costs, execution details that may be adjusted; open questions, who decides them, and the steps they block. |
+| Overall approach | How to get from the current state to the target state; the responsibilities, inputs and outputs, and collaboration of the parts; the reasons for key choices. |
+| Execution steps and dependencies | Concrete actions, preconditions, order, outputs and done criteria; work that can proceed independently, and the conditions for handing off. |
+| Boundaries and error handling | Situations relevant to the task such as missing inputs, failures, conflicts and interruptions; the conditions for retrying, stopping, rolling back, recovering or asking for a ruling. |
+| Verification and acceptance | For each requirement, the verification method, the expected result, where the evidence is, what to do on failure, and what cannot be verified. |
+| Delivery and continuation | Where the outputs are, their format and delivery status; when work is interrupted or handed off, how to identify the valid results and continue the remaining work. |
 
-待决项存在时可以交付待确认稿，但受影响步骤必须保持阻塞状态。不得为了让 plan 看起来完整而填造事实、默选重要取舍或宣称已验证。
+When open items exist, you may deliver a draft pending confirmation, but the affected steps must stay blocked. Do not make up facts, choose important trade-offs by default, or claim something is verified in order to make the plan look complete.
 
-## 3. 把方案展开到可执行粒度
+## 3. Expand the approach to executable granularity
 
-按“可以独立执行并判断完成”的单元拆分步骤，给需要依赖或交接的步骤稳定标识。避免只有“分析、实现、测试”这样的阶段名称，也无需逐条预写普通机械操作。
+Split steps into units that "can be executed on their own and judged complete", and give stable identifiers to steps that involve dependencies or handoffs. Avoid having only phase names like "analyze, implement, test", and there is no need to write out ordinary mechanical operations one by one in advance.
 
-每个实质步骤写清以下信息，简单步骤可以合并成一段：
+For each substantive step, write out the following; simple steps may be merged into one paragraph:
 
 ```text
-步骤 ID 与目标：
-前置条件 / 依赖：
-具体行动：
-预期产物：
-完成判据：
-异常或阻塞时的处理：
+Step ID and goal:
+Preconditions / dependencies:
+Concrete actions:
+Expected outputs:
+Done criteria:
+Handling of errors or blockers:
 ```
 
-粒度是否足够，用这个问题判断：执行者是否仍需自行决定会改变目标行为、跨环节约定或正确性的事项？如果需要，就补足相关规则或标明待决；仅剩符合约束的常规实现选择时，留给执行者。
+Judge whether the granularity is enough with this question: does the executor still have to decide on its own matters that would change the target behavior, agreements across stages, or correctness? If so, add the relevant rules or mark them as open; when only routine implementation choices within the constraints remain, leave them to the executor.
 
-标明可并行不等于授权创建多 agent。只有任务需要时才指定执行角色；存在多人或多 agent 协作时，明确产物归属、共享修改边界和汇合条件，不预设模型或调度工具。
+Marking work as parallelizable does not authorize creating multiple agents. Assign execution roles only when the task needs them; when several people or agents collaborate, make clear who owns which outputs, the boundaries for shared changes and the conditions for joining the work up; do not presuppose models or scheduling tools.
 
-按任务补充会影响执行正确性的专业细节：
+Depending on the task, add the domain-specific details that affect whether execution is correct:
 
-- **软件开发：** 改动与复用范围、接口与数据约定、状态和关键时序；涉及迁移、并发、幂等、兼容或恢复时展开对应语义及验证。无需预写全部函数和代码。
-- **调研分析：** 问题范围、资料获取方式、来源可信度、比较方法、证据冲突与不足时的结论边界。
-- **文档或内容创作：** 受众、结构、事实来源、表达要求、审阅方式和成品格式。
-- **数据处理：** 输入输出、转换规则、质量标准、异常数据处理；存在覆盖或损失风险时说明恢复方式。
-- **外部操作：** 目标对象、执行权限、预览与提交边界；按实际风险确定结果核验及撤销或补救方式。
+- **Software development:** the scope of change and reuse, interface and data agreements, state and key sequencing; when migration, concurrency, idempotency, compatibility or recovery is involved, expand the corresponding semantics and their verification. There is no need to write out every function and all the code in advance.
+- **Research and analysis:** the scope of the question, how materials are obtained, the credibility of sources, the method of comparison, and the limits of conclusions when evidence conflicts or falls short.
+- **Documents or content creation:** audience, structure, sources of facts, requirements on expression, how it is reviewed, and the format of the finished product.
+- **Data processing:** inputs and outputs, transformation rules, quality standards, handling of anomalous data; when there is a risk of overwriting or loss, state how to recover.
+- **External operations:** the target, the permissions to act, the boundary between preview and submission; according to the actual risk, decide how results are verified and how to undo or remedy them.
 
-只写任务实际需要的内容，不为凑齐清单引入新机制、额外平台或假想风险。
+Write only what the task actually needs; do not bring in new mechanisms, extra platforms or hypothetical risks just to complete the list.
 
-## 4. 修订时保持完整方案
+## 4. Keep the plan complete when revising
 
-以已有完整 plan 为修订对象，结合新的事实、用户裁决和有效 review 意见更新相关部分。用户只改变一个决定时，先检查该决定及其依赖，不把它解释为授权重写或压缩整份计划。
+Take the existing complete plan as what you revise, and update the relevant parts using new facts, user rulings and valid review comments. When the user changes only one decision, first check that decision and its dependencies; do not read it as authorization to rewrite or compress the whole plan.
 
-- 仍然有效的要求、接口约定、边界、步骤和验收细节保留。
-- 被新结论推翻的设计，在对应位置替换，并同步依赖步骤、异常处理和验证要求。
-- 重复内容合并到一个权威位置；读者通过明确引用找到它。
-- 删除或合并实质内容时，在修订核对中记录原内容、处置理由和替代位置；确实不再需要时说明依据。记录默认留在工作过程中，有审阅或交接需要时另行交付。
+- Keep requirements, interface agreements, boundaries, steps and acceptance details that are still valid.
+- Replace a design overturned by a new conclusion in its own place, and update the dependent steps, error handling and verification requirements to match.
+- Merge repeated content into one authoritative place; readers find it through explicit references.
+- When deleting or merging substantive content, record in the revision check the original content, the reason for how it was handled, and where its replacement is; when it is truly no longer needed, state the basis. By default the record stays in your working process; deliver it separately when review or handoff needs it.
 
-摘要可以单独提供，不能替换完整正文。方案简化时写清取消哪些工作、为什么可以取消、留下什么代价，以及其余要求如何继续满足。原稿更长不是全部恢复的理由，但“保持精炼”也不是删除必要细节的理由。
+A summary may be provided separately; it cannot replace the complete body. When the approach is simplified, state which work is dropped, why it can be dropped, what cost remains, and how the other requirements are still met. A longer original is not a reason to restore all of it, but "keep it concise" is not a reason to delete necessary details either.
 
-已有评审流程时，评审对象应是实际修订后的完整文件与差异。对建议达成一致不代表修改后的文档已通过检查；修改发生在确认之后时，重新检查受影响部分并明确确认对应的版本。计划正文呈现当前有效方案，历史争论与 review 记录按需另存。
+When a review process exists, what is reviewed should be the complete file as actually revised, and the diff. Agreeing on a suggestion does not mean the revised document has passed the check; when changes are made after confirmation, check the affected parts again and state clearly which version the confirmation applies to. The body of the plan presents the approach currently in effect; keep the history of debates and review records elsewhere as needed.
 
-## 5. 核对覆盖、可执行性和交付状态
+## 5. Check coverage, executability and delivery status
 
-对照原始有效要求与最终裁决，在工作过程中逐项建立：
+Against the original requirements in effect and the final rulings, build up, item by item while you work:
 
-**要求 → 方案位置 → 执行步骤 → 产物 → 验收方式与预期证据。**
+**Requirement → place in the approach → execution step → output → acceptance method and expected evidence.**
 
-简单任务可逐项核对；复杂或跨环节任务可用映射表。只在交接或审阅确有需要时交付独立台账。
+For a simple task you may check item by item; for a complex or cross-stage task you may use a mapping table. Deliver a separate ledger only when handoff or review really needs it.
 
-- **正向覆盖：** 每项有效要求、条件、例外和已接受代价都有落点；不能只核对主题标题或关键词。
-- **反向核对：** 每项计划工作都服务于目标、要求或必要依赖；无依据的扩展删除或明确作为待选建议。
-- **执行闭合：** 每个步骤具备输入、依赖、行动、产物和完成判据；关键交接没有缺失责任或互相等待。
-- **边界一致：** 总体方案、具体步骤、异常处理和验收要求相互一致。检查是否存在符合计划文字却违反已确认要求的合理执行方式。
-- **验证诚实：** 计划中的验证方法与执行后的证据分开。“待验证、已通过、失败、受阻”按事实记录；不能通过降低验收标准宣称完成。
+- **Forward coverage:** every requirement in effect, condition, exception and accepted cost has a place; checking only topic headings or keywords is not enough.
+- **Reverse check:** every piece of planned work serves the goal, a requirement or a necessary dependency; delete expansions that have no basis, or mark them explicitly as suggestions to choose from.
+- **Execution closure:** every step has inputs, dependencies, actions, outputs and done criteria; no key handoff is missing a responsible party or has parties waiting on each other.
+- **Consistent boundaries:** the overall approach, the concrete steps, error handling and acceptance requirements are consistent with one another. Check whether there is a reasonable way of executing that follows the wording of the plan yet violates a confirmed requirement.
+- **Honest verification:** keep the verification methods in the plan separate from the evidence after execution. Record "to be verified, passed, failed, blocked" as they actually are; do not claim completion by lowering the acceptance criteria.
 
-执行中发现事实与计划不符时，记录差异、影响和调整理由。符合既定目标与约束的细节自行调整；超出已有授权、改变用户已确认决定或需要新的重要取舍时，请求最小必要裁决，同时推进不受影响的工作。
+When you find during execution that the facts do not match the plan, record the difference, its impact and the reason for the adjustment. Adjust details yourself when they stay within the set goal and constraints; when an adjustment goes beyond existing authorization, changes a decision the user confirmed, or needs a new important trade-off, ask for the minimum necessary ruling, and meanwhile move forward with the work it does not affect.
 
-交付前回读最终产物。通过条件是：在声明的来源范围内，影响执行的遗漏、矛盾和歧义已解决，未决项及其阻塞范围清楚，执行者能定位所需信息。关键来源缺失时说明完整性检查的限制。
+Before delivering, reread the final output. It passes when: within the stated scope of sources, omissions, contradictions and ambiguities that affect execution are resolved, the open items and what they block are clear, and the executor can locate the information it needs. When a key source is missing, state the limits of the completeness check.
 
-默认交付一份完整计划，使用用户指定路径或项目已有惯例。进度与执行证据放在明确区分的状态区或已有记录中；只在实际交接时记录当前成果、失败尝试、剩余工作和继续执行的入口。最终回复给出产物位置、核对范围与尚未解决的事项；计划通过检查不代表实际工作已经完成。
+By default, deliver one complete plan, at the path the user specifies or following the project's existing conventions. Put progress and execution evidence in a clearly separated status section or in existing records; only at an actual handoff, record the current results, failed attempts, remaining work and the entry point for continuing. The final reply gives the location of the output, the scope checked and the issues not yet resolved; a plan passing its check does not mean the actual work is done.

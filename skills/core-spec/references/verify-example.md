@@ -1,101 +1,101 @@
-# 示例：执行额度改造的验收要求
+# Example: acceptance requirements for the execution quota change
 
-以下沿用 [spec 示例](spec-example.md)中的“执行额度改造”spec，脱敏简化，用于说明拆分粒度、证明方式、检查点松紧和错误实现的写法；其中业务规则不适用于其他任务。
+The following reuses the "execution quota change" spec from the [spec example](spec-example.md), de-identified and simplified, to show split granularity, proof methods, how tight checkpoints should be, and how to write decoy implementations; its business rules do not apply to other tasks.
 
-## 输入：spec 中的规范性内容
+## Input: the spec's normative content
 
-- 额度按实际发出的逻辑请求计数：同一请求内部重试不额外计数；发送前被拦截不计数；发出后失败仍计数。
-- 旧额度原数延续：旧上限 12、已用 7 → 新上限 12、历史占用 7、剩余 5；历史部分标注旧口径。
-- 额度用尽拦截下一次普通请求；最后一次获准请求的结果仍被处理；时间、权限和用户停止仍可独立阻止后续执行。
-- 只在当前执行仍可继续时收尾，不为总结新建执行；接受部分停止场景没有新总结。
-- 任务可以从界面和命令行两个入口发起。
+- The quota counts logical requests actually sent: internal retries of the same request are not counted again; requests blocked before sending are not counted; requests that fail after being sent are still counted.
+- Old quotas carry over unchanged: old limit 12, used 7 → new limit 12, historical usage 7, remaining 5; the historical part is labeled with the old counting basis.
+- An exhausted quota blocks the next ordinary request; the result of the last permitted request is still processed; time limits, permissions and user stops can still independently prevent further execution.
+- Wrap-up happens only when the current execution can still continue, and no new execution is created for a summary; it is accepted that some stop scenarios have no new summary.
+- A task can be started from two entry points: the UI and the command line.
 
-## 可以形成的 verify 片段
+## The verify excerpt this can produce
 
-### 冒烟集
+### Smoke set
 
-- 从界面发起一次普通任务，结果出现在执行记录中。
-- 从命令行发起一次普通任务，结果出现在执行记录中。
+- Start an ordinary task from the UI; the result appears in the execution record.
+- Start an ordinary task from the command line; the result appears in the execution record.
 
-两条都是已有功能、本次改动会碰到，开工前就应通过。新行为的场景在实现完成前会失败，不放进冒烟集。
+Both are existing features that this change touches, and both should pass before work starts. Scenarios for new behavior fail until the implementation is done, so they do not go into the smoke set.
 
-### 要求表
+### Requirements table
 
-| ID | 要求 | spec 位置 | 证明方式 |
+| ID | Requirement | Spec location | Proof method |
 |---|---|---|---|
-| R01 | 同一请求内部重试，计数只加 1 | 按逻辑请求计数 | 场景 S01 |
-| R02 | 发送前被拦截的请求不计数 | 按逻辑请求计数 | 场景 S01 |
-| R03 | 发出后失败的请求仍计数 | 按逻辑请求计数 | 场景 S01 |
-| R04 | 旧数据升级后剩余 5 次，历史 7 次标注旧口径 | 保留历史额度 | 场景 S04 |
-| R05 | 额度用尽后，下一次普通请求不发出 | 最后一次获准请求 | 场景 S02、S03 |
-| R06 | 最后一次获准请求的结果仍被处理 | 最后一次获准请求 | 场景 S02、S03 |
-| R07 | 没有可继续的当前执行时不新建执行，保留已有结果和停止状态 | 当前执行可以继续时才收尾 | 场景 S05 |
+| R01 | Internal retries of the same request increase the count by only 1 | Count logical requests | Scenario S01 |
+| R02 | A request blocked before sending is not counted | Count logical requests | Scenario S01 |
+| R03 | A request that fails after being sent is still counted | Count logical requests | Scenario S01 |
+| R04 | After old data is upgraded, 5 remain, and the historical 7 are labeled with the old counting basis | Keep historical quota | Scenario S04 |
+| R05 | After the quota is exhausted, the next ordinary request is not sent | Last permitted request | Scenarios S02, S03 |
+| R06 | The result of the last permitted request is still processed | Last permitted request | Scenarios S02, S03 |
+| R07 | When there is no current execution that can continue, no new execution is created, and the existing results and stopped state are kept | Wrap up only when the current execution can continue | Scenario S05 |
 
-### 场景
+### Scenarios
 
 ```text
-S01 计数规则　覆盖：R01、R02、R03
-入口：命令行发起任务
-前提：用测试数据把剩余额度设为 5
-操作步骤：依次发起三个任务，分别让外部 provider 首次失败后重试成功、在发送前被拦截、发出后失败
-检查点：三个任务的计数依次为 +1、+0、+1；剩余额度读回为 3
-不得出现：重试让计数 +2；被拦截的请求计数
-基线预期：失败（旧口径不按逻辑请求计数）
-错误实现：每次 HTTP 尝试都计数（重试后计数 +2）；在发送前就计数（被拦截的也 +1）
-替身：外部 provider 在对接层用替身，控制失败、重试和拦截
-证据：额度只读查询的结果、替身收到的请求记录
-执行状态：需补验证能力（缺口 G1）
+S01 Counting rules  Covers: R01, R02, R03
+Entry point: start a task from the command line
+Preconditions: set the remaining quota to 5 with test data
+Steps: start three tasks in turn: in the first, the external provider fails once and the retry succeeds; the second is blocked before sending; the third fails after being sent
+Checkpoints: the counts for the three tasks are +1, +0, +1 in order; the remaining quota reads back as 3
+Must not appear: a retry making the count +2; a blocked request being counted
+Baseline expectation: fails (the old counting basis does not count by logical requests)
+Decoy implementation: count every HTTP attempt (the count is +2 after a retry); count before sending (a blocked request is also +1)
+Test double: the external provider is replaced by a test double at the integration layer, which controls failures, retries and blocking
+Evidence: the result of the read-only quota query; a log of the requests the test double received
+Execution status: needs verification capability (gap G1)
 ```
 
 ```text
-S02 用尽边界（界面）　覆盖：R05、R06
-入口：界面发起任务
-前提：用测试数据把剩余额度设为 1
-操作步骤：从界面发起一个需要两次请求才能完成的任务，第一次请求获准并返回结果
-检查点：该结果出现在执行记录中；实际发出的逻辑请求数为 1；任务停在额度用尽状态
-不得出现：第二次普通请求发出
-基线预期：失败（基线在额度归零时立即终止，结果未进入执行记录）
-错误实现：结果返回后才检查额度（第二次请求已发出）；完全不检查额度（第二次请求照常发出）
-替身：外部 provider 在对接层用替身，第一次结果要求继续请求，保证任务确实会尝试第二次请求
-证据：执行记录、出站请求记录
-执行状态：实现后绑定命令
+S02 Exhaustion boundary (UI)  Covers: R05, R06
+Entry point: start a task from the UI
+Preconditions: set the remaining quota to 1 with test data
+Steps: from the UI, start a task that needs two requests to finish; the first request is permitted and returns a result
+Checkpoints: that result appears in the execution record; the number of logical requests actually sent is 1; the task stops in the quota-exhausted state
+Must not appear: a second ordinary request is sent
+Baseline expectation: fails (the baseline terminates immediately when the quota reaches zero, and the result does not enter the execution record)
+Decoy implementation: check the quota only after the result returns (the second request has already been sent); do not check the quota at all (the second request is sent as usual)
+Test double: the external provider is replaced by a test double at the integration layer; the first result asks for another request, so the task does attempt a second request
+Evidence: the execution record, the outbound request log
+Execution status: bind command after implementation
 ```
 
-S03 与 S02 的前提和检查点相同，入口为命令行发起任务。S04、S05 按同样字段书写，此处省略。
+S03 has the same preconditions and checkpoints as S02; its entry point is starting a task from the command line. S04 and S05 are written with the same fields and are omitted here.
 
-### 验证工具缺口
+### Verification tooling gaps
 
-| 缺口 | 服务场景 |
+| Gap | Scenarios served |
 |---|---|
-| G1 从外部读不到某次执行实际发出的逻辑请求数；补一个只读查询或指标 | S01、S02、S03 |
+| G1 The number of logical requests an execution actually sent cannot be read from outside; add a read-only query or metric | S01, S02, S03 |
 
-### 覆盖盲区
+### Coverage blind spots
 
-无。
+None.
 
-## 检查案例与判断
+## Check cases and judgments
 
-以下是独立的检查情境，每行给出候选写法及应作的判断。
+The following are standalone check situations; each row gives a candidate wording and the judgment to make.
 
-| 候选写法 | 判断与最小处置 |
+| Candidate wording | Judgment and minimal fix |
 |---|---|
-| S02 只断言“界面显示剩余 0” | 太松。“结果返回后才检查额度”的错误实现同样显示 0；改为断言实际出站请求数 |
-| S02 用一个只需要一次请求的任务 | 太松。这个任务本来只请求一次，完全不检查额度的实现也能通过；改用必然尝试第二次请求的任务 |
-| S02 的正向检查点删掉，只留“不得出现第二次请求” | 太松。实现什么都不做也不会发第二次请求；保留“第一次结果进入执行记录”作为正向检查点 |
-| S01 的检查点写成“剩余额度等于 `quota.remaining()` 的返回值” | 自引用。预期取自被测代码，错误实现也会通过；改为 spec 推出的字面值 3 |
-| S01 基线预期写成“通过” | 矛盾。计数口径在本次改变，场景在旧代码上通过说明它没测到改变；重查检查点 |
-| 只写 S02，没有命令行入口的场景 | 不完整。同一行为也能从命令行触发，一个入口的结果不代表另一个；补 S03 或写明不需要的依据 |
-| S02 同时写界面和命令行两个入口 | 拆开。入口不同就分成不同场景，前提和检查点可以相同 |
-| R01–R03 写成三个场景，每个都重新准备额度和替身 | 过细。同一入口、同一前提，能在一次流程里依次触发，合成一个场景、三个检查点 |
-| 为 R01 写一个 `countRequests()` 的单元测试作为验收 | 层级不对。单元测试属于实现；验收从入口发起任务，通过只读查询读回计数，查询不存在时列为工具缺口 |
-| 为验证 R06，直接调用内部的结果处理函数 | 不走用户路径。剩余额度可以用测试数据安排，被验证的“结果被处理”必须由入口发起的真实任务产生 |
-| S01 断言“`RequestLedger.increment` 被调用一次” | 太窄。spec 没有指定内部结构，其他正确实现会被误拒；改为断言对外可见的计数结果 |
-| 为 R04 增加“迁移 5 秒内完成” | 越界。spec 没有时间要求，删除 |
-| spec 未说明两个并发执行共享额度时最后一次名额归谁，草稿写成“先发起者获得” | 不能自行补定。向用户提问，答复写进 spec 后再写场景；答复前标为待确认 |
-| 接受的代价“部分停止场景没有新总结”没有对应要求 | 遗漏。接受的代价也是约定，需要场景确认此时不新建执行，防止实现为补总结而新建执行 |
-| S01 的 provider 用替身 | 可以。替身放在对接外部服务的那一层，只替代外部响应，计数仍由本系统产生；spec 要求真实 provider 行为时不能这样替代 |
-| 界面发起任务时会弹出浏览器原生确认框，驱动工具看不到，S02 仍标“入口已存在” | 标注不实。把受影响的检查点列入覆盖盲区，写明改用什么方式判断 |
-| 把 S01 放进冒烟集 | 不对。S01 验证新行为，实现完成前必然失败；冒烟集只放开工前就应通过的已有功能 |
-| “复用现有额度存储，不新增表”写成场景 | 证明方式不对。这是结构性约束，改为机械检查，例如结构测试确认本次没有新增表；无法机械化时写明评审查什么、怎样算不通过 |
+| S02 only asserts "the UI shows 0 remaining" | Too loose. The decoy implementation "check the quota only after the result returns" also shows 0; assert the actual number of outbound requests instead |
+| S02 uses a task that needs only one request | Too loose. This task only makes one request anyway, so an implementation that never checks the quota also passes; use a task that is certain to attempt a second request |
+| S02's positive checkpoint is removed, leaving only "must not appear: a second request" | Too loose. An implementation that does nothing also sends no second request; keep "the first result enters the execution record" as the positive checkpoint |
+| S01's checkpoint is written as "the remaining quota equals the return value of `quota.remaining()`" | Self-referential. The expected value comes from the code under test, so a wrong implementation also passes; use the literal value 3 derived from the spec |
+| S01's baseline expectation is written as "passes" | Contradiction. The counting basis changes in this change; if the scenario passes on the old code, it does not test the change; recheck the checkpoints |
+| Only S02 is written, with no scenario for the command-line entry point | Incomplete. The same behavior can also be triggered from the command line, and the result at one entry point does not stand for the other; add S03 or state why it is not needed |
+| S02 covers both the UI and the command-line entry points | Split it. Different entry points go into different scenarios; the preconditions and checkpoints may be the same |
+| R01–R03 are written as three scenarios, each preparing the quota and the test double again | Too fine. Same entry point, same preconditions, and they can be triggered one after another in one flow: merge them into one scenario with three checkpoints |
+| A unit test of `countRequests()` is written as the acceptance for R01 | Wrong level. Unit tests belong to the implementation; acceptance starts a task from the entry point and reads back the count through a read-only query; if the query does not exist, list it as a tooling gap |
+| To verify R06, the internal result-processing function is called directly | Not the user path. The remaining quota may be arranged with test data, but the "result is processed" under verification must come from a real task started at the entry point |
+| S01 asserts "`RequestLedger.increment` is called once" | Too narrow. The spec does not specify internal structure, so other correct implementations would be wrongly rejected; assert the externally visible count instead |
+| "Migration finishes within 5 seconds" is added to R04 | Beyond the spec. The spec has no time requirement; delete it |
+| The spec does not say who gets the last slot when two concurrent executions share a quota, and the draft writes "the one started first gets it" | Do not settle it yourself. Ask the user, write the answer into the spec, then write the scenario; until the answer comes, mark it pending confirmation |
+| The accepted cost "some stop scenarios have no new summary" has no corresponding requirement | Omission. An accepted cost is also an agreement; a scenario must confirm that no new execution is created in this case, so that the implementation does not create one to produce a summary |
+| S01 uses a test double for the provider | Acceptable. The test double sits in the layer that connects to the external service and replaces only the external responses; the count is still produced by this system. When the spec requires real provider behavior, it cannot be replaced this way |
+| Starting a task from the UI pops up a browser-native confirmation dialog that the driving tool cannot see, yet S02 is still marked "entry point exists" | Untrue status. List the affected checkpoints under coverage blind spots and state what is used to judge them instead |
+| S01 is put in the smoke set | Wrong. S01 verifies new behavior and is bound to fail until the implementation is done; the smoke set holds only existing features that should pass before work starts |
+| "Reuse the existing quota storage; add no new table" is written as a scenario | Wrong proof method. This is a structural constraint; make it a mechanical check, e.g. a structural test confirming that this change adds no table; where it cannot be mechanized, state what review checks and what counts as a failure |
 
-仅在实际完成这些核对后给出结论，不照抄示例中的场景或判断。
+Give a conclusion only after actually doing these checks; do not copy the scenarios or judgments from the example.

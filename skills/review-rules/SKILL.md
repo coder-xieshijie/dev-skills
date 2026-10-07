@@ -4,40 +4,40 @@ description: Apply personal review criteria to code and design reviews, finding 
 disable-model-invocation: true
 ---
 
-将以下准则应用于当前评审对象，以及评审中提出的修改建议。可独立使用，也可配合现有代码或设计评审流程。
-评审范围、执行方式和是否修复，沿用用户当前任务。
+Apply the criteria below to the current review target and to the changes proposed during the review. They can be used on their own or together with an existing code or design review process.
+The review scope, how the review is carried out, and whether to fix follow the user's current task.
 
-## 评审准则
+## Review criteria
 
-1. **正确且完整**
-   实现是否满足本次需求？是否存在实际可触发的 bug 或功能遗漏？
-   少改造的前提是保持功能完整和行为正确。
+1. **Correct and complete**
+   Does the implementation meet this requirement? Are there bugs that can actually be triggered, or missing functionality?
+   Keeping functionality complete and behavior correct is the precondition for changing less.
 
-2. **最少的必要改造**
-   新增代码是否必要？先核实已有能力，寻找可以复用的实现。
-   是否有改动范围更小、引入概念更少的等价方案？
-   同时考虑维护成本，不能只比较 diff 行数。
+2. **The minimum necessary change**
+   Is the new code necessary? First check what already exists and look for implementations that can be reused.
+   Is there an equivalent approach that changes a smaller area and introduces fewer concepts?
+   Consider maintenance cost as well; do not compare only the number of diff lines.
 
-3. **复杂度与收益相称**
-   新增抽象、状态和协调机制解决了什么具体问题？
-   对局部或低概率场景，说明触发条件、后果及处理成本。
-   不凭假想风险增加复杂设计，也不因其是竞态就否定必要保护。
+3. **Complexity proportionate to the benefit**
+   What concrete problem do the new abstractions, state and coordination mechanisms solve?
+   For local or low-probability cases, state the trigger conditions, the consequences and the cost of handling them.
+   Do not add complex design for imagined risks, and do not reject a necessary safeguard just because the case is a race condition.
 
-4. **足够的扩展性**
-   下一次类似功能是否更容易实现？
-   用具体变化检验扩展边界，避免为尚无需求的变化预建框架。
+4. **Enough extensibility**
+   Will the next similar feature be easier to build?
+   Test the limits of extensibility against concrete changes; avoid building frameworks in advance for changes nobody has asked for yet.
 
-5. **更少的理解成本，清晰的责任边界**
-   下次修改需要理解的上下文是否更少？
-   状态、决策和资源是否有清晰的 owner？
-   故障能否定位到负责层？能否整体回退？
-   是否存在跨层耦合、重复逻辑或多处维护同一规则？
+5. **Less to understand, clear boundaries of responsibility**
+   Does the next change need less context to understand?
+   Do state, decisions and resources have a clear owner?
+   Can a failure be traced to the layer responsible for it? Can the change be rolled back as a whole?
+   Is there cross-layer coupling, duplicated logic, or the same rule maintained in several places?
 
-## 形成结论
+## Reaching a conclusion
 
-对提出的问题说明：具体位置、触发场景或维护后果、判断依据，以及最小改法和代价。
+For each issue raised, state the exact location, the triggering scenario or the maintenance consequence, the basis for the judgment, and the smallest fix with its cost.
 
-区分真实缺陷、改进建议和需要用户决定的取舍。
-能从现有实现和明确需求回答的问题，直接回答。
-已确认的产品边界继续沿用；没有新证据时不重复列为缺陷。
-没有成立的问题时可以明确说没有，不为凑数制造问题。
+Distinguish real defects, improvement suggestions, and trade-offs the user needs to decide.
+Answer directly any question that the existing implementation and the explicit requirements can answer.
+Keep confirmed product boundaries as they are; without new evidence, do not list them as defects again.
+When no issue holds up, you may say plainly that there are none; do not make up issues to fill a count.
