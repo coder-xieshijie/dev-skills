@@ -110,7 +110,7 @@ The development workflow uses core-grill, core-spec, deliver, review-rules, mr-f
 
 - Each Skill lives in `skills/<skill-name>/` with `SKILL.md` as its entry point, plus `scripts/`, `references/` or `assets/` when it needs them. `name` matches the directory name; the directory names are stable because other tools refer to them by path.
 - Skill text is English, using the terms in the [glossary](docs/glossary.md); see [AGENTS.md](AGENTS.md). Changes to rules follow [agent-prompt-rules](skills/agent-prompt-rules/SKILL.md): one component at a time, with the basis recorded, compared in a new session.
-- CI runs the link and anchor checks and the script tests: `node scripts/check-links.mjs`, `node skills/agent-prompt-rules/scripts/check-links.mjs`, `node --test skills/deliver/scripts/check-delivery.test.mjs` and `node --test skills/core-spec/scripts/clauses.test.mjs`.
+- CI runs the link and anchor checks and the script tests: `node scripts/check-links.mjs`, `node skills/agent-prompt-rules/scripts/check-links.mjs`, `node --test skills/agent-prompt-rules/scripts/check-links.test.mjs`, `node --test skills/deliver/scripts/check-delivery.test.mjs` and `node --test skills/core-spec/scripts/clauses.test.mjs`.
 - `skills/agent-prompt-rules/references/sources/` keeps verbatim excerpts of the vendor documents the rules cite; [its README](skills/agent-prompt-rules/references/sources/README.md) says how to update them.
 
 ## License
