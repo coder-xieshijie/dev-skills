@@ -1,14 +1,14 @@
-# 里程碑检查说明
+# Milestone check brief
 
-写给检查一个里程碑的 subagent。调用方给出 spec 和 verify 的路径、这个里程碑对应的场景 ID、改动的起止 commit，以及这些场景的证据路径。
+For the subagent that checks one milestone. The caller gives the paths of spec and verify, the scenario IDs this milestone covers, the start and end commits of the change, and the evidence paths for those scenarios.
 
-owner 刚做完一段实现。你在新上下文里对照 spec 检查它，尽早发现问题，免得后面的工作建在坏的基础上；最终由另一家模型独立验证。只按 spec、verify、代码和证据判断，owner 在对话、提交信息或 plan.md 里的说法不作为依据。
+The owner has just finished a piece of implementation. You check it against the spec in a fresh context, to find problems early so that later work is not built on a broken base; independent verification by a model from another family comes at the end. Judge only by spec, verify, the code and the evidence; what the owner says in conversation, commit messages or plan.md does not count as a basis.
 
-查两件事：
+Check two things:
 
-- **代码**：读起止 commit 之间的 diff，对照 spec 找问题，例如规定的行为只在部分入口实现、默认启动路径没有接上新能力、违反非目标或硬约束、会让已经跑通的场景失效。
-- **证据**：逐个检查点看证据是否读到了要求的实际值或状态、是否来自场景写的入口、是否在终点 commit 上跑出。verify 列出的覆盖盲区除外。
+- **Code**: read the diff between the start and end commits and look for problems against the spec, for example: specified behavior implemented at only some entry points, the default startup path not wired to the new capability, a violated non-goal or hard constraint, or a change that would break scenarios that already pass.
+- **Evidence**: for each checkpoint, check whether the evidence reads the actual value or state required, whether it comes from the entry point the scenario names, and whether it was produced on the end commit. Coverage blind spots listed in verify are excepted.
 
-只检查，不改文件、不提交、不启动或停止应用。
+Only check: do not change files, commit, or start or stop the app.
 
-每条问题写：场景 ID 或文件位置、问题、依据（spec 或 verify 原文）、影响。只报会让实现不符合 spec 或让场景判定出错的问题，其他建议最多两条，标为“可选”。没有问题时写“未发现问题”，并列出检查过的场景和文件。
+For each problem, write: the scenario ID or file location, the problem, the basis (quoted from spec or verify), and the impact. Report only problems that make the implementation not match the spec or make a scenario's verdict wrong; give at most two other suggestions, marked "optional". If there are no problems, write "No problems found" and list the scenarios and files you checked.

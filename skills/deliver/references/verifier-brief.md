@@ -1,53 +1,53 @@
-# 验证说明
+# Verifier brief
 
-写给独立验证者。调用方在验证输入文件里给出：
+For the independent verifier. The caller gives the following in the verification input file:
 
-- spec、verify 的路径；
-- 待验证的 head SHA 和基线 SHA，以及检出这个 head 的目录；
-- 项目验证能力的位置；
-- [review-rules](../../review-rules/SKILL.md) 的路径；
-- 证据目录；
-- 允许你使用的环境：给你的实例、profile、端口和数据目录，可用的测试数据，结束时要清理的范围；
-- plan.md 的路径：其中“验证与验收”一节是场景对应的实际命令，只用来执行场景；“决定清单”是 owner 的主张，由你判断；
-- 只验部分场景时，本次要验的场景。
+- the paths of spec and verify;
+- the head SHA to verify and the baseline SHA, and the directory where this head is checked out;
+- where the project's verification capabilities are;
+- the path of [review-rules](../../review-rules/SKILL.md);
+- the evidence directory;
+- the environment you may use: the instance, profile, port and data directory given to you, the test data available, and what to clean up when you finish;
+- the path of plan.md: its "Validation and Acceptance" section holds the actual commands for the scenarios and is only for running them; its "Decision list" is the owner's claim, which you judge;
+- when only some scenarios are to be verified, the scenarios to verify this time.
 
-## 目的
+## Purpose
 
-这次改动由另一个 agent 实现，它会自己宣布完成。你的结论决定这个 MR 能不能合入。产品行为只按 spec 和 verify 判断；MR 描述、提交信息和 plan.md 里的说法都不能直接作为判定依据，决定清单由你按第 4 步判断。
+Another agent implemented this change, and it will declare the work done itself. Your verdict decides whether this MR can be merged. Judge product behavior only by spec and verify; nothing said in the MR description, commit messages or plan.md counts directly as a basis for the verdict; you judge the decision list as in step 4.
 
-## 要做的事
+## What to do
 
-1. **确认检出。** 检出目录的 `HEAD` 等于给定的 head，工作树干净。不满足时停止，在报告里写明。
-2. **在运行中的应用上跑场景。** 只在给你的环境里启动和操作应用；起不来或被权限挡住时，不自行扩大权限，受影响的场景标为 UNVERIFIED，说明以“环境受阻”开头。执行冒烟集、每个场景、回归范围，以及要求表里用机械检查或已有检查证明的要求。每个场景从它写的入口操作，按检查点读取实际的值和状态：涉及发出的参数、持久化后的状态、默认启动下的装配或其他副作用时，读回实际的值，不凭界面提示、函数被调用或某行日志推断。
-3. **边验边记。** 每验完一个场景，就在证据目录的 `results.md` 追加一行结果表的行。调用方在同一个会话里让你接着验时，从还没有结果的场景接着做。
-4. **判断决定清单。** 逐条判断 owner 的决定是否放宽了验收（不再检查 spec 要求的某个结果、放松数值、把应计入的排除在外），或违背了 spec 的意图。没有放宽、也不违背的，受影响的检查点按决定里更正后的事实或改用的方法判定；放宽或违背的，受影响的检查点记 FAIL，说明以“决定放宽”开头。
-5. **对照 spec 审代码。** 读基线到 head 的 diff。影响正确性或违反 spec 的记为代码问题，例如规定的行为没有实现或只在部分入口实现、默认启动路径没有接上、违反非目标或硬约束。另外列两类意见，不影响结论：按 review-rules 的代码质量意见；新增或改变的行为有没有测试覆盖，没有的列出来。
-6. **不改动。** 不修改代码、不提交、不推送。结束时停掉你启动的进程，在给定范围内清理测试数据，证据保留。
+1. **Confirm the checkout.** `HEAD` in the checkout directory equals the given head, and the working tree is clean. If not, stop and say so in the report.
+2. **Run the scenarios on the running app.** Start and operate the app only in the environment given to you; if it will not start or permissions block you, do not widen your permissions yourself; mark the affected scenarios UNVERIFIED with a note that starts with "Environment blocked". Run the smoke set, every scenario, the regression scope, and the requirements in the requirements table that are proven by a mechanical check or an existing check. Operate each scenario from the entry point it names, and read the actual values and states its checkpoints ask for: for parameters sent out, state after persistence, wiring under the default startup, or other side effects, read back the actual value; do not infer it from a UI hint, a function being called, or a log line.
+3. **Record as you go.** Each time you finish a scenario, append its row of the results table to `results.md` in the evidence directory. When the caller asks you to continue in the same session, resume from the scenarios that have no result yet.
+4. **Judge the decision list.** For each of the owner's decisions, judge whether it relaxes acceptance (stops checking a result the spec requires, loosens a value, excludes something that should count) or goes against the spec's intent. If it neither relaxes acceptance nor goes against the intent, judge the affected checkpoints by the corrected fact or the substitute method in the decision; if it does either, record the affected checkpoints as FAIL with a note that starts with "Decision relaxes".
+5. **Review the code against the spec.** Read the diff from the baseline to the head. Record anything that affects correctness or violates the spec as a code issue, for example: specified behavior not implemented or implemented at only some entry points, the default startup path not wired up, a violated non-goal or hard constraint. Also list two kinds of comments that do not affect the verdict: code quality comments per review-rules; and whether new or changed behavior has test coverage, listing what has none.
+6. **Change nothing.** Do not modify code, commit or push. When you finish, stop the processes you started, clean up test data within the given scope, and keep the evidence.
 
-## 判定
+## Verdict
 
-| 结果 | 条件 |
+| Result | Condition |
 |---|---|
-| PASS | 每个检查点都读到了符合预期的实际值，证据齐全。预期取 spec、verify 的字面值；决定清单更正或改用了判定方法、你判为没有放宽的，按决定判 |
-| FAIL | 任一检查点不符合，或出现了“不得出现”的结果 |
-| UNVERIFIED | 无法执行或观察。说明以“覆盖盲区”（verify 列出的）或“环境受阻”开头 |
+| PASS | Every checkpoint read an actual value that matches the expectation, and the evidence is complete. The expectation is the literal value in spec and verify; where the decision list corrected it or changed the judging method and you judged that this does not relax acceptance, judge by the decision |
+| FAIL | Any checkpoint does not match, or a "must not appear" result appeared |
+| UNVERIFIED | Could not be run or observed. The note starts with "Coverage blind spot" (one listed in verify) or "Environment blocked" |
 
-没有实际执行的不能写 PASS。总体结论 `verdict`：本次要验的每一项都是 PASS 或覆盖盲区造成的 UNVERIFIED、冒烟集与回归范围通过、没有代码问题时写 PASS；有 FAIL 或代码问题时写 FAIL；其余写 UNVERIFIED。
+Do not write PASS for anything you did not actually run. The overall `verdict`: write PASS when every item to verify this time is PASS or is UNVERIFIED because of a coverage blind spot, the smoke set and regression scope pass, and there are no code issues; write FAIL when there is a FAIL or a code issue; otherwise write UNVERIFIED.
 
-## 报告格式
+## Report format
 
-报告作为你的最终回复输出，调用方保存为报告文件。开头三行格式固定，`check-delivery.mjs` 会读取：
+Output the report as your final reply; the caller saves it as the report file. Write it in the language of spec.md. The first three lines have a fixed format, and `check-delivery.mjs` reads them; keep the `head:`, `verifier-model:` and `verdict:` lines exactly as shown:
 
 ```text
-head: <40 位 SHA>
-验证模型：<你的模型 ID>
+head: <40-hex SHA>
+verifier-model: <your model ID>
 verdict: <PASS|FAIL|UNVERIFIED>
 
-| 项 | 结果 | 证据 | 说明 |
+| Item | Result | Evidence | Note |
 |---|---|---|---|
-| S01 | PASS | <证据路径> | |
-| S02 | FAIL | <证据路径> | 检查点 2：预期 3，实际 4 |
-| R05 | PASS | <证据路径> | 机械检查 |
+| S01 | PASS | <evidence path> | |
+| S02 | FAIL | <evidence path> | Checkpoint 2: expected 3, actual 4 |
+| R05 | PASS | <evidence path> | Mechanical check |
 ```
 
-表后依次写，没有内容写“无”：冒烟集与回归范围；决定清单的判断（每条一行：放宽或违背与否，理由）；代码问题（位置、问题、违反的 spec 条款、触发条件与后果）；代码质量意见；测试覆盖；可选建议（最多三条）。只验了部分场景时，开头写明本次范围。
+After the table, write the following in order, writing "None" for any that has no content: smoke set and regression scope; judgments on the decision list (one line each: whether it relaxes acceptance or goes against the spec, and why); code issues (location, problem, the spec clause violated, trigger condition and consequence); code quality comments; test coverage; optional suggestions (at most three). When only some scenarios were verified, state the scope of this run at the beginning.

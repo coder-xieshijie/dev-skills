@@ -1,43 +1,45 @@
 ---
 name: core-grill
 disable-model-invocation: true
-description: 需求起步时逐轮追问用户，定下会改变用户可见结果的决定，写好术语，整理成决定汇总交给 core-spec。
+description: Question the user in rounds to settle the decisions that change user-visible results, record terms, and compile a decision summary for core-spec. Use at the start of a requirement.
 ---
 
-# 需求起步：问到能写 spec
+# Starting a requirement: ask until a spec can be written
 
-你在需求开始时和用户一起把要做的事问清楚。结束时交出一份用户确认过的决定汇总，交给 [core-spec](../core-spec/SKILL.md) 写 spec 和 verify，之后由 deliver 全自动交付。这里没定下的产品决定，交付中只能由 agent 自己选，用户要到合入前才看到。
+At the start of a requirement, you and the user work out, by asking questions, exactly what is to be done. At the end you hand over a decision summary the user has confirmed, for [core-spec](../core-spec/SKILL.md) to write spec and verify from; after that, deliver carries out the delivery fully automatically. A product decision not settled here can only be made by the agent on its own during delivery, and the user will not see it until just before merge.
 
-## 四项输入
+Write your questions, the decision summary, `CONTEXT.md` and ADRs in the language the user writes in, unless the user or the repository's documentation rules specify another language.
 
-先收齐这四项。能从仓库和平台查到的（当前分支、目标 MR、基线、已有文档）自己查，不问用户。
+## Four inputs
 
-| 项 | 写什么 |
+Collect these four first. Look up yourself anything you can find in the repository and on the platform (current branch, target MR, baseline, existing documents); do not ask the user for it.
+
+| Item | What to write |
 |---|---|
-| 目标 | 完成后用户能做什么、怎样看到它生效；需求原文或链接 |
-| 完成条件 | 做到什么程度算完；截止时间和上线的分支 |
-| 授权 | 能否推送需求分支、开 MR。合入和其他不可逆操作（强推共享分支、删除共享数据、对外发消息、改共享环境）始终留给用户 |
-| 范围 | 必须控制的影响范围；明确不做的部分 |
+| Goal | What the user can do once it is done, and how they see it take effect; the request text or a link to it |
+| Done criteria | How far the work must go to count as done; the deadline and the branch it ships on |
+| Authorization | Whether the feature branch may be pushed and an MR opened. Merging and other irreversible operations (force-pushing a shared branch, deleting shared data, sending messages outside, changing a shared environment) are always left to the user |
+| Scope | The range of impact that must be kept under control; what is explicitly not done |
 
-## 追问
+## Asking questions
 
-按轮次问。每一轮把当前能问的问题一起问完：前提都已定下的问题才进这一轮，答案取决于本轮其他问题的，放到下一轮。每题编号，写清可选项和各自的后果，给出你推荐的答案。用户答完，再算下一轮。
+Ask in rounds. In each round, ask every question you can ask now: a question goes into this round only when its prerequisites are all settled; a question whose answer depends on another question in this round belongs to the next round. Number each question, state the options and the consequences of each, and give your recommended answer. When the user has answered, work out the next round.
 
-只问会改变用户可见结果的决定，例如界面和交互、文案、默认值、入口、数据会不会丢、和现有功能怎样共存。其余的（接口命名、文件划分、实现方式）由你定，记成默认决定，写上理由和怎样推翻。
+Ask only about decisions that change user-visible results, for example UI and interaction, user-facing text, default values, entry points, whether data can be lost, and how the change coexists with existing features. Decide the rest yourself (interface naming, file layout, implementation approach) and record each as a default decision, with its reason and how to overturn it.
 
-事实由你查，不问用户。需要代码、文档或运行结果时自己查，可以派 subagent 并行查；等结果时，先问不依赖它的问题。用户说的现状与代码不符时，当场指出，请用户确认以哪个为准。
+Finding facts is your job; do not ask the user for them. When you need code, documents or run results, look them up yourself; you may dispatch subagents to look them up in parallel. While you wait for results, ask the questions that do not depend on them first. When what the user says about the current state does not match the code, point it out right away and ask the user to confirm which one to go by.
 
-## 术语与 ADR
+## Terms and ADRs
 
-- 一个术语定下来，就写进仓库的 `CONTEXT.md`，格式见[术语表格式](references/context-format.md)。它只放术语，不放实现和决定。
-- ADR 只在三条同时成立时写：改主意的代价大，不看上下文会让人意外，确实在几个方案里做了取舍。格式见 [ADR 格式](references/adr-format.md)。
+- When a term is resolved, write it into the repository's `CONTEXT.md` right away; the format is in [Glossary format](references/context-format.md). It holds only terms, not implementation details or decisions.
+- Write an ADR only when all three are true: changing your mind later is costly, it would be surprising without context, and it is the result of a real trade-off between several options. The format is in [ADR format](references/adr-format.md).
 
-## 结束
+## Finishing
 
-会改变用户可见结果的问题都有了答案时，写一份决定汇总，存在需求目录（用户指定的，或仓库已有的需求文档位置），请用户确认一次：
+When every question that changes user-visible results has an answer, write a decision summary with the items below, save it in the requirement directory (the one the user named, or where the repository already keeps requirement documents), and ask the user to confirm it once:
 
-- 四项输入；
-- 用户答过的决定：问题、可选项、用户原话；
-- 默认决定：决定、理由、怎样推翻。
+- the four inputs;
+- the decisions the user answered: the question, the options, the user's own words;
+- default decisions: the decision, the reason, how to overturn it.
 
-用户确认汇总，就确认了其中的默认决定；用户改了哪条，按用户的改。确认后接着用 core-spec：它以这份汇总为原始约定写 spec 和 verify，并请另一家模型对照它查漏。
+When the user confirms the summary, they also confirm the default decisions in it; where the user changes an item, follow the user's change. After confirmation, continue with core-spec: it takes this summary as the source agreements, writes spec and verify from it, and has a model from another family run a gap check against it.

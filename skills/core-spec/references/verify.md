@@ -1,110 +1,110 @@
-# verify.md 的写法
+# How to write verify.md
 
-core-spec 第 6 步按本文写 verify.md。交付一份可独立阅读的中文 Markdown《<主题>：验收要求》，默认文件名 `verify.md`。读者据此判断：一个实现怎样才算满足 spec，要在哪里操作、观察什么结果、留下什么证据，才能宣布完成。
+Step 6 of core-spec writes verify.md by this document. Deliver one self-contained Markdown file, "<topic>: Acceptance Requirements", in the same language as spec.md, with the default file name `verify.md`. From it, the reader judges what it takes for an implementation to satisfy the spec: where to operate, what results to observe, and what evidence to leave before declaring it done.
 
-这份文档在写 plan 和代码之前完成，依据见第 1 节，计划和实现中的遗漏因此不会缩小验收范围。验收以用户能观察到的完整操作为单位，由实现的 agent 在开发过程中自己驱动真实应用运行，实际跑通才算通过。verify.md 规定验什么、怎样判定；怎样启动和驱动应用属于项目自己的验证能力（控制命令、功能地图、测试工具），verify.md 引用它们。实现步骤、单元测试和执行结果不在其中。
+This document is finished before the plan and the code are written, from the basis set out in section 1, so omissions in the plan and the implementation do not narrow the acceptance scope. The unit of acceptance is a complete operation whose result the user can observe. During development, the implementing agent drives the real application itself, and a scenario passes only when it actually runs through. verify.md states what to verify and how to judge it; how to start and drive the application belongs to the project's own verification capabilities (control commands, feature map, test tools), which verify.md references. Implementation steps, unit tests and execution results are not part of it.
 
-## 1. 列出 spec 的规范性内容
+## 1. List the spec's normative content
 
-读取 spec 全文，记录路径、内容 sha256 和相关仓库的当前 commit；spec 之后再更新时，重新记录哈希。spec 是需求的唯一来源。当前会话、ADR 和术语表用于理解 spec 的用词、找具体例子；要求只从 spec 来。
+Read the whole spec and record its path, the sha256 of its content, and the current commit of each related repository; when the spec is updated later, record the hash again. The spec is the only source of requirements. The current session, ADRs and the glossary help you understand the spec's wording and find concrete examples; requirements come only from the spec.
 
-逐条列出 spec 中的规范性内容：选定的行为、默认值、条件与例外、不得发生的事、必须保持的现有行为、非目标、接受的代价和不变量。非目标涉及的现有行为进入回归范围。只解释理由的句子不列。
+List the spec's normative content item by item: chosen behaviors, defaults, conditions and exceptions, things that must not happen, existing behavior that must be preserved, non-goals, accepted costs, and invariants. Existing behavior that the non-goals touch goes into the regression scope. Do not list sentences that only explain reasons.
 
-完成条件：spec 的每条规范性内容都有去处，成为一条要求，或并入另一条要求并注明。
+Done criteria: every item of the spec's normative content has a place: it becomes a requirement, or it is merged into another requirement with a note saying so.
 
-## 2. 把约定写成可判断的要求
+## 2. Write agreements as requirements that can be judged
 
-每条要求给一个稳定 ID（R01、R02……），写成可观察的结论，并注明 spec 位置。一条约定带多个条件或例外时拆开，让每个例外都能单独判定。
+Give each requirement a stable ID (R01, R02, ...), write it as an observable conclusion, and note its location in the spec. When one agreement carries several conditions or exceptions, split it so that each exception can be judged on its own.
 
-为每条要求选定证明方式：
+Choose a proof method for each requirement:
 
-| 证明方式 | 适用内容 |
+| Proof method | What it fits |
 |---|---|
-| 场景 | 行为、状态、输出、副作用；从真实入口运行 |
-| 机械检查 | 结构性约束，例如分层方向、复用指定能力、不新增依赖、接口保持兼容；写成 lint 或结构测试，一个约束一条规则。确实无法机械化的，写明评审时检查什么、怎样算不通过 |
-| 已有检查 | 仓库现有的端到端测试、结构测试或 lint 已能证明的部分；写明具体文件或命令 |
+| Scenario | Behavior, state, output, side effects; run from the real entry point |
+| Mechanical check | Structural constraints, e.g. layering direction, reusing a specified capability, no new dependencies, interfaces staying compatible; write them as lint rules or structural tests, one rule per constraint. Where a constraint truly cannot be mechanized, state what review checks and what counts as a failure |
+| Existing check | What the repository's existing end-to-end tests, structural tests or lint can already prove; name the specific file or command |
 
-完成条件：每条要求都有证明方式，读者无需猜测怎样判定。
+Done criteria: every requirement has a proof method, and the reader does not need to guess how it is judged.
 
-## 3. 为行为要求设计场景
+## 3. Design scenarios for behavioral requirements
 
-一个场景是用户在一个入口上完成的一次完整操作及其结果，写成“用户在某入口做某事，看到或产生某结果”，默认从真实入口驱动。按以下字段写：
+A scenario is one complete operation a user performs at one entry point, with its result, written as "the user does something at some entry point and sees or produces some result". By default it is driven from the real entry point. Write it with these fields:
 
 ```text
-S01 <标题>　覆盖：R01、R03
-入口：本场景驱动的用户入口（功能地图条目或具体入口）
-前提：用测试数据、配置或 fixture 安排的初始状态
-操作步骤：用户在入口上依次做什么
-检查点：每个结果一条，写取自 spec 的字面预期值或状态，以及从哪里读到
-不得出现：
-基线预期：在改动前的代码上失败 / 通过 / 基线没有此功能
-错误实现：同基线 / 基线覆盖不到的关键风险：一个看似合理、会让本场景失败的做法
-替身：无 / 哪个外部依赖用替身、放在哪个对接层
-证据：
-执行状态：入口已存在 / 需补验证能力（见工具缺口）/ 实现后绑定命令
+S01 <title>  Covers: R01, R03
+Entry point: the user entry point this scenario drives (a feature map entry or a specific entry point)
+Preconditions: the initial state, arranged with test data, configuration or fixtures
+Steps: what the user does at the entry point, in order
+Checkpoints: one per result; the literal expected value or state taken from the spec, and where it is read from
+Must not appear:
+Baseline expectation: on the code before the change, fails / passes / the baseline lacks this feature
+Decoy implementation: same as baseline / for a key risk the baseline does not cover: a plausible approach that makes this scenario fail
+Test double: none / which external dependency uses a test double, and at which integration layer
+Evidence:
+Execution status: entry point exists / needs verification capability (see tooling gaps) / bind command after implementation
 ```
 
-**拆与合。** 结果不同就拆开：spec 的每条规定、每个例外、每个入口、会导致不同结果的每个状态，都要有场景覆盖。同一入口、同一前提、能在一次操作流程里依次检查的，合成一个场景，每个结果一个检查点；需要不同入口或不同前提的，分成不同场景。拆分依据是用户能观察到的结果，实现步骤和内部函数不作为拆分依据。
+**Splitting and merging.** Split when results differ: every provision of the spec, every exception, every entry point, and every state that leads to a different result must be covered by a scenario. What has the same entry point and the same preconditions and can be checked one after another in one operation flow goes into one scenario, with one checkpoint per result; what needs a different entry point or different preconditions goes into separate scenarios. Split by results the user can observe; implementation steps and internal functions are not grounds for splitting.
 
-**按改动类型选证明形式。**
+**Choose the form of proof by type of change.**
 
-| 改动 | 证明形式 |
+| Change | Form of proof |
 |---|---|
-| CLI | 运行真实命令，核对输出和退出码 |
-| UI | 在运行中的应用里走一遍改动的流程 |
-| 存储 | 写入后从另一个只读视图读回 |
-| 解析或迁移 | 重放保存下来的真实输入 |
-| 平台支持 | 在 spec 点名的目标平台上运行 |
-| 性能（spec 有要求时） | 同一环境先测基线再测改动，写明指标和判定失败的数值 |
+| CLI | Run the real command; check the output and exit code |
+| UI | Walk the changed flow in the running app |
+| Storage | After writing, read the value back from a separate read-only view |
+| Parsing or migration | Replay saved real inputs |
+| Platform support | Run on the target platform the spec names |
+| Performance (when the spec requires it) | In the same environment, measure the baseline first, then the change; state the metric and the value that counts as failure |
 
-**内部规则先变得可观察。** 从入口看不到的内部规则，例如计数、实际发出的参数、写入的数据，先补可观察性：日志、指标、链路追踪或只读查询，并列入验证工具缺口，场景仍从入口发起。外部依赖的失败、限流等情况，用放在对接外部系统那一层的替身触发，替身只证明它边界内的行为；spec 要求真实 provider、真实设备或目标平台时，场景在真实环境上运行。单元测试属于实现，不写进 verify.md。
+**Make internal rules observable first.** For internal rules that cannot be seen from the entry point, such as counts, the parameters actually sent, or the data written, first add observability (logs, metrics, traces or a read-only query) and list it as a verification tooling gap; the scenario still starts from the entry point. Trigger conditions such as failures or rate limiting of external dependencies with a test double placed in the layer that connects to the external system; a test double proves only the behavior inside its boundary. When the spec requires a real provider, a real device or the target platform, the scenario runs in the real environment. Unit tests belong to the implementation and do not go into verify.md.
 
-**走真实用户路径。** 前提可以用测试数据、配置、权限或受支持的测试开关安排；被验证的行为必须由入口上的真实操作产生。内部 setter、测试专用接口和直接写存储只用于安排前提。
+**Take the real user path.** Preconditions may be arranged with test data, configuration, permissions or supported test flags; the behavior under verification must come from real operations at the entry point. Internal setters, test-only interfaces and direct writes to storage are used only to arrange preconditions.
 
-**观察实际结果。** 证据直接证明 spec 要求的结果。要求本身是展示时，界面就是直接证据；要求涉及实际发出的参数、持久化后的状态、默认启动下的装配或其他副作用时，同时观察动作和它引起的状态变化，读回实际的值或状态，不凭界面提示、函数被调用或某行日志推断。
+**Observe the actual result.** Evidence directly proves the result the spec requires. When the requirement is itself about what is displayed, the UI is direct evidence. When the requirement involves the parameters actually sent, the persisted state, the wiring under default startup or other side effects, observe both the action and the state change it causes, and read back the actual value or state; do not infer it from a UI message, a function being called or a log line.
 
-**断言要能失败。** 检查点取 spec 给出的字面值，不用被测代码算出来的值。每条“不得出现”在同一场景里配一条正向检查点，证明流程确实跑过。检验方法：实现什么都不做或返回空时，场景是否仍会通过；会通过就重写检查点。spec 规定了交互的功能，只能显示、不能交互的空壳也必须失败，所以这类检查点断言交互产生的效果，而不只是控件出现。
+**Assertions must be able to fail.** Checkpoints use the literal values the spec gives, not values computed by the code under test. Pair each "must not appear" item with a positive checkpoint in the same scenario, which proves the flow actually ran. The check: would the scenario still pass if the implementation did nothing or returned empty? If it would, rewrite the checkpoints. For a feature whose interaction the spec specifies, a display-only stub that cannot be interacted with must also fail, so these checkpoints assert the effect the interaction produces, not just that the control appears.
 
-**用基线对照。** 新增或改变的行为，场景在改动前的代码上应当失败；必须保持的行为，在改动前后都应通过；基线没有此功能时写明这一点，改为判定新增行为和用户最终等待的状态。基线是第一个现成的错误实现；它覆盖不到的关键风险，再写一个看似合理的错误实现，并确认检查点会让它失败。
+**Compare against the baseline.** For new or changed behavior, the scenario should fail on the code before the change; for behavior that must be preserved, it should pass both before and after the change. When the baseline lacks the feature, say so, and judge the added behavior and the end state the user waits for instead. The baseline is the first ready-made decoy implementation. For a key risk it does not cover, write one more plausible decoy implementation and confirm that the checkpoints make it fail.
 
-**覆盖每个入口。** 同一行为能从多个用户入口触发时，每个入口要么有场景，要么写明不需要的依据；一个入口的结果不代表其他入口。
+**Cover every entry point.** When the same behavior can be triggered from several user entry points, each entry point either has a scenario or has a stated reason why it does not need one; the result at one entry point does not stand for the others.
 
-**只约束 spec 约定的内容。** 检查点检查 spec 要求的结果。spec 没有指定的内部结构、命名和实现路径留给实现，其他正确实现应当能通过。
+**Constrain only what the spec specifies.** Checkpoints check the results the spec requires. Internal structure, naming and implementation paths that the spec does not specify are left to the implementation; other correct implementations should be able to pass.
 
-**无法用代码断言的结果**，如模型输出质量或视觉效果，写明固定样本、参照和判定标准，并注明需要独立判断。
+**Results that code cannot assert**, such as model output quality or visual effects: state the fixed samples, the reference and the judging criteria, and note that independent judgment is needed.
 
-完成条件：spec 的每条规定、例外、相关入口和会导致不同结果的状态都有场景覆盖；每个场景都有字面检查点和基线预期，基线覆盖不到关键风险的另有错误实现；没有两个场景的入口、前提和操作流程完全相同。
+Done criteria: every provision, exception, relevant entry point and result-changing state in the spec is covered by a scenario; every scenario has literal checkpoints and a baseline expectation, and where the baseline does not cover a key risk, it also has a decoy implementation; no two scenarios have exactly the same entry point, preconditions and operation flow.
 
-## 4. 定位验证能力，列出工具缺口和覆盖盲区
+## 4. Locate verification capabilities; list tooling gaps and coverage blind spots
 
-先找项目已有的验证能力：验证 Skill、控制命令、功能地图、端到端测试工具、现有测试、日志、指标和数据查询。有功能地图时，场景的“入口”引用其条目和驱动命令，不在 verify.md 里重写驱动步骤。引用的入口必须能在记录的 commit 中找到；从仓库确认不了的，标为“实现后绑定命令”或列入验证工具缺口。能否实际运行，由交付阶段验证。
+First find the project's existing verification capabilities: verification Skills, control commands, feature map, end-to-end test tools, existing tests, logs, metrics and data queries. When there is a feature map, a scenario's "Entry point" references its feature map entry and drive commands; do not rewrite the drive steps in verify.md. A referenced entry point must exist in the recorded commit; what you cannot confirm from the repository is marked "bind command after implementation" or listed as a verification tooling gap. Whether it actually runs is verified in the delivery stage.
 
-本次才实现的功能，写明入口类型和观察方式，具体命令留到实现后的验收时绑定。尚未确定的命令、参数和路径，按“实现后绑定命令”标注。
+For features implemented in this change, state the type of entry point and how the result is observed; bind the specific commands at acceptance after implementation. Mark commands, parameters and paths not yet determined as "bind command after implementation".
 
-现在观察或驱动不了的，列入“验证工具缺口”：缺什么、服务哪些场景。交付时优先复用项目已有的验证能力，只补这些场景需要的最小缺口，并按仓库规则保留成可复用的入口，例如给控制命令加一个观察项、加一个只读查询或指标、给功能地图加一个条目。
+What cannot be observed or driven now goes under "Verification tooling gaps": what is missing and which scenarios it serves. During delivery, prefer reusing the project's existing verification capabilities, fill only the minimal gaps these scenarios need, and keep them as reusable entry points according to the repository's rules, for example an extra observation in a control command, a read-only query or metric, or an entry in the feature map.
 
-现有工具看不到或操作不了、本次也不补的部分（例如驱动工具看不到浏览器原生弹窗），列入“覆盖盲区”：每个盲区写成一个列表项或表格行，写明影响的场景 ID 和检查点、改用什么方式判断。独立验证者只认这些条目里的盲区，段落里顺带提到的编号不算。盲区内的检查点不能标为已验证。
+Parts that existing tools cannot see or operate, and that this change does not fill (for example, the driving tool cannot see browser-native alert modals), go under "Coverage blind spots": write each blind spot as one list item or table row, stating the affected scenario IDs and checkpoints and what is used to judge them instead. The independent verifier recognizes only the blind spots in these items; IDs mentioned in passing in a paragraph do not count. Checkpoints inside a blind spot cannot be marked verified.
 
-完成条件：每个场景的执行状态如实标注，每个缺口和盲区都对应到场景。
+Done criteria: each scenario's execution status is marked truthfully, and each gap and blind spot maps to scenarios.
 
-## 5. 写成文档
+## 5. Write the document
 
-文档依次包含：
+The document contains, in order:
 
-1. **用途与效力**，可按主题调整：
+1. **Purpose and authority**, adjustable to the topic:
 
-   > 本文依据 spec 规定本次需求怎样算做对、如何证明，是实现、独立验证和最终验收的共同依据。实现过程中由实现 agent 自己运行这些场景，实际跑通才算通过；冻结后不修改场景和检查点。本文只描述验收要求，不代表验证已经执行或通过。
+   > Based on the spec, this document defines what counts as doing this requirement right and how to prove it. It is the shared basis for implementation, independent verification and final acceptance. During implementation, the implementing agent runs these scenarios itself, and a scenario passes only when it actually runs through; after freezing, scenarios and checkpoints do not change. This document only describes acceptance requirements; it does not mean verification has been run or has passed.
 
-   随后写来源：spec 路径与 sha256，相关仓库与 commit，引用的验证 Skill 或功能地图。
-2. **重点**：要求数、场景数，以及 3–5 个最容易出错的场景，通常是跨模块真实路径、默认装配和关键例外，一屏内看清。
-3. **冒烟集**：按本次改动的风险选几条核心用户旅程，优先选本次改动会碰到的已有功能，用来确认环境和已有功能没有被弄坏。
-4. **要求表**：ID、要求、spec 位置、证明方式。
-5. **场景**。
-6. **回归范围**：本次改动触及、spec 没有要求改变的现有行为，用仓库已有测试或补充场景覆盖，这些场景在基线和改动后都应通过。spec 明确改变的行为，旧测试随之更新，不算回归。
-7. **验证工具缺口**。
-8. **覆盖盲区**。
-9. **完成条件**：除覆盖盲区里的检查点外，全部场景由实际运行通过；盲区里的检查点标为 UNVERIFIED 并单列；证据对应交付版本的代码和运行实例；工具缺失的场景如实标为受阻，不用单元测试或其他更低层的检查代替。
+   Then write the sources: the spec path and sha256, the related repositories and commits, and the verification Skill or feature map referenced.
+2. **Key points**: the number of requirements and scenarios, and the 3–5 scenarios most likely to go wrong, usually real cross-module paths, default wiring and key exceptions; readable within one screen.
+3. **Smoke set**: a few core user journeys chosen by the risk of this change, preferring existing features this change touches, to confirm that the environment and existing features are not broken.
+4. **Requirements table**: ID, requirement, spec location, proof method.
+5. **Scenarios**.
+6. **Regression scope**: existing behavior this change touches that the spec does not ask to change, covered by the repository's existing tests or additional scenarios; these scenarios should pass both on the baseline and after the change. Behavior the spec explicitly changes is not a regression; its old tests are updated with it.
+7. **Verification tooling gaps**.
+8. **Coverage blind spots**.
+9. **Done criteria**: all scenarios pass by actually running, except checkpoints in coverage blind spots; checkpoints in blind spots are marked UNVERIFIED and listed separately; the evidence matches the code and running instance of the delivered version; scenarios that lack tools are truthfully marked blocked, not replaced by unit tests or other lower-level checks.
 
-判断拆分粒度、检查点松紧、证明方式或错误实现写法时，读取[示例与检查案例](verify-example.md)。
+When deciding split granularity, how tight checkpoints should be, the proof method, or how to write a decoy implementation, read [the example and check cases](verify-example.md).
 
-交付一个 `verify.md`，放在用户指定的位置；没有单独指定时，与 spec 放在同一目录。
+Deliver one `verify.md` in the location the user specifies; when no separate location is given, put it in the same directory as the spec.

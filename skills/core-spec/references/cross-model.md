@@ -1,56 +1,56 @@
-# 跨模型调用
+# Cross-model calls
 
-三处由另一家模型在新 session 里做：core-spec 第 7 步的查漏，deliver 交付中的决定咨询，deliver 的独立验证。同一家模型、相近的上下文容易犯同样的错；新 session 只拿到调用方给的文件，看不到调用方的会话。
+Three tasks are done by a model from another family in a new session: the gap check in core-spec step 7, consultation on decisions during delivery in deliver, and deliver's independent verification. Models from the same family with similar context tend to make the same mistakes; a new session gets only the files the caller gives it and cannot see the caller's conversation.
 
-## 选哪一家
+## Which family to call
 
-| 当前 session 的模型 | 调用 |
+| Model of the current session | Call |
 |---|---|
-| Claude（在 Claude Code 里） | Codex：`codex exec` |
-| GPT（在 Codex 里） | Claude Code：`claude -p` |
-| 以上任一 | MiniMax Code：`mcode exec`，默认是 MiniMax 自家模型；也可以用 `--model <provider/model>` 选别家的模型 |
+| Claude (in Claude Code) | Codex: `codex exec` |
+| GPT (in Codex) | Claude Code: `claude -p` |
+| Either of the above | MiniMax Code: `mcode exec`, which uses MiniMax's own model by default; you can also choose another vendor's model with `--model <provider/model>` |
 
-用对方 CLI 当前配置的模型和 effort；用户另有指定时按用户的。报告里写明实际模型。对方 CLI 用不了（未安装、未登录，或重试后仍失败）时，换另一个不同家族的 CLI；都用不了时不用同家族代替，按调用处的说明处理。`claude -p` 需要已登录：`claude auth status` 中 `loggedIn` 为 `true`。
+Use the model and effort currently configured in the other CLI; when the user specifies otherwise, follow the user. The report states the actual model. When the other CLI cannot be used (not installed, not logged in, or still failing after a retry), switch to another CLI of a different family; when none can be used, do not substitute the same family, and handle it as the place that makes the call says. `claude -p` requires being logged in: `loggedIn` is `true` in `claude auth status`.
 
-## 怎样调用
+## How to call
 
-说明文件（[查漏说明](gap-check.md)、deliver 的验证说明）不复制进命令：命令里给出它的绝对路径和本次输入的路径，由对方自己读取。回复写到文件，调用方读文件。`codex exec` 在 stdin 不是终端时会读取 stdin，所以把 stdin 接到 `/dev/null`。调用可能运行很久，放到后台运行，靠结束时的通知回来。
+Do not copy the brief ([gap check brief](gap-check.md), deliver's verifier brief) into the command: the command gives its absolute path and the paths of this call's inputs, and the other side reads them itself. The reply is written to a file, and the caller reads the file. `codex exec` reads stdin when stdin is not a terminal, so connect stdin to `/dev/null`. A call may run for a long time; run it in the background and come back on the notification when it ends.
 
-要在同一个会话里接着谈或接着做，记下 session id（`codex exec` 打印在输出开头；`claude -p --output-format json` 的结果里有 `session_id`），然后：
+To continue talking or working in the same session, record the session id (`codex exec` prints it at the start of its output; the result of `claude -p --output-format json` contains `session_id`), then:
 
-| CLI | 续接 |
+| CLI | Resume |
 |---|---|
-| Codex | 在原来的目录里运行 `codex exec resume <session id> "<下一轮>"`；它没有 `-s`，沙箱用 `-c sandbox_mode=<read-only 或 danger-full-access>`，`-o` 照常可用 |
-| Claude Code | `claude -p --resume <session id> "<下一轮>"`，权限参数与第一次相同 |
-| MiniMax Code | `mcode exec --session <session id> "<下一轮>"` |
+| Codex | In the original directory, run `codex exec resume <session id> "<next turn>"`; it has no `-s`, so set the sandbox with `-c sandbox_mode=<read-only or danger-full-access>`; `-o` works as usual |
+| Claude Code | `claude -p --resume <session id> "<next turn>"`, with the same permission flags as the first call |
+| MiniMax Code | `mcode exec --session <session id> "<next turn>"` |
 
-### 只读：查漏、交付中的决定
+### Read-only: gap check, decisions during delivery
 
 ```bash
-codex exec -C <仓库> -s read-only -o <回复文件> "按 <gap-check.md 的绝对路径> 查漏。spec：<路径>，sha256 <值>；verify：<路径>，sha256 <值>；原始约定：<路径>；仓库：<路径>。" < /dev/null
+codex exec -C <repository> -s read-only -o <reply file> "Run a gap check per <absolute path of gap-check.md>. spec: <path>, sha256 <value>; verify: <path>, sha256 <value>; source agreements: <path>; repository: <path>." < /dev/null
 ```
 
 ```bash
-claude -p "按 <gap-check.md 的绝对路径> 查漏。spec：<路径>，sha256 <值>；verify：<路径>，sha256 <值>；原始约定：<路径>；仓库：<路径>。" --permission-mode dontAsk --allowedTools Read Grep Glob "Bash(git log:*)" "Bash(git show:*)" "Bash(ls:*)" > <回复文件>
+claude -p "Run a gap check per <absolute path of gap-check.md>. spec: <path>, sha256 <value>; verify: <path>, sha256 <value>; source agreements: <path>; repository: <path>." --permission-mode dontAsk --allowedTools Read Grep Glob "Bash(git log:*)" "Bash(git show:*)" "Bash(ls:*)" > <reply file>
 ```
 
-`dontAsk` 拒绝所有未列出的工具，因此不能写文件。`--allowedTools`、`--add-dir` 会把后面的参数都当成自己的值，所以提示词紧跟在 `-p` 后面。
+`dontAsk` denies every tool that is not listed, so it cannot write files. `--allowedTools` and `--add-dir` take all the arguments after them as their own values, so the prompt goes right after `-p`.
 
-交付中的决定用同样的命令，提示词换成：要决定的问题、相关的 spec 原文、可选做法、各自的证据，请它给出选择和理由。不写调用方的倾向。
+For decisions during delivery, use the same commands with the prompt replaced by: the question to decide, the relevant spec text, the possible approaches and the evidence for each, asking it to give a choice and the reason. Do not write the caller's leaning.
 
-### 运行应用：独立验证
+### Running the app: independent verification
 
-验证者要启动和操作应用，三个 CLI 都不带沙箱：Codex 用 `-s danger-full-access`，Claude 用 `--permission-mode bypassPermissions`，MiniMax Code 用 `--permission full`。在检出待验证 head 的专用目录里运行（`mcode` 用 `--cwd <验证检出目录>`），证据目录用 `--add-dir` 加入；`mcode` 没有这个参数，证据目录的绝对路径写在验证输入里。以 60 分钟为一个周期，用 `perl -e 'alarm 3600; exec @ARGV'` 包住命令（macOS 没有 `timeout`）：
+The verifier must start and operate the application, so all three CLIs run without a sandbox: Codex with `-s danger-full-access`, Claude with `--permission-mode bypassPermissions`, MiniMax Code with `--permission full`. Run in a dedicated directory that has the head under verification checked out (`mcode` uses `--cwd <verification checkout directory>`), and add the evidence directory with `--add-dir`; `mcode` has no such flag, so write the absolute path of the evidence directory in the verification input. Use 60 minutes as one cycle, wrapping the command in `perl -e 'alarm 3600; exec @ARGV'` (macOS has no `timeout`):
 
 ```bash
-perl -e 'alarm 3600; exec @ARGV' codex exec -C <验证检出目录> -s danger-full-access --add-dir <证据目录> -o <报告文件> "按 <verifier-brief.md 的绝对路径> 验证。验证输入：<路径>。" < /dev/null
+perl -e 'alarm 3600; exec @ARGV' codex exec -C <verification checkout directory> -s danger-full-access --add-dir <evidence directory> -o <report file> "Verify per <absolute path of verifier-brief.md>. Verification input: <path>." < /dev/null
 ```
 
-到点进程被停掉，`-o` 不会写出报告。看输出和证据目录里的 `results.md`：没做完，就续接同一个会话（例如 `codex exec resume <session id> -c sandbox_mode=danger-full-access -o <报告文件> "接着验还没有结果的场景"`），再包一层 60 分钟；失败了，看原因决定下一步。被停掉时它启动的应用可能还在运行；不再续接时，由调用方停掉。
+When time is up, the process is killed and `-o` does not write the report. Look at the output and at `results.md` in the evidence directory: if it is not done, resume the same session (for example `codex exec resume <session id> -c sandbox_mode=danger-full-access -o <report file> "Continue verifying the scenarios that have no result yet"`), wrapped in another 60 minutes; if it failed, decide the next step from the cause. When it is killed, the application it started may still be running; when you will not resume, the caller stops it.
 
-验证结束后，检出目录的 `git status --porcelain` 为空、`HEAD` 未变：验证者没有改代码。
+After verification, `git status --porcelain` in the checkout directory is empty and `HEAD` has not changed: the verifier did not change the code.
 
-## 调用之后
+## After the call
 
-- 回复有必需的内容：查漏报告要有问题条目，或写明“未发现问题”并列出检查范围；验证报告要有 `head:`、`验证模型：`、`verdict:` 三行和结果表。缺项、被截断或调用出错时重试一次。
-- 要抽查某次调用，按 session id 找对方的会话日志；Codex 在 `$CODEX_HOME/sessions/` 下，文件名含 session id。
+- The reply has the required content: a gap check report has issue entries, or says "No issues found" and lists the scope checked; a verification report has the three lines `head:`, `verifier-model:` and `verdict:` and the results table. When something is missing, the reply is truncated, or the call errors, retry once.
+- To spot-check a call, find the other side's session log by session id; Codex keeps them under `$CODEX_HOME/sessions/`, with the session id in the file name.

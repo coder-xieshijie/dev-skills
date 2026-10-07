@@ -1,179 +1,179 @@
 ---
 name: core-spec
 disable-model-invocation: true
-description: 讨论和澄清结束后，把会话与材料收敛为核心决策 spec.md；需要自动交付时，再写验收要求 verify.md。
+description: Converges a conversation and its materials into spec.md, the core decisions; when delivery will be automated, also writes verify.md, the acceptance requirements. Use after discussion and clarification are finished.
 ---
 
-# 将讨论收敛为 spec，并写出验收要求
+# Converge a discussion into a spec, and write the acceptance requirements
 
-交付两份可独立阅读的中文 Markdown：
+Deliver two self-contained Markdown files, written in the language of the decision summary (or of the user's request when there is none), unless the user or the repository's documentation rules specify another language:
 
-- **spec.md**《<主题>：核心决策与约束》：已经选定什么、必须满足什么。读者快速浏览能抓住最重要的改变，深入阅读能逐项判断方案与实现是否符合约定。
-- **verify.md**《<主题>：验收要求》：一个实现怎样才算满足 spec，要在哪里操作、观察什么结果、留下什么证据，才能宣布完成。
+- **spec.md** "<topic>: Core Decisions and Constraints": what has been chosen and what must be satisfied. A reader who skims it grasps the most important changes; a reader who reads it closely can judge, item by item, whether a design or an implementation matches what was agreed.
+- **verify.md** "<topic>: Acceptance Requirements": what it takes for an implementation to count as meeting the spec: where to operate, what results to observe, and what evidence to keep before declaring it done.
 
-两份在同一次工作中完成：写验收时按入口和状态找出的缺口要回写 spec，spec 到 verify 写完才定稿；两份一起查漏、一起请用户确认、一起冻结，再一起提交到需求分支交给 deliver。两份仍是两个文件：spec 给人和实现方看，verify 给实现方和独立验证者看，冻结后各自核对 sha256。先定 spec 再写 verify。
+Both are done in the same piece of work: gaps found by entry point and state while writing the acceptance requirements go back into the spec, and the spec is final only when verify is written. The two are gap-checked together, confirmed by the user together, frozen together, and then committed together to the feature branch and handed to deliver. They remain two files: the spec is for people and the implementer, verify is for the implementer and the independent verifier, and after freezing each is checked by its own sha256. Settle the spec first, then write verify.
 
-按用户给出的起点选择范围：
+Choose the scope by the starting point the user gives:
 
-- **从讨论开始**（默认）：做完第 1–9 步。
-- **只要 spec**（例如用于方案设计、design-for-review、plan-for-agents 或汇报）：做完第 1–4 步即交付。
-- **已有定稿 spec，要写验收**：从第 5 步开始，把给定的 spec 当作唯一依据，不重新收敛；第 5–7 步需要回写 spec 时，按第 1–4 步的规则只改受影响的部分。
+- **Starting from a discussion** (default): do steps 1–9.
+- **Spec only** (for example for solution design, design-for-review, plan-for-agents or reporting): deliver after steps 1–4.
+- **A finalized spec exists; write the acceptance requirements**: start at step 5 and treat the given spec as the only basis; do not converge it again. When steps 5–7 need to write back into the spec, change only the affected parts, following the rules of steps 1–4.
 
-这是讨论结束后的收敛动作。沿用已经完成的澄清和 grill（通常是 [core-grill](../core-grill/SKILL.md) 用户确认过的决定汇总）；只有影响最终结论的未决冲突才需要继续提问。
+This is the converging step after a discussion ends. Build on the clarification and grilling already done (usually the decision summary from [core-grill](../core-grill/SKILL.md) that the user confirmed); only unresolved conflicts that affect the final conclusions need further questions.
 
-## 1. 找到最终有效的约定
+## 1. Find the agreements that are finally in effect
 
-读取当前会话、用户指定的历史会话及相关需求、ADR、术语和方案文档。跨会话使用可用的会话读取能力，或按确切 session ID 定位本地记录；摘要缺失、分页未读完或 fork 后续不可见时，继续读取与决定相关的原文。无法取得的材料明确说明，不用推测填补。
+Read the current conversation, the past conversations the user points to, and the related requirements, ADRs, terminology and design documents. Across sessions, use whatever session-reading capability is available, or locate local records by exact session ID; when a summary is missing, pagination has not been read to the end, or the continuation of a fork is not visible, keep reading the original text relevant to the decisions. State clearly which materials you could not obtain; do not fill them in with guesses.
 
-先在工作过程中建立简短的对应关系：**议题 → 最终约定 → 依据 → 确认状态 → 成稿位置**。它服务于核对，默认不另行交付决策台账。
+First, while you work, build a short mapping: **issue → final agreement → basis → confirmation status → location in the spec**. It serves checking; by default, do not deliver a separate decision ledger.
 
-- **已确认决定：** 找到用户选择、认可或明确指定的权威定稿。简短的“同意”“A”要连同对应问题和选项读取。后来的明确修订替代旧结论。
-- **保留行为与约束：** 区分现状事实与目标要求。结合已确认的范围判断哪些现有行为必须保持；仅有现状描述不能自动推导出永久不变的要求。
-- **建议与未决项：** 助手建议、源码推断和未经采纳的草案保持原身份。文档较新、重复出现、用户没有反对，都不等于已经批准。
+- **Confirmed decisions:** find the authoritative final version that the user chose, approved or explicitly specified. Read a short "agreed" or "A" together with the question and options it answers. A later explicit revision replaces the earlier conclusion.
+- **Preserved behavior and constraints:** separate facts about the current state from target requirements. Use the confirmed scope to judge which existing behavior must be kept; a description of the current state alone cannot be taken as a requirement that it stay unchanged forever.
+- **Suggestions and open items:** assistant suggestions, inferences from source code, and drafts that were not adopted keep their original status. Being in a newer document, appearing repeatedly, or not being objected to by the user does not mean approved.
 
-遇到冲突，先核对上下文和约定适用范围。源码可以证实现状或限制，不能替用户决定目标行为。确有影响范围、行为或取舍的未决冲突时，写清冲突与影响，提出最小必要问题，同时整理不受影响的部分；答复前保留“待确认”状态。接口命名、文件划分等留给后续设计，不为这些问题重开 grill。
+When you meet a conflict, first check the context and the scope in which each agreement applies. Source code can confirm the current state or a limitation; it cannot decide the target behavior for the user. When there really is an unresolved conflict that affects scope, behavior or trade-offs, state the conflict and its impact, ask the minimum necessary question, and meanwhile organize the parts it does not affect; until it is answered, keep the status "pending confirmation". Interface naming, file layout and the like are left to later design; do not reopen grilling for them.
 
-完成条件：每个影响目标、范围、行为和正确性的议题，都能区分最终约定、被替代内容或尚未确认内容。
+Done criteria: for every issue that affects the goal, scope, behavior or correctness, the final agreement, superseded content and content not yet confirmed can be told apart.
 
-## 2. 提炼决定，保留判断边界
+## 2. Distill the decisions, keep the boundaries for judging
 
-围绕“未来的方案或实现怎样才算符合约定”筛选内容：
+Select content around "what makes a future design or implementation conform to the agreements":
 
-- 选定的行为、职责归属、改动范围、复用与兼容边界。
-- 会改变正确性判断的条件、例外、限制，以及明确接受的代价。
-- 已确认必须保持的不变量；按任务需要保留计量、并发、持久化、恢复等语义。
+- The chosen behavior, ownership of responsibilities, scope of change, and the boundaries of reuse and compatibility.
+- Conditions, exceptions and limits that change the judgment of correctness, and costs explicitly accepted.
+- Invariants confirmed as ones that must hold; as the task requires, keep semantics such as metering, concurrency, persistence and recovery.
 
-将问答改成直接的结论，将具体实现建议还原为它要满足的约束。只有接口、字段或实现机制本身已经被明确选定且构成约束时，才保留为要求。
+Turn questions and answers into direct conclusions, and turn concrete implementation suggestions back into the constraints they are meant to satisfy. Keep an interface, field or implementation mechanism as a requirement only when it has itself been explicitly chosen and forms a constraint.
 
-删除调查过程、被否决的选项、重复解释、实施步骤和详细测试清单。必要理由可用一句话解释取舍；具体例子如果能消除规则歧义，就放在对应决定旁边。保留关键条件与数值，不用“保持兼容”“保证可靠”代替原有可核对的规则。
+Remove the investigation process, rejected options, repeated explanations, implementation steps and detailed test lists. A necessary reason may explain a trade-off in one sentence; a concrete example that removes ambiguity from a rule goes next to the decision it belongs to. Keep key conditions and numbers; do not replace an original checkable rule with "stay compatible" or "ensure reliability".
 
-按问题及需要一起判断的约定归组，不机械分成“开发决策”和“Review 原则”，也不沿代码目录或工作阶段拆散同一决定。
+Group by question and by the agreements that need to be judged together; do not mechanically split into "development decisions" and "review principles", and do not break up one decision along code directories or work phases.
 
-除了决定本身，spec 还要写清下面四项。交付阶段的 agent 按 spec 自行判断，缺了它们只能猜，或停下来问人。
+Besides the decisions themselves, the spec must state the four items below. The agent in the delivery stage judges on its own from the spec; without them it can only guess, or stop and ask a person.
 
-| 内容 | 写什么 | 缺了会怎样 |
+| Item | What to write | What goes wrong without it |
 |---|---|---|
-| 目的 | 一两句：完成后用户能做什么以前做不到的事，怎样看到它生效 | 实现只满足条款字面，做出能运行却没有用的东西 |
-| 非目标 | 本次明确不做的事，尤其是相邻、容易被顺手改掉的功能 | 自主执行时范围扩大，改动没人要求的行为 |
-| 硬约束 | 适用时逐类检查性能、平台、兼容、依赖和安全，保留原有数值 | 必须满足的条件被当作可以取舍的偏好 |
-| 交付与授权 | 交付到哪个仓库和基线分支；能否推送自己的分支并开 MR/PR。合入和其他不可逆操作始终留给用户，不在这里授权 | 交付做到一半停下等人，或推送到不该去的地方 |
+| Purpose | One or two sentences: what the user can do after this is done that they could not do before, and how to see it working | The implementation satisfies only the letter of the clauses and builds something that runs but is of no use |
+| Non-goals | What is explicitly not done this time, especially adjacent features that are easy to change in passing | Scope grows during autonomous execution, changing behavior nobody asked for |
+| Hard constraints | Where they apply, check each category: performance, platform, compatibility, dependencies and security; keep the original numbers | Conditions that must be met are treated as preferences that can be traded off |
+| Delivery and authorization | Which repository and base branch to deliver to; whether the agent may push its own branch and open an MR/PR. Merging and other irreversible operations are always left to the user and are not authorized here | Delivery stops halfway to wait for a person, or pushes somewhere it should not go |
 
-这四项只写有依据的内容，不替用户补定。非目标写用户已明确的；讨论中没有谈到时写“未单列非目标”，只有某个具体的相邻事项会实质改变交付范围时，才作为最小必要问题提出。交付与授权只由用户决定：用于自动交付、讨论中又没有定下时提问；spec 不用于自动交付时可以不写。
+For these four items, write only what has a basis; do not decide them for the user. For non-goals, write what the user has made explicit; when the discussion did not cover them, write "No separate non-goals listed", and raise one as a minimum necessary question only when a specific adjacent matter would materially change the delivery scope. Delivery and authorization are decided only by the user: ask when the spec is for automated delivery and the discussion did not settle it; when the spec is not for automated delivery, you may leave it out.
 
-## 3. 用金字塔结构写成 spec
+## 3. Write the spec in a pyramid structure
 
-开头简短说明用途与效力，可按主题调整：
+Open with a short statement of what the document is for and how binding it is, which may be adjusted to the topic:
 
-> 本文记录本次改造的核心决策与约束，作为方案设计、开发实现和代码审查的共同依据，也用于人工决策核对与对外说明。
+> This document records the core decisions and constraints of this change. It is the common basis for design, implementation and code review, and is also used for checking decisions by hand and for explaining the change to others.
 >
-> 具体实现可以调整，但必须满足这些约定；需要改变约定时，应先明确影响并重新确认。本文描述的是目标要求，不代表实现已完成或验证已通过。
+> The concrete implementation may vary, but it must satisfy these agreements; when an agreement needs to change, its impact should first be made clear and the change confirmed again. This document describes target requirements; it does not mean the implementation is done or verification has passed.
 
-用途说明之后，用一两句写目的，再进入正文。
+After this statement, write the purpose in one or two sentences, then start the body.
 
-正文采用两层：
+The body has two layers:
 
-### 第一层：最核心的决定
+### Layer 1: the core decisions
 
-通常选 3–5 个，内容较少时更少。优先突出最影响本次工作方向、外部行为、范围和取舍的决定，一屏内建立整体认识。
+Usually pick 3–5, fewer when there is less content. Prefer the decisions that most affect this work's direction, external behavior, scope and trade-offs, so that one screen gives the overall picture.
 
-每点用**结论句 + 必要解释**，让人知道具体选了什么。开头有意不覆盖全部细节；不要为了穷尽内容而把结论抽象成“迁移范围”“数据一致性”等主题标签，也不把所有条款平均压缩后堆在开头。
+Write each point as **a conclusion sentence + the necessary explanation**, so the reader knows what exactly was chosen. The opening deliberately does not cover every detail; do not abstract conclusions into topic labels such as "migration scope" or "data consistency" in order to cover everything, and do not compress all clauses evenly and pile them up at the top.
 
-### 第二层：完整决策与约束
+### Layer 2: complete decisions and constraints
 
-围绕核心决定展开，其他重要约定放在就近的分组，必要时增加独立分组。分组是阅读结构，不代表要实现对应数量的模块。
+Expand around the core decisions; put other important agreements in the nearest group, and add separate groups when needed. Groups are a reading structure; they do not mean that the same number of modules must be implemented.
 
-- 标题直接表达决定，下面紧跟相关的规则、边界与取舍。
-- 摘要和正文允许必要重复；详细规则在正文保留一个权威位置，其他地方引用它。
-- 编号按最终阅读顺序组织。仅用于整理核对的旧编号不带入成稿；已经用于外部引用的稳定标识保留。
-- 非目标和硬约束放在第二层，单独成组或并入相关决定；交付与授权放在文末单独一节。
+- Each heading states a decision directly, followed right below by the related rules, boundaries and trade-offs.
+- The summary and the body may repeat each other where necessary; each detailed rule keeps one authoritative place in the body, and other places refer to it.
+- Number items in final reading order. Do not carry old numbers used only for organizing and checking into the spec; keep stable identifiers that are already referenced from outside.
+- Non-goals and hard constraints go in layer 2, as their own group or merged into the related decisions; delivery and authorization go in a separate section at the end.
 
-最终约定齐全时，不设空的“待决问题”章节。仍有关键未决项时，明确标为待确认稿，并在文末隔离这些问题，不把它们混进已定约束。必要来源链接可就近保留，正文应足以独立理解规则，无需读者回看聊天。
+When the final agreements are complete, do not add an empty "Open questions" section. When key items are still open, mark the document clearly as a draft pending confirmation, and isolate those questions at the end, keeping them out of the settled constraints. Necessary source links may stay next to the text they support; the body should be enough to understand the rules on its own, without the reader going back to the chat.
 
-需要判断摘要与完整规则如何分层，或如何处理被替代的结论时，读取[收敛示例](references/spec-example.md)。
+When you need to decide how to layer the summary and the full rules, or how to handle superseded conclusions, read the [convergence example](references/spec-example.md).
 
-只写一个 spec 文件，不附带过程台账、额外摘要或拆分版，写入用户本次指定的目录；没有给出目录时先问，同时继续不需要落盘的整理。用于自动交付时，这个目录要在目标仓库中，第 9 步把两份文件提交到需求分支。更新已有 spec 时整篇保持一致；原始讨论与来源文档保留，不因收敛而删除。
+Write only one spec file, with no process ledger, extra summary or split versions, into the directory the user specified this time; if no directory was given, ask first, and meanwhile continue the organizing that does not need to be written to disk. For automated delivery, this directory must be in the target repository; step 9 commits both files to the feature branch. When updating an existing spec, keep the whole document consistent; keep the original discussions and source documents, and do not delete them because of the convergence.
 
-## 4. spec 的完成标准
+## 4. Done criteria for the spec
 
-成稿以第 1 步读取的原始需求、已接受 ADR 和最终澄清为基线，满足下面的条件。记清依据的来源范围和成稿版本；中间摘要仅作索引。重排前后文字相同，只能证明这次重排没有丢字，不能证明此前的压缩没有遗漏。
+Measured against the original requirements, accepted ADRs and final clarifications read in step 1, the written spec meets the conditions below. Record the scope of sources it is based on and the version of the spec; intermediate summaries serve only as an index. Identical text before and after a reordering proves only that this reordering lost no words; it does not prove that earlier compression left nothing out.
 
-### 条件
+### Conditions
 
-按“议题 → 约定 → 依据 → 成稿位置”的对应关系判断：
+Judge by the mapping "issue → agreement → basis → location in the spec":
 
-- **原材料 → 成稿：** 已确认的关键决定、限制、例外和接受的取舍都有落点。合并条款不能吞掉条件，删掉过程不能连带删掉结论。
-- **成稿 → 原材料：** 每个规范性断言都有依据，没有将建议升级为承诺，也没有借整理文档新增需求。
-- **摘要 → 正文：** 最核心决定都有展开；摘要没有超出正文，也没有让局部例外看起来适用于全部情况。
-- **独立阅读：** 人扫开头能抓住重点；agent 读正文能判断符合或偏离。目标要求和实现、验证状态明确分开。
-- **自动交付所需：** 目的和非目标已写明；用于自动交付时，交付与授权已写明。四项都有依据，没有替用户补定。
-- **精简有效：** 过程、被替代方案和非必要实现细节没有混入最终要求。已有工程规范可以明确引用适用文档及范围；决定本次行为的关键边界仍在正文写清。
+- **Source material → spec:** every confirmed key decision, limit, exception and accepted trade-off has a place in the spec. Merging clauses must not swallow conditions, and removing the process must not remove the conclusions along with it.
+- **Spec → source material:** every normative statement has a basis; no suggestion has been promoted to a commitment, and no new requirement has been added under cover of tidying up the document.
+- **Summary → body:** every core decision is expanded in the body; the summary does not go beyond the body, and does not make a local exception look as if it applies everywhere.
+- **Self-contained reading:** a person skimming the opening grasps the main points; an agent reading the body can judge conformance or deviation. Target requirements are clearly separated from the state of implementation and verification.
+- **What automated delivery needs:** the purpose and non-goals are stated; for automated delivery, delivery and authorization are stated. All four items have a basis, and none was decided for the user.
+- **Lean and effective:** process, superseded options and unnecessary implementation details are not mixed into the final requirements. Existing engineering standards may be referenced explicitly, naming the applicable document and scope; the key boundaries that decide this change's behavior are still stated in the body.
 
-对疑似遗漏或歧义，用反例判断其影响：**是否存在一种符合当前文字、却违反已确认约定的合理实现？** 若能指出具体场景和违背的原始约定，就在对应决定旁补足最小必要表述。重要的已接受代价也应直接说明，不能只留给读者推导。
+For a suspected omission or ambiguity, judge its impact with a counterexample: **is there a reasonable implementation that matches the current text but violates a confirmed agreement?** If you can name the concrete scenario and the source agreement it violates, add the minimum necessary wording next to the corresponding decision. Important accepted costs should also be stated directly, not left for the reader to infer.
 
-检查建议不是新需求。每项问题记清“依据、成稿位置、影响、处置”：已有条款明确覆盖的，无需再补；已有工程规范能承接的，引用即可；纯命名或实现方式留给设计。仅凭“原稿写得更详细”不能要求全部补回；来源中的冲突或未决选择按第 1 步处理。
+Suggestions from a check are not new requirements. For each issue, record "basis, location in the spec, impact, disposition": if an existing clause clearly covers it, nothing needs adding; if an existing engineering standard can carry it, a reference is enough; pure naming or the way of implementing is left to design. "The original draft was more detailed" alone is not grounds for restoring everything; handle conflicts or open choices in the sources per step 1.
 
-需要判断哪些缺失必须补、哪些无需补时，读取[检查案例](references/spec-example.md#检查案例与验收判断)。修正后，受影响的条款、相邻边界和摘要仍要满足这些条件。
+When you need to judge which omissions must be filled and which need not, read the [check cases](references/spec-example.md#check-cases-and-acceptance-judgments). After a fix, the affected clauses, the adjacent boundaries and the summary must still meet these conditions.
 
-### 通过条件
+### Pass conditions
 
-在已声明的来源范围内，关键遗漏、无依据新增、实质冲突和会改变实现的歧义均已解决；原有关键约定可定位，摘要与正文一致，过程与非必要细节已剔除。条目数相同、关键词齐全或格式检查通过，不能替代上述判断。
+Within the declared scope of sources, key omissions, additions without basis, substantive conflicts and ambiguities that would change the implementation are all resolved; the original key agreements can be located, the summary matches the body, and process and unnecessary details are removed. Equal item counts, complete keywords or a passing format check cannot replace this judgment.
 
-影响关键约定的材料无法取得，或关键决定仍未确认时，交付明确标注缺口的待确认稿，说明缺什么及影响；不宣称完整通过。检查通过仅代表文档忠实承接约定，不代表产品实现或测试已通过。
+When material that affects key agreements cannot be obtained, or key decisions are still unconfirmed, deliver a draft pending confirmation that clearly marks the gaps, stating what is missing and its impact; do not claim a full pass. Passing this check means only that the document faithfully carries the agreements; it does not mean the product implementation or tests have passed.
 
-完整流程中，第 7 步的查漏会对照原始约定独立核验，这里不另设一轮作者复查。
+In the full workflow, the gap check in step 7 verifies independently against the source agreements; do not add a round of author re-review here.
 
-**只要 spec 时**，到此交付。最终回复给出文件链接及简短检查结论：核对了哪些来源、修正了哪些实质问题、通过或仍有哪些缺口。核对过程默认留在工作上下文中，无需另交长报告。
+**For spec only**, deliver at this point. The final reply gives the file link and a short check conclusion: which sources were checked, which substantive problems were fixed, and whether it passed or which gaps remain. By default the checking process stays in the working context; no separate long report is needed.
 
-## 5. 按入口和状态找 spec 的缺口
+## 5. Find gaps in the spec by entry point and state
 
-对 spec 涉及的每个功能过一遍它的用户入口（按钮、快捷键、CLI、API 等）和适用的状态（默认、加载、空、错误、禁用、取消、重复触发、并发、重启后），找 spec 没有定下的行为。项目有功能地图时，按地图列出的入口逐个过，不只看一个方便的入口。
+For each feature the spec touches, go through its user entry points (buttons, keyboard shortcuts, CLI, API, and so on) and the states that apply (default, loading, empty, error, disabled, cancelled, triggered repeatedly, concurrent, after restart), and find behavior the spec has not settled. When the project has a feature map, go through every entry point the map lists, not only one convenient entry point.
 
-会改变场景判定结果的缺口，按第 1–4 步更新 spec：从会话中找出最终约定，仍未确定时向用户提出最小必要问题。答复前，相关内容标为待确认，其余部分继续。只影响实现方式、不影响判定的，留给实现。
+For a gap that would change how a scenario is judged, update the spec per steps 1–4: find the final agreement in the conversation, and if it is still undecided, ask the user the minimum necessary question. Until it is answered, mark the related content as pending confirmation and continue with the rest. A gap that affects only the way of implementing, not the judgment, is left to the implementation.
 
-完成条件：每个相关入口和状态都已归入 spec 的约定、确认不适用，或作为问题提出。
+Done criteria: every relevant entry point and state is covered by an agreement in the spec, confirmed as not applicable, or raised as a question.
 
-## 6. 依据 spec 写 verify
+## 6. Write verify from the spec
 
-读取 [verify 的写法](references/verify.md)，按其中的规则写 verify.md：把 spec 的规范性内容写成可判断的要求，为行为要求设计从真实入口运行的场景，定位项目的验证能力，列出验证工具缺口和覆盖盲区。写 verify 时又发现 spec 没定的行为，回到第 5 步处理。
+Read [how to write verify](references/verify.md) and write verify.md by its rules: turn the spec's normative content into requirements that can be judged, design scenarios run from real entry points for behavioral requirements, locate the project's verification capabilities, and list verification tooling gaps and coverage blind spots. If, while writing verify, you find more behavior the spec has not settled, go back to step 5.
 
-完成条件：[verify 的写法](references/verify.md)各节的完成条件全部满足。
+Done criteria: the done criteria of every section of [how to write verify](references/verify.md) are all met.
 
-## 7. 换一家模型查漏
+## 7. Gap check by a model from another family
 
-作者自查容易放过自己的遗漏，同一家模型也容易犯同样的错；交付阶段全自动，这里漏掉的问题会一直带到 MR。用与写 spec、verify 的模型不同家族的 CLI 开一个新 session 查漏。它拿到 spec、verify、相关仓库和原始约定：需求稿、已接受的 ADR，以及用户最终决定的原话和对应的问题、选项（有 core-grill 的决定汇总时直接用它，否则从第 1 步的对应关系里摘出，存成一个文件）；拿不到作者的推理过程和草稿。查什么、怎样报告写在[查漏说明](references/gap-check.md)里，调用时引用这份说明，不另写；启动方式见[跨模型调用](references/cross-model.md)。
+An author checking their own work tends to let their own omissions pass, and models from the same family tend to make the same mistakes; the delivery stage is fully automated, so a problem missed here is carried all the way into the MR. Run the gap check in a new session, using the CLI of a model from a different family than the one that wrote spec and verify. It gets the spec, verify, the related repository and the source agreements: the request text, accepted ADRs, and the user's final decisions in their own words together with the questions and options they answered (when there is a core-grill decision summary, use it directly; otherwise extract them from the step 1 mapping and save them as one file). It does not get the author's reasoning or drafts. What to check and how to report are written in the [gap check brief](references/gap-check.md); reference this brief in the call, and do not write another. How to start the session is in [cross-model calls](references/cross-model.md).
 
-查漏方只报告，修改由本 session 按报告逐条处理：
+The gap checker only reports; this session handles the report item by item and makes the changes:
 
-- verify 的问题（覆盖缺失、检查点不能失败、越出 spec、入口不存在）：直接改 verify.md。
-- spec 的问题：原始约定里已有依据的，按第 1–4 步直接改 spec；自相矛盾、缺少会改变判定的决定或缺少交付与授权，而原始约定里没有依据的，转成给用户的最小必要问题，答复按第 1–4 步写进 spec 后，更新对应场景。
-- 不成立的：在最终回复里写一句理由。
+- Problems in verify (missing coverage, checkpoints that cannot fail, going beyond the spec, entry points that do not exist): fix verify.md directly.
+- Problems in the spec: when the source agreements already give a basis, fix the spec directly per steps 1–4; when the spec contradicts itself, lacks a decision that would change the judging, or lacks delivery and authorization, and the source agreements give no basis, turn it into a minimum necessary question for the user; after the answer is written into the spec per steps 1–4, update the corresponding scenarios.
+- Findings that do not hold: give a one-sentence reason in the final reply.
 
-用户的答复新增或改变了 spec 的要求时，对改动后的两份文件再查一次。查漏最多两轮。第二轮之后仍未解决的问题保留为未通过，写进最终回复；其中只有需要用户选择的目标、行为或取舍，才转成问题。
+When the user's answers add or change requirements in the spec, check the two changed files once more. The gap check runs at most two rounds. Issues still unresolved after the second round stay as not passed and go into the final reply; of these, only those that need the user to choose a goal, behavior or trade-off are turned into questions.
 
-另一家模型用不了时（未安装、未登录，或重试后仍失败），先换另一个不同家族的 CLI；都用不了，就记为“跨模型查漏未完成”：可以交付待确认稿，但不请用户冻结。只有用户明确放宽这一要求时，才用同家族查漏，并在最终回复里写明。
+When the other family's model cannot be used (not installed, not logged in, or still failing after a retry), first switch to another CLI of a different family; if none can be used, record "cross-model gap check not completed": you may deliver a draft pending confirmation, but do not ask the user to freeze. Run the gap check with the same family only when the user explicitly relaxes this requirement, and say so in the final reply.
 
-完成条件：报告中的每条问题都已修改、转成问题并得到答复、保留为未通过，或写明不成立的理由。
+Done criteria: every issue in the report has been fixed, turned into a question and answered, kept as not passed, or given a reason why it does not hold.
 
-## 8. 请用户一次确认
+## 8. Ask the user to confirm once
 
-运行 `node <本 Skill 目录>/scripts/freeze.mjs --spec <spec.md> --verify <verify.md>`。它输出两份文件的 sha256，并核对 verify.md 来源里记的 spec 哈希与 spec 当前内容一致；不一致时先更新 verify.md 的来源，再运行一次。
+Run `node <this Skill's directory>/scripts/freeze.mjs --spec <spec.md> --verify <verify.md>`. It prints the sha256 of both files and checks that the spec hash recorded in verify.md's source matches the spec's current content; if it does not, update verify.md's source first, then run it again.
 
-最终回复给出 spec 与 verify 的文件链接和 sha256、要求数与场景数、冒烟集、工具缺口、覆盖盲区、查漏结果（查漏用的模型、问题数与处置）和仍待确认的问题，请用户一次确认；sha256 用脚本的输出，不手抄。跨模型查漏未完成时写明原因，不请用户冻结。用户确认后两份文件冻结，交付阶段不再修改，接着做第 9 步；需要改变时回到本 Skill，重新查漏和确认。
+The final reply gives the file links and sha256 of spec and verify, the number of requirements and the number of scenarios, the smoke set, tooling gaps, coverage blind spots, the gap check result (the model used for the gap check, the number of issues and how they were handled), and the questions still pending confirmation, and asks the user to confirm once; take the sha256 from the script's output, do not copy it by hand. When the cross-model gap check was not completed, state the reason and do not ask the user to freeze. After the user confirms, both files are frozen and are not changed during the delivery stage; go on to step 9. When a change is needed, come back to this Skill, and gap-check and confirm again.
 
-## 9. 提交到需求分支，开 Draft MR/PR 交给 deliver
+## 9. Commit to the feature branch and open a Draft MR/PR for deliver
 
-本步的MR 同时指 GitHub 的 PR，Draft 对应 GitHub 的 draft PR 和 GitLab 的 Draft MR。deliver 从需求分支和 MR 开工，可以在任何 worktree 或机器上检出，不依赖本 session 的工作目录。用户确认后：
+In this step, MR also means a GitHub PR, and Draft means a draft PR on GitHub and a Draft MR on GitLab. deliver starts from the feature branch and the MR, and can check it out in any worktree or on any machine, without depending on this session's working directory. After the user confirms:
 
-1. 在目标仓库的需求分支上单独提交 spec.md 和 verify.md，只 add 这两个文件，下称交接提交。提交信息的末尾原样写上 `node <本 Skill 目录>/scripts/freeze.mjs --spec <spec.md> --verify <verify.md> --trailers` 输出的 `Frozen-Spec`、`Frozen-Verify` 两行；deliver 从这两行读取用户确认过的 sha256，不能手抄或改写。还没有需求分支时，按仓库规则命名，从 spec 交付与授权里的基线新建。本 session 在这个仓库留下的其他改动（例如 grill 写入的术语、ADR）另行提交，留在工作区的改动 deliver 看不到。
-2. 推送需求分支，开一个 Draft MR/PR，目标分支取 spec 的交付与授权；平台要求的属性（例如合并方式）按仓库规则设置并读回。描述写明：这是本需求的交付 MR；spec、verify 已冻结，附两个 sha256；代码由 deliver 在同一个 MR 上提交。
-3. 本 session 的 worktree 检出着需求分支时，切到 detached，让 deliver 在自己的 worktree 里检出它。
+1. On the feature branch of the target repository, commit spec.md and verify.md on their own, adding only these two files; this is called the handoff commit below. End the commit message with the `Frozen-Spec` and `Frozen-Verify` lines printed by `node <this Skill's directory>/scripts/freeze.mjs --spec <spec.md> --verify <verify.md> --trailers`, exactly as printed; deliver reads the sha256 values the user confirmed from these two lines, so they must not be copied by hand or rewritten. If there is no feature branch yet, name it by the repository's rules and create it from the base given in the spec's delivery and authorization. Commit separately the other changes this session left in this repository (for example terminology or ADRs written during grilling); deliver cannot see changes left in the working tree.
+2. Push the feature branch and open a Draft MR/PR, with the target branch taken from the spec's delivery and authorization; set the attributes the platform requires (for example the merge method) by the repository's rules and read them back. The description states: this is the delivery MR for this requirement; spec and verify are frozen, with the two sha256 values; deliver commits the code to this same MR.
+3. If this session's worktree has the feature branch checked out, switch it to detached HEAD so that deliver can check the branch out in its own worktree.
 
-最终回复给出交接信息：MR/PR 链接，这是 deliver 开工唯一需要的输入；另列需求分支、交接提交、两份文件在仓库内的路径和两个 sha256，供用户核对和留底。
+The final reply gives the handoff information: the MR/PR link, which is the only input deliver needs to start; also list the feature branch, the handoff commit, the paths of the two files in the repository and the two sha256 values, for the user to check and keep on record.
 
-spec 的交付与授权不允许推送或开 MR，或仓库规则不允许提交这两份文件时，跳过上面三项，只交本地路径：交接信息改为两份文件的本地路径和两个 sha256，deliver 在读得到它们的环境里开工，是否推送、开 MR 仍按 spec 的交付与授权。
+When the spec's delivery and authorization does not allow pushing or opening an MR, or the repository's rules do not allow committing these two files, skip the three items above and hand off local paths only: the handoff information becomes the local paths of the two files and the two sha256 values; deliver starts in an environment that can read them, and whether it pushes or opens an MR still follows the spec's delivery and authorization.
 
-交付中 deliver 不回到本 Skill：spec 没定的选择、verify 按字面判不了的检查点、现有事实的更正，都由它记进决定清单，用户在合入前看。用户看过决定清单后要改 spec 或 verify 时，按本 Skill 更新、查漏并请用户重新确认，再按原来的交接方式交回：随需求分支交接的，在需求分支最新的远端提交上提交新版本，提交信息同样以 `--trailers` 输出的两行结尾，推送后更新 MR 描述里的 sha256；只交本地路径的，交回更新后的路径和两个新 sha256。deliver 拉取或读取后继续。
+During delivery, deliver does not come back to this Skill: choices the spec did not settle, checkpoints in verify that cannot be judged as written, and corrections of existing facts all go into its decision list, which the user reviews before merging. When, after reviewing the decision list, the user wants to change spec or verify, update them by this Skill, run the gap check, ask the user to confirm again, and then hand them back the same way as the original handoff: if they were handed off with the feature branch, commit the new version on top of the latest remote commit of the feature branch, end the commit message with the two lines printed by `--trailers` in the same way, push, and then update the sha256 values in the MR description; if only local paths were handed off, hand back the updated paths and the two new sha256 values. deliver continues after pulling or reading them.
 
-完成条件：交接提交已推送，其中两份文件的 sha256 与用户确认的一致，提交信息的 `Frozen-Spec`、`Frozen-Verify` 两行记的也是这两个值；MR/PR 处于 Draft 状态，目标分支与 spec 一致；或者按上面的情况只交了本地路径，并在最终回复里写明原因。
+Done criteria: the handoff commit is pushed, the sha256 of the two files in it match what the user confirmed, and the `Frozen-Spec` and `Frozen-Verify` lines in the commit message record these same values; the MR/PR is in Draft state and its target branch matches the spec. Or, in the case above, only local paths were handed off, and the final reply states the reason.
 
-本 Skill 不实现产品、不编写测试代码、不执行验证；发布到远端的只有第 9 步交接用的提交（spec、verify 和本 session 在这个仓库里的配套改动）和 Draft MR；除查漏 session 外不启动其他 agent。
+This Skill does not implement the product, write test code, or run verification. The only things it publishes to a remote are the commits for the step 9 handoff (spec, verify, and this session's accompanying changes in this repository) and the Draft MR. It starts no agent other than the gap check session.

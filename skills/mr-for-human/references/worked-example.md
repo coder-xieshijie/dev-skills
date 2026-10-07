@@ -1,16 +1,16 @@
-# 教学示例
+# Worked examples
 
-按需读示例一的失败窗口，或示例二的简短降级指南。两者均为合成材料；文件名及行号指各自代码块，从 1 起算。实际交付须换成固定快照的真实源码链接。示例下方的指南展示写法，代码块是输入材料。
+Read Example 1 for a failure window, or Example 2 for a short degradation guide, as needed. Both are synthetic; file names and line numbers refer to their own code blocks, counted from 1. A real deliverable must use links to the real source at a pinned snapshot instead. The guide under each example shows how to write; the code blocks are the input material.
 
-## 示例一：新增查重改变了失败后的重试行为
+## Example 1: new deduplication changes retry behavior after a failure
 
-教学需求：ACCEPTED 表示已建立可恢复的执行责任；同租户、同 request_id 的串行重试返回原任务，租户间隔离。
+Teaching requirement: ACCEPTED means that a recoverable responsibility for execution has been established; serial retries with the same tenant and the same request_id return the original job, and tenants are isolated from each other.
 
-依赖约定：actor 来自可信认证入口；store 的 get/insert 在本模型中成功，记录在示例调用之间保留；publish 可能在入队前抛错。模型没有后台恢复扫描。store 内部的索引、唯一性、清理、日志与真实持久化语义均未给出。
+Dependency assumptions: actor comes from a trusted authentication entry point; store's get/insert succeed in this model, and records persist between the example calls; publish may throw before enqueuing. The model has no background recovery scan. The store's internal indexes, uniqueness, cleanup, logging and real persistence semantics are not given.
 
-### 输入：submit.py，修改
+### Input: submit.py, modified
 
-Before：
+Before:
 
 ```python
 def submit(store, broker, actor, request):
@@ -23,7 +23,7 @@ def submit(store, broker, actor, request):
     return {"status": "ACCEPTED", "job_id": job["id"]}
 ```
 
-After：
+After:
 
 ```python
 def submit(store, broker, actor, request):
@@ -39,63 +39,63 @@ def submit(store, broker, actor, request):
     return {"status": "ACCEPTED", "job_id": job["id"]}
 ```
 
-### 指南：先看结论
+### Guide: Conclusions first
 
-**新增早返回将“有记录”当成“已接受执行”的充分条件。首次发布失败后，重试会报成功却不再发布，违反教学需求。**证据：After 第 4–6、7–11 行。修复方向应恢复执行责任；若考虑放宽 ACCEPTED 的契约，需要用户决定这一业务变化。
+**The new early return treats "a record exists" as a sufficient condition for "accepted for execution". After the first publish fails, a retry reports success but never publishes again, which violates the teaching requirement.** Evidence: After, lines 4–6 and 7–11. A fix should restore the execution responsibility; if relaxing the ACCEPTED contract is considered, the user needs to decide on that business change.
 
-另一个关键决定是按可信 actor 的租户查重，并保留读写前鉴权（第 2–4 行），使重试隔离在同一租户内。
+Another key decision is to deduplicate by the trusted actor's tenant while keeping the authorization check before reads and writes (lines 2–4), so that retries are isolated within the same tenant.
 
-### 目录具体改了什么
+### What exactly changed, by directory
 
-| 目录 / 文件及状态 | 具体变化 | 与目标的关系 |
+| Directory / file and status | Specific change | Relation to the goal |
 |---|---|---|
-| 根目录 / submit.py，修改 | 新增第 4–6 行，同租户同键存在记录时提前返回 | 目标内修改，实现串行查重；同时改变发布失败后的重试行为 |
+| root / submit.py, modified | Adds lines 4–6: returns early when a record with the same tenant and key exists | Within the goal: implements serial deduplication; also changes retry behavior after a failed publish |
 
-本模型只提供这一文件的完整 before/after，未见额外改动；权限检查、插入和发布为未改上下文。
+This model provides only this file's complete before/after, and no extra change is seen; the permission check, insert and publish are unchanged context.
 
-### 主流程、边界与失败
+### Main flow, boundaries and failure
 
-正常路径：鉴权 → 同租户查重 → 命中返回旧任务；未命中则插入 → 发布 → 返回。submit 封装了内部调用顺序；调用者仍需传入 store 和 broker。
+Normal path: authorize → deduplicate within the tenant → on a hit, return the old job; on a miss, insert → publish → return. submit encapsulates the internal call order; callers still need to pass in store and broker.
 
-核心伪代码保留失败窗口（After 第 4–11 行）：
+The core pseudocode keeps the failure window (After, lines 4–11):
 
 ```text
 existing = store.get(actor.tenant_id, request.request_id)
 if existing exists:
     return ACCEPTED(existing.id)
 job = store.insert(actor.tenant_id, request.request_id, request.payload)
-broker.publish(job.id)  // 入队前可能抛错；示例中的记录仍保留
+broker.publish(job.id)  // may throw before enqueuing; in the example the record remains
 return ACCEPTED(job.id)
 ```
 
-| 边界 / 失败条件 | 已完成什么 | 实际处理与可见结果 |
+| Boundary / failure condition | What is already done | Actual handling and visible result |
 |---|---|---|
-| 无权限 | 尚无业务读写 | 抛 FORBIDDEN（第 2–3 行） |
-| 插入后 publish 在入队前失败 | 已有记录，没有消息 | 首次向调用者抛错；无本函数内的降级或补偿（第 7–11 行） |
-| 失败后用同键重试 | 旧记录仍在 | 第 6 行返回 ACCEPTED，不再发布；模型无恢复扫描，尚未建立执行责任 |
+| No permission | No business reads or writes yet | Throws FORBIDDEN (lines 2–3) |
+| After the insert, publish fails before enqueuing | A record exists, no message | The first call throws to the caller; no degradation or compensation within this function (lines 7–11) |
+| Retry with the same key after the failure | The old record is still there | Line 6 returns ACCEPTED and does not publish again; the model has no recovery scan, so no execution responsibility has been established |
 
-原版已有先写后发的失败窗口，但重试会再次创建并发布；新增查重改变了重试后果。真实系统应核实已有恢复能力；若建议命中后再发，先确认重复投递与消费幂等的边界。
+The original version already had the write-then-publish failure window, but a retry would create and publish again; the new deduplication changes what a retry leads to. A real system should be checked for existing recovery capabilities; if you propose publishing again on a hit, first confirm the boundaries of duplicate delivery and consumer idempotency.
 
-### 阅读路线与验证边界
+### Reading route and verification boundaries
 
-从 After 第 4 行追查重键，到第 6 行看提前返回，再看第 10 行发布是否执行。观察首次异常、重试响应、store 记录与 broker 消息，能区分“已记录”和“已投递”。
+From After line 4, follow the deduplication key to the early return on line 6, then check whether the publish on line 10 runs. Observing the first exception, the retry response, the store records and the broker messages tells "recorded" apart from "delivered".
 
-可静态核实入口调用次数有界；get/insert/publish 的内部成本、唯一性与清理策略未知，不能推导总工作量为常数或记录永不过期。首次错误可被调用方观察，其他告警渠道未知。并发唯一性、同键不同 payload 的契约需另查。
+It can be verified statically that the number of calls from the entry point is bounded; the internal cost, uniqueness and cleanup policy of get/insert/publish are unknown, so you cannot conclude that the total work is constant or that records never expire. The first error is observable by the caller; other alerting channels are unknown. Concurrent uniqueness and the contract for the same key with a different payload need to be checked separately.
 
-## 示例二：读取超时后返回明确标记的备用结果
+## Example 2: returning a clearly marked fallback result after a read timeout
 
-教学需求已确认：目录读取超时可以返回同租户的备用数据，并提示降级；权限等其他错误继续向上抛出。备用读取失败也传播错误。remote/fallback 在本模型中均为只读依赖，按传入 tenant_id 隔离数据；上游身份可信。真实实现需另核实这些依赖保证。
+Confirmed teaching requirement: when a catalog read times out, it may return fallback data for the same tenant, with a notice that the result is degraded; other errors, such as permission errors, are still thrown upward. A failed fallback read also propagates its error. In this model remote/fallback are both read-only dependencies that isolate data by the tenant_id passed in; the upstream identity is trusted. A real implementation needs these dependency guarantees verified separately.
 
-### 输入：两个文件的完整 before/after
+### Input: complete before/after of two files
 
-catalog.py Before：
+catalog.py Before:
 
 ```python
 def load_catalog(remote, fallback, tenant_id):
     return {"items": remote.fetch(tenant_id), "source": "live"}
 ```
 
-catalog.py After：
+catalog.py After:
 
 ```python
 def load_catalog(remote, fallback, tenant_id):
@@ -105,42 +105,42 @@ def load_catalog(remote, fallback, tenant_id):
         return {"items": fallback.get(tenant_id), "source": "fallback"}
 ```
 
-page.py Before：
+page.py Before:
 
 ```python
 def render(result):
     return {"items": result["items"], "notice": ""}
 ```
 
-page.py After：
+page.py After:
 
 ```python
 def render(result):
-    notice = "备用数据" if result["source"] == "fallback" else ""
+    notice = "Fallback data" if result["source"] == "fallback" else ""
     return {"items": result["items"], "notice": notice}
 ```
 
-### 指南：先看结论
+### Guide: Conclusions first
 
-**超时现在能返回有标记的备用结果，读取与展示两侧都落实了已确认的降级契约。当前没有需要用户决定的事项。**关键决定是只捕获 TimeoutError：其他错误保持抛出，避免将权限失败伪装为可用结果。证据：catalog.py After 第 2–5 行、page.py After 第 2–3 行。
+**A timeout can now return a marked fallback result, and both the read side and the display side implement the confirmed degradation contract. Nothing currently needs the user's decision.** The key decision is to catch only TimeoutError: other errors are still thrown, so that a permission failure is not disguised as a usable result. Evidence: catalog.py After lines 2–5, page.py After lines 2–3.
 
-### 目录具体改了什么
+### What exactly changed, by directory
 
-| 目录 / 文件及状态 | 具体变化 | 与目标的关系 |
+| Directory / file and status | Specific change | Relation to the goal |
 |---|---|---|
-| 根目录 / catalog.py，修改 | 超时后按同一 tenant_id 读取备用数据，source 设为 fallback | 目标内修改，提供约定的降级 |
-| 根目录 / page.py，修改 | 根据 source 显示“备用数据” | 必要配套，使调用结果中的降级状态对用户可见 |
+| root / catalog.py, modified | After a timeout, reads fallback data with the same tenant_id and sets source to fallback | Within the goal: provides the agreed degradation |
+| root / page.py, modified | Shows "Fallback data" based on source | Necessary supporting change: makes the degraded state in the call result visible to the user |
 
-两个文件的变化均与目标有关；所给完整差异中未见额外改动。
+Both files' changes relate to the goal; no extra change is seen in the complete diff given.
 
-### 主流程、边界与失败降级
+### Main flow, boundaries and failure degradation
 
-正常读取显示远端数据；超时后显示备用数据及提示。没有写入副作用，备用数据的实时性取决于 fallback，代码没有承诺新鲜度。权限错误以及备用读取失败均传播给调用方，本例未提供外层错误展示。降级结束于本次响应，后续调用仍先尝试远端；没有后台恢复任务。
+A normal read shows remote data; after a timeout it shows the fallback data with a notice. There are no write side effects; how current the fallback data is depends on fallback, and the code promises no freshness. Permission errors and fallback read failures both propagate to the caller; this example provides no outer error display. The degradation ends with this response, and later calls still try the remote first; there is no background recovery task.
 
-### 阅读路线与验证边界
+### Reading route and verification boundaries
 
-先看 catalog.py 的异常类型和 tenant_id 传递，再看 page.py 的 source 分支。逻辑较短，直接链接这两处即可。示例可核实控制流和展示字段；真实数据隔离、备用数据更新策略、超时后原请求是否仍运行及外层错误展示需结合实际依赖验证。
+First look at the exception type and the tenant_id passing in catalog.py, then at the source branch in page.py. The logic is short, so linking these two places directly is enough. The example can verify the control flow and the displayed field; real data isolation, the update policy of the fallback data, whether the original request keeps running after a timeout, and the outer error display need to be verified against the actual dependencies.
 
 ---
 
-执行检查与限制见 [验证记录](../../../docs/mr-for-human-validation.md)。示例结果不证明生产数据库、真实网络超时或读者使用效果。
+For the checks that were run and their limits, see the [validation record](../../../docs/mr-for-human-validation.md). The example results do not prove anything about a production database, real network timeouts, or the effect on readers.

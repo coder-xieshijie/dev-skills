@@ -24,8 +24,9 @@
 //    tests/ or e2e/ directory at the repository root or at a package root (a
 //    directory with its own package.json, pyproject.toml, go.mod or Cargo.toml).
 // 3. Each report says `verdict: PASS`.
-// 4. The model on each report's `验证模型：` line is not of the family of the
-//    model on plan.md's `- owner:` line.
+// 4. The model on each report's `verifier-model:` line is not of the family of
+//    the model on plan.md's `- owner:` line. Reports written before that key
+//    have a `验证模型：` or `验证模型:` line instead, read the same way.
 //
 // Several reports are allowed (verification split across sessions); each must
 // pass 2-4. Whether they cover every scenario is the verifier's call.
@@ -218,8 +219,8 @@ if (!args.frozen) {
     }
     const verdict = text.match(/^verdict:[ \t]*(\S+)/m)?.[1];
     if (verdict !== "PASS") errors.push(`${name}: verdict is ${verdict ?? "missing"}, not PASS`);
-    const modelLine = text.match(/^验证模型[:：](.*)$/m)?.[1];
-    const verifier = modelLine === undefined ? { problem: "has no `验证模型：<model ID>` line" } : familyIn(modelLine);
+    const modelLine = text.match(/^(?:verifier-model:|验证模型[:：])(.*)$/m)?.[1];
+    const verifier = modelLine === undefined ? { problem: "has no `verifier-model: <model ID>` line" } : familyIn(modelLine);
     if (verifier.problem) errors.push(`${name}: ${verifier.problem}`);
     else if (owner.family === verifier.family)
       errors.push(`${name}: the verifier is ${verifier.family}, the same family as the owner; verify with another family`);

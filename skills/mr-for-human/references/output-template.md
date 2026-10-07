@@ -1,41 +1,41 @@
-# 阅读指南输出骨架
+# Reading guide skeleton
 
-按规模合并章节，复杂清单放附件并链接。每节先给结论；规则以 [SKILL.md](../SKILL.md) 为准。
+Merge sections according to size; put complex lists in an appendix and link to it. Each section gives its conclusion first; [SKILL.md](../SKILL.md) governs the rules.
 
-## 先看结论
+## Conclusions first
 
-一句话说明触发场景与旧行为 → 新行为，简记分析对象、快照与范围。
+In one sentence, state the triggering scenario and the old behavior → new behavior; briefly note the subject of analysis, the snapshot and the scope.
 
-列最重要的决定、问题或范围偏离，每条说明影响并链接到证据或下文。需要用户决策时写明具体选择、建议和代价；没有待决事项则说明，无须把技术未知都转成问题交给用户。
+List the most important decisions, problems or scope deviations; for each, state its impact and link to the evidence or to the section below. When the user needs to decide, give the concrete options, a recommendation and the cost; when nothing awaits a decision, say so. There is no need to turn every technical unknown into a question for the user.
 
-## 变更目录树与职责
+## Changed directory tree and responsibilities
 
-先总结改动围绕哪些功能，再展示带职责注释的变更目录树。展开到责任边界，关键文件作为阅读入口；单目录小改动可简写。大树放附件时，正文仍让读者看见主要目录分别实现什么。
+First summarize which features the change is about, then show the tree of changed directories annotated with responsibilities. Expand down to responsibility boundaries, with key files as reading entry points; a small change in a single directory may be written briefly. When a large tree goes in an appendix, the body still lets the reader see what each main directory implements.
 
-树回答“功能分布在哪里”，下面的清单回答“具体改了什么、是否属于目标”；两者按路径对应。关系分为目标内修改、必要配套、额外改动、待确认。
+The tree answers "where the features live"; the list below answers "what exactly changed, and does it belong to the goal". The two correspond by path. The relation is one of: within the goal, necessary supporting change, extra change, to be confirmed.
 
-| 目录 / 文件及增删改或重命名状态 | 具体变化 | 与目标的关系及依据 |
+| Directory / file and its added, deleted, modified or renamed status | Specific change | Relation to the goal and its basis |
 |---|---|---|
 
-每个变更文件有去向；同一文件的额外行为单独点出。合并同类项时列齐路径。大型清单可放附件，正文保留目录摘要、重要额外改动和缺口。未读文件写“尚未分析”，不能写成次要或无关。
+Every changed file is accounted for; call out extra behavior within the same file separately. When merging files of the same kind, list all their paths. A large list may go in an appendix, with the directory summary, important extra changes and gaps kept in the body. Write "not yet analyzed" for files you have not read; do not write them as minor or unrelated.
 
-## 主流程、边界与失败降级
+## Main flow, boundaries and failure degradation
 
-### 按功能串起来读
+### Follow each feature through
 
-按场景或关键操作给出“入口目录/符号 → 各步骤职责与传递内容 → 结果”的阅读路线，连接上节目录地图。分开独立主线，标明真实分支、未接线与未知；纯文档或配置用实际使用/生效关系表达。
+For each scenario or key operation, give a reading route "entry directory/symbol → what each step is responsible for and passes on → result", connected to the directory map in the previous section. Keep independent main lines apart, and mark real branches, unwired parts and unknowns; for pure documentation or configuration, express how it is actually used or takes effect.
 
-沿路线展开关键决定、状态变化和可见结果，把抽象与运行约束放在对应步骤。复杂逻辑附忠实的核心伪代码；简单逻辑直接链接源码。后面的阅读入口与失败分析引用这条路线，避免重复讲述同一流程。
+Along the route, expand the key decisions, state changes and visible results, placing abstractions and runtime constraints at the step they belong to. Attach faithful core pseudocode for complex logic; for simple logic, link the source directly. The reading entry points and the failure analysis later refer to this route, to avoid retelling the same flow.
 
-关键失败可以用短段落或下表，正常与失败共有的解释只写一次：
+Key failures may be written as short paragraphs or in the table below; write an explanation shared by the normal and failure cases only once:
 
-| 边界 / 失败条件 | 已完成的状态或副作用 | 实际处理、降级后保证 | 用户可见结果 / 恢复入口 | 证据或缺口 |
+| Boundary / failure condition | State or side effects already done | Actual handling, guarantees after degradation | User-visible result / recovery entry point | Evidence or gap |
 |---|---|---|---|---|
 
-如果实现只传播错误，写清这一结果；降级是建议时明确标记。前提未被证明的后果按条件表达。
+If the implementation only propagates the error, state that result; when a degradation is a proposal, mark it clearly. Express consequences whose preconditions are unproven as conditional.
 
-## 阅读路线与验证边界
+## Reading route and verification boundaries
 
-列少数源码入口及每一步看什么，证据链接与分析快照一致。排查请求再补具体观察值和调试入口。
+List a few source entry points and what to look at in each step; evidence links match the analysis snapshot. For a troubleshooting request, add the concrete values to observe and the debugging entry points.
 
-说明已读范围、未读/不可见材料、静态结论与实际测试结果，以及最新状态能否回读。测试未运行须注明。重要决策与缺口已在前文解释时，此处引用即可。
+State what you have read, which materials were unread/not visible, the static conclusions and the actual test results, and whether the latest state could be re-read. If tests were not run, say so. When important decisions and gaps are already explained above, refer to them here.

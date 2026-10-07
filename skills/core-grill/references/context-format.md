@@ -1,35 +1,35 @@
-# 术语表格式
+# Glossary format
 
-改写自 [mattpocock/skills](https://github.com/mattpocock/skills) `skills/engineering/domain-modeling/CONTEXT-FORMAT.md`（`74ca5fe`，MIT 许可）。
+Adapted from [mattpocock/skills](https://github.com/mattpocock/skills) `skills/engineering/domain-modeling/CONTEXT-FORMAT.md` (`74ca5fe`, MIT License).
 
-## 结构
+## Structure
 
 ```md
-# {上下文名称}
+# {Context Name}
 
-{一两句：这个上下文是什么、为什么存在。}
+{One or two sentences: what this context is and why it exists.}
 
-## 术语
+## Language
 
-**订单**：
-客户下的一次购买请求。
-_避免_：采购单、交易
+**Order**:
+A purchase request placed by a customer.
+_Avoid_: Purchase, transaction
 
-**发票**：
-交付后发给客户的付款请求。
-_避免_：账单、付款请求
+**Invoice**:
+A request for payment sent to a customer after delivery.
+_Avoid_: Bill, payment request
 ```
 
-## 规则
+## Rules
 
-- **只选一个词。** 同一个概念有几种叫法时，选最好的一个，其余列在“避免”下。
-- **定义要短。** 最多一两句，写它是什么，不写它做什么。
-- **只收本项目特有的概念。** 超时、错误类型这类通用编程概念不收，即使项目里大量使用。
-- **自然成组时加小标题**；都属于同一块时，平铺即可。
+- **Pick one word.** When multiple words exist for the same concept, pick the best one and list the others under _Avoid_.
+- **Keep definitions tight.** One or two sentences max. Define what it is, not what it does.
+- **Only include concepts specific to this project.** General programming concepts such as timeouts and error types do not belong, even if the project uses them extensively.
+- **Group terms under subheadings when natural clusters emerge**; if all terms belong to a single area, a flat list is fine.
 
-## 单个与多个上下文
+## Single and multiple contexts
 
-- 大多数仓库只有一个上下文：根目录一个 `CONTEXT.md`。
-- 有多个上下文时，根目录的 `CONTEXT-MAP.md` 列出各上下文、所在位置和相互关系，每个上下文目录里各有一个 `CONTEXT.md`。
-- 有 `CONTEXT-MAP.md` 就按它找；只有根目录 `CONTEXT.md` 就是单个上下文；都没有时，第一个术语定下来再建根目录的 `CONTEXT.md`。
-- 有多个上下文、又看不出当前话题属于哪一个时，问用户。
+- Most repositories have a single context: one `CONTEXT.md` at the repository root.
+- With multiple contexts, a `CONTEXT-MAP.md` at the repository root lists the contexts, where they live, and how they relate to each other, and each context directory has its own `CONTEXT.md`.
+- If `CONTEXT-MAP.md` exists, read it to find contexts; if only a root `CONTEXT.md` exists, there is a single context; if neither exists, create the root `CONTEXT.md` lazily, when the first term is resolved.
+- When there are multiple contexts and you cannot tell which one the current topic belongs to, ask the user.

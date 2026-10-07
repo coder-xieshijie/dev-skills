@@ -1,92 +1,92 @@
-# 收敛示例：执行额度改造
+# Convergence example: execution quota change
 
-以下为脱敏后的简化示例，用于检查结论更新与金字塔分层；其中业务规则不适用于其他任务。
+The following is a de-identified, simplified example for checking how conclusions are updated and how the pyramid layers are split; its business rules do not apply to other tasks.
 
-## 输入材料
+## Input materials
 
-- 早期草案：额度用尽后，新建一次执行生成总结。
-- 后续讨论：用户确认只在当前执行仍可继续时收尾，不再新建执行；接受部分停止场景没有新总结。
-- 需求稿：额度按实际发出的逻辑请求计数；同请求重试不额外计数，发送前拦截不计数，发出后失败仍计数。
-- ADR：用户确认旧上限 12、已用 7 原数延续，剩余 5 次；历史占用标注旧口径，不伪称真实请求数。
-- 边界讨论：最后一次获准请求的结果可以继续处理，额度拦截下一次普通请求；时间、权限与用户停止仍有独立效力。
-- 方案草案：助手建议新建 `RequestLedgerV2` 类；没有确认记录。
-- 仍在材料中的问题：内部表名尚未确定。
-- 用户说明：改造是为了让额度反映实际发出的请求，用户不再因内部重试多扣额度；本次不改额度的界面展示样式，也不改计费。
-- 用户授权：交付到 `main`，可以推送自己的分支并开 MR，由用户自己合入。
-- 助手推断：“不改命令行输出格式”也应列为非目标；用户没有回应。
+- Early draft: after the quota runs out, create a new execution to generate a summary.
+- Later discussion: the user confirmed that wrap-up happens only when the current execution can still continue, with no new execution; the user accepted that some stop scenarios have no new summary.
+- Requirements draft: the quota counts logical requests actually sent; retries of the same request are not counted again, requests blocked before sending are not counted, and requests that fail after being sent are still counted.
+- ADR: the user confirmed that the old limit of 12 and usage of 7 carry over unchanged, leaving 5; historical usage is labeled with the old counting basis and is not passed off as a real request count.
+- Boundary discussion: the result of the last permitted request may still be processed, and the quota blocks the next ordinary request; time limits, permissions and user stops still apply independently.
+- Design draft: the assistant suggested a new `RequestLedgerV2` class; there is no record of confirmation.
+- Question still open in the materials: the internal table name is not decided yet.
+- User's explanation: the change is meant to make the quota reflect requests actually sent, so users are no longer charged extra quota for internal retries; this change does not alter the quota's UI display style, nor billing.
+- User's authorization: deliver to `main`; may push its own branch and open an MR; the user merges it themselves.
+- Assistant's inference: "do not change the command-line output format" should also be listed as a non-goal; the user did not respond.
 
-## 可以形成的 spec 正文
+## The spec body this can produce
 
-> 本文记录额度改造的核心决策与约束，供设计、实现和审查共同使用；目标要求不代表实现或验证已经完成。
+> This document records the core decisions and constraints of the quota change, for shared use in design, implementation and review; the target requirements do not mean implementation or verification is done.
 >
-> 目的：额度按实际发出的请求扣减，内部重试不再多扣；用户在执行记录中看到的剩余次数与实际请求一致。
+> Purpose: the quota is charged by requests actually sent, and internal retries no longer charge extra; the remaining count the user sees in the execution record matches the actual requests.
 
-### 本次最核心的决定
+### The core decisions of this change
 
-1. **额度改为按逻辑请求计算，旧额度原数延续。** 已有任务不会因此获得一份新预算。
-2. **额度用尽拦截下一次普通请求。** 最后一次获准请求的结果仍可处理，其他独立限制继续生效。
-3. **仅在当前执行中收尾。** 接受部分停止场景没有新总结，取消为总结新建执行。
+1. **The quota is counted by logical requests, and old quotas carry over unchanged.** Existing tasks do not get a fresh budget because of this.
+2. **An exhausted quota blocks the next ordinary request.** The result of the last permitted request can still be processed, and other independent limits stay in effect.
+3. **Wrap-up happens only within the current execution.** We accept that some stop scenarios have no new summary; creating a new execution for the summary is dropped.
 
-### 完整决策与约束
+### Complete decisions and constraints
 
-#### 按实际发出的逻辑请求计数，保留历史额度
+#### Count logical requests actually sent; keep historical quota
 
-| 情况 | 计量规则 |
+| Case | Counting rule |
 | --- | --- |
-| 同一请求内部重试 | 不额外计数 |
-| 请求发送前被拦截 | 不计数 |
-| 请求发出后失败 | 仍计数 |
+| Internal retries of the same request | Not counted again |
+| Request blocked before sending | Not counted |
+| Request fails after being sent | Still counted |
 
-旧上限 12、已用 7 → 新上限 12 次、历史占用 7、剩余 5 次。历史部分注明旧口径，不把历史占用当作真实请求数。
+Old limit 12, used 7 → new limit 12, historical usage 7, remaining 5. The historical part is labeled with the old counting basis; historical usage is not treated as a real request count.
 
-#### 处理最后一次获准请求的结果，阻止下一次普通请求
+#### Process the result of the last permitted request; block the next ordinary request
 
-次数额度不截断已获准请求的结果处理。时间、权限和用户停止仍可独立阻止后续执行，不能用“最后一次结果”绕过这些限制。
+The count quota does not cut off processing of a permitted request's result. Time limits, permissions and a user stop can still independently prevent further execution; the "last result" cannot be used to bypass these limits.
 
-#### 当前执行可以继续时才收尾
+#### Wrap up only when the current execution can continue
 
-不为总结新建执行；没有可继续的当前执行时，保留已有结果和停止状态。
+Do not create a new execution for a summary; when there is no current execution that can continue, keep the existing results and the stopped state.
 
-> 接受的取舍：部分停止场景没有新生成的总结。
+> Accepted trade-off: some stop scenarios have no newly generated summary.
 
-#### 非目标
+#### Non-goals
 
-- 不改额度的界面展示样式。
-- 不改计费。
+- No change to the quota's UI display style.
+- No change to billing.
 
-### 交付与授权
+### Delivery and authorization
 
-交付到 `main`。可以推送自己的分支并开 MR；不合入，停在可合入，由用户合入。
+Deliver to `main`. May push its own branch and open an MR; does not merge: stop at mergeable, and the user merges.
 
-## 核对要点
+## Points to check
 
-- 新建执行总结的早期方案被明确替代，不能与当前约定并列。
-- 类名只是未确认的建议，不进入 spec；内部表名留给设计，不阻塞收敛。
-- “额度用尽立即停止一切处理”改变了原有边界，不能作为压缩后的表述。
-- “每次停止都有总结”抹去了已接受的代价；即使更好听，也不是最终决定。
-- 开头无需塞入每种计数情况，后文必须保留。两层少量重复是为了不同阅读深度。
-- “不改命令行输出格式”只是助手推断，不写进非目标；它会影响实现范围，作为问题向用户确认。
-- 若两个来源对历史额度有冲突且找不到采纳记录，保留为待确认项；不能仅因某份草案日期较新，就将其写成最终约定。
+- The early plan of creating a new execution for the summary was explicitly replaced; it cannot stand alongside the current agreement.
+- The class name is only an unconfirmed suggestion and does not enter the spec; the internal table name is left to design and does not block convergence.
+- "An exhausted quota immediately stops all processing" changes the original boundary; it cannot serve as the condensed wording.
+- "Every stop has a summary" erases the accepted cost; even if it sounds better, it is not the final decision.
+- The opening need not cram in every counting case, but the body must keep them. The small overlap between the two layers serves different reading depths.
+- "Do not change the command-line output format" is only the assistant's inference and does not go into the non-goals; it would affect the implementation scope, so confirm it with the user as a question.
+- If two sources conflict on historical quota and no record of adoption can be found, keep it as an item pending confirmation; do not write a draft as the final agreement just because its date is newer.
 
-## 检查案例与验收判断
+## Check cases and acceptance judgments
 
-以下是独立的检查情境，不向上面的示例追加业务要求。每行给出原始依据、候选成稿及应作的判断。
+The following are standalone check situations; they add no business requirements to the example above. Each row gives the source basis, a candidate draft, and the judgment to make.
 
-| 原始依据 | 候选成稿或检查建议 | 判断与最小处置 |
+| Source basis | Candidate draft or check suggestion | Judgment and minimal fix |
 | --- | --- | --- |
-| 已确认请求发出后失败仍计数 | 中间摘要漏了此项，重排后的条款与摘要完全相同 | 不通过。回到原始确认，补回失败计数；文本一致不能证明语义完整 |
-| 已确认普通请求受次数上限限制，另有当前执行内的收尾额度，收尾请求也计步 | 只写“收尾消耗照常记录” | 不通过。实现者仍可能在总步数达到普通上限时禁掉收尾；需明确收尾额度的适用边界，实际总步骤可以超过普通工作上限 |
-| 已确认旧额度原数延续，并接受单位变化使可执行工作量变少 | 只有旧额度换算例子 | 补清已接受的代价；算例不能替代对产品取舍的明确说明 |
-| 已确认复用共享能力；原稿另列某共享包名称 | 建议把包名列为新条款 | 若该包确已被复用范围覆盖，记录已有覆盖，不重复补回 |
-| 原稿引用仓库既有契约生成规范 | 建议将整份规范复制进 spec | 明确引用适用规范即可；本次特有的契约变化仍需写清 |
-| 只有助手建议新增某个存储类 | 成稿规定必须新增该类 | 不通过。移除未经确认的实现要求，保留有依据的业务约束 |
-| 摘要写“每次停止都有总结”，正文允许部分场景无总结 | 两层各自有完整段落 | 不通过。按已接受取舍修正摘要，不能因正文有例外就保留错误概括 |
-| 用户只说“交给 agent 做完” | 成稿写“完成后合入 `main`” | 不通过。合入是不可逆操作，始终由用户在交付后做；写“停在可合入，由用户合入” |
-| 讨论只确认了改动范围，没有谈不做什么 | 成稿列出五条助手认为合理的非目标 | 不通过。非目标会限制实现范围，只写有依据的；没有约定时写“未单列非目标”，只有某个具体的相邻事项会实质改变交付范围时，才向用户提最小必要问题，例如相邻的展示样式改不改 |
-| 历史额度的两种方案都能找到，但用户最终选择所在的消息无法读取 | 草稿选择了较新的方案 | 待确认。隔离这一缺口并说明影响，继续交付其余已确认部分，不宣布检查通过 |
+| Confirmed: a request that fails after being sent is still counted | The intermediate summary missed this, and the reordered clauses match the summary exactly | Fail. Go back to the original confirmation and restore failure counting; identical text does not prove the meaning is complete |
+| Confirmed: ordinary requests are subject to the count limit; there is also a wrap-up allowance within the current execution, and wrap-up requests also count as steps | Only says "wrap-up consumption is recorded as usual" | Fail. An implementer could still disable wrap-up when total steps reach the ordinary limit; state where the wrap-up allowance applies; actual total steps may exceed the ordinary work limit |
+| Confirmed: old quotas carry over unchanged, and the user accepts that the change of unit leaves less executable work | Only an example of converting the old quota | Spell out the accepted cost; a worked example cannot replace an explicit statement of the product trade-off |
+| Confirmed: reuse the shared capability; the original draft also names a shared package | Suggests adding the package name as a new clause | If the package is indeed covered by the reuse scope, record the existing coverage and do not add it again |
+| The original draft references the repository's existing contract-generation conventions | Suggests copying the whole convention into the spec | Referencing the applicable convention explicitly is enough; contract changes specific to this change must still be spelled out |
+| Only the assistant suggested adding a storage class | The draft requires adding that class | Fail. Remove the unconfirmed implementation requirement; keep the business constraints that have a basis |
+| The summary says "every stop has a summary", while the body allows some cases without a summary | Each layer has its own complete paragraph | Fail. Fix the summary according to the accepted trade-off; the body having an exception does not justify keeping a wrong generalization |
+| The user only said "let the agent finish it" | The draft says "merge into `main` when done" | Fail. Merging is an irreversible operation and is always done by the user after delivery; write "stop at mergeable; the user merges" |
+| The discussion only confirmed the scope of the change and did not discuss what is out of scope | The draft lists five non-goals the assistant considers reasonable | Fail. Non-goals limit the implementation scope, so write only those with a basis; when none were agreed, write "No separate non-goals listed". Only when a specific adjacent matter would materially change the delivery scope, ask the user the minimum necessary question, e.g. whether the adjacent display style changes |
+| Both options for historical quota can be found, but the message with the user's final choice cannot be read | The draft picks the newer option | Pending confirmation. Isolate this gap and state its impact, continue delivering the other confirmed parts, and do not declare the check passed |
 
-检查结论示例：
+Example check conclusion:
 
-> 已对照原始需求稿、已接受 ADR 和最终澄清核对本版 spec，补回失败计数与收尾额度边界；共享包名已由复用范围覆盖，无需单列。已识别的实质问题均已解决，文档检查通过；不代表实现完成或测试通过。
+> Checked this version of the spec against the original requirements draft, the accepted ADRs and the final clarifications; restored failure counting and the boundary of the wrap-up allowance. The shared package name is already covered by the reuse scope and needs no separate entry. All substantive issues identified are resolved and the document check passes; this does not mean implementation is done or tests pass.
 
-仅在实际完成这些核对后使用相应结论，不照抄示例中的来源或通过状态。
+Use the corresponding conclusion only after actually doing these checks; do not copy the sources or the pass status from the example.

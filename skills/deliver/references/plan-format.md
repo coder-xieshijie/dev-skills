@@ -1,75 +1,75 @@
-# plan.md 格式
+# plan.md format
 
-依据 OpenAI 的 ExecPlan（[Using PLANS.md for multi-hour problem solving](https://cookbook.openai.com/articles/codex_exec_plans)）。plan.md 由 owner 写，边做边改，随代码提交。读者有两个：中断后接手的新 session，只读 plan.md 和 git 历史就要能接着做；合入前的用户，先看决定清单。
+Based on OpenAI's ExecPlan ([Using PLANS.md for multi-hour problem solving](https://cookbook.openai.com/articles/codex_exec_plans)). The owner writes plan.md, revises it while working, and commits it with the code. It has two readers: a new session taking over after an interruption, which must be able to continue from only plan.md and the git history; and the user before merging, who reads the decision list first.
 
-spec.md、verify.md 已冻结并提交在需求分支上，plan.md 引用它们，不复述需求和场景；验收以 verify.md 为准。
+spec.md and verify.md are frozen and committed on the feature branch. plan.md refers to them and does not restate the requirements or scenarios; acceptance follows verify.md.
 
-## 各节
+## Sections
 
-按下面的顺序写。标“持续更新”的，每次停下或做完一个里程碑都更新；改变做法时，受影响的各节一起改，不只在末尾追加。
+Write them in the order below. Sections marked "kept up to date" are updated at every stopping point and after each milestone; when you change course, revise all affected sections together, not only by appending at the end.
 
-### 决定清单（持续更新）
+### Decision list (kept up to date)
 
-放在最前面，按影响从大到小排。每条一个顶层列表项：
-
-```text
-- 决定：<做了什么选择>
-  - 理由：<依据和证据>
-  - 另一家模型：<问过的模型和它的意见；没问过写“未问，只影响实现”>
-  - 推翻后：<要改什么；要重跑哪些场景>
-```
-
-收什么见 SKILL.md“决定清单”。没有决定时写“无”。MR 描述最前面的决定清单从这里复制。
-
-### 冻结输入
+Put it first, ordered from largest to smallest impact. Each entry is one top-level list item:
 
 ```text
-- 交接: <MR 链接> <需求分支> @ <交接提交>
-- spec: <仓库内路径>
-- verify: <仓库内路径>
-- 基线: <目标分支> @ <commit>
-- owner: <你的模型 ID，例如 claude-opus-5-5>
+- Decision: <the choice you made>
+  - Rationale: <basis and evidence>
+  - Other family: <the model you asked and its opinion; if you did not ask, write "Not asked; affects implementation only">
+  - If overturned: <what must change; which scenarios to rerun>
 ```
 
-`check-delivery.mjs` 读 owner 一行，用来确认独立验证者来自另一家。只交了本地路径时，交接一行写“本地”，spec、verify 两行写绝对路径和用户给的 sha256（`- spec: <绝对路径> sha256=<值>`），接手的 session 用它们运行 `check-delivery.mjs --spec <路径>@<sha256> --verify <路径>@<sha256>`。
+For what goes in it, see "Decision list" in SKILL.md. If there are no decisions, write "None". The decision list at the top of the MR description is copied from here.
 
-### 目的
-
-一两句：完成后用户能做什么，怎样看到它生效。取自 spec 的目的。
-
-### 进度（持续更新）
-
-带时间的勾选列表，每步一行：时间、做了什么、跑通了哪些场景、commit。没做完的写成“已完成 X；剩余 Y”。
+### Frozen inputs
 
 ```text
-- [x] (2026-09-29 14:05+08:00) M1 补额度只读查询；S01 跑通；里程碑检查未发现问题；a1b2c3d
-- [ ] M2 用尽边界（已完成：界面入口 S02；剩余：命令行入口 S03）
+- handoff: <MR link> <feature branch> @ <handoff commit>
+- spec: <path in the repository>
+- verify: <path in the repository>
+- baseline: <target branch> @ <commit>
+- owner: <your model ID, e.g. claude-opus-5-5>
 ```
 
-### 意外与发现（持续更新）
+`check-delivery.mjs` reads the owner line to confirm that the independent verifier is from another family. When only local paths were handed over, write "local" on the handoff line, and on the spec and verify lines write the absolute path and the sha256 the user gave (`- spec: <absolute path> sha256=<value>`); a session taking over uses them to run `check-delivery.mjs --spec <path>@<sha256> --verify <path>@<sha256>`.
 
-和预想不同、影响了做法的事实，例如库不支持、接口行为不同、与本次改动无关的基线失败。每条写现象和简短证据。
+### Purpose / Big Picture
 
-### 结果与复盘（持续更新）
+One or two sentences: what the user can do once this is done, and how to see it working. Taken from the spec's purpose.
 
-做成了什么，还缺什么，和目的对照的结果，以及这次暴露的仓库缺口（缺什么验证能力、文档或 lint）。
+### Progress (kept up to date)
 
-### 现状与上下文
+A checklist with timestamps, one line per step: time, what was done, which scenarios passed, commit. Write an unfinished step as "completed: X; remaining: Y".
 
-与本任务相关的文件和模块（完整路径）、不明显的约定和要用到的术语；已有文档给链接，不复述实现。
+```text
+- [x] (2026-09-29 14:05+08:00) M1 add read-only quota query; S01 passes; milestone check found no problems; a1b2c3d
+- [ ] M2 quota-exhausted boundary (completed: UI entry point S02; remaining: command-line entry point S03)
+```
 
-### 里程碑
+### Surprises & Discoveries (kept up to date)
 
-每个里程碑一段，以编号开头（M1、M2……）：范围，完成后多了什么，对应 verify 的哪些场景，要跑哪些质量命令。依赖某项验证能力的场景，排在补上这项能力之后。
+Facts that differed from what you expected and shaped your approach, for example a library that lacks support for something, an interface that behaves differently, or a baseline failure unrelated to this change. For each, write the observation and brief evidence.
 
-### 验证与验收
+### Outcomes & Retrospective (kept up to date)
 
-怎样启动应用、怎样跑冒烟集；每个场景怎样从入口驱动，写出实际命令，verify 里标为“实现后绑定命令”的也写在这里。判定以 verify.md 的检查点为准。这一节会交给独立验证者，用来执行场景。
+What was achieved, what remains, the result compared against the purpose, and the repository gaps this work exposed (missing verification capabilities, docs or lint).
 
-### 接口与依赖
+### Context and Orientation
 
-用到的库、模块和服务，以及为什么用；spec 没有规定的部分是 owner 的选择，做法变了可以改。
+Files and modules relevant to this task (full paths), non-obvious conventions, and the terms you will use; link to existing docs, and do not restate the implementation.
 
-## 大小
+### Milestones
 
-证据只写路径和一句结论，完整输出放在 `evidence/`。进度长到每次开工读 plan.md 都费时的时候，可以移到同目录的 `progress.md`，plan.md 里留一个链接；决定清单和冻结输入留在 plan.md。
+One paragraph per milestone, starting with its number (M1, M2, ...): the scope, what will exist at the end that did not exist before, which scenarios in verify it covers, and which quality commands to run. A scenario that depends on a verification capability is placed after the capability is added.
+
+### Validation and Acceptance
+
+How to start the app and run the smoke set; how to drive each scenario from its entry point, with the actual commands, including those marked "bind command after implementation" in verify. Verdicts follow the checkpoints in verify.md. This section is given to the independent verifier for running the scenarios.
+
+### Interfaces and Dependencies
+
+The libraries, modules and services used, and why; parts the spec does not prescribe are the owner's choice and may change when the approach changes.
+
+## Size
+
+For evidence, write only the path and a one-sentence conclusion; full output goes in `evidence/`. When Progress grows so long that reading plan.md at every start takes real time, you may move it to `progress.md` in the same directory and leave a link in plan.md; the decision list and frozen inputs stay in plan.md.
