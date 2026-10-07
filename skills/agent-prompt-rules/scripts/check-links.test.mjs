@@ -204,14 +204,13 @@ test("reference-style definitions are checked like inline links", () => {
     "a.md:4: broken link -> missing file.md (missing missing file.md)",
     "a.md:5: missing anchor -> b.md#nope",
     "a.md:7: anchor on a directory -> dir/#x",
-    "a.md:8: link leaves the Skill directory -> ../out.md",
   ]);
 });
 
 test("a definition's target may be on the next line; indented code is not a definition", () => {
   const result = check({
     "a.md": [
-      "See [h], [i], [j] and [k].",
+      "See [h], [i], [j], [k], [l] and [m].",
       "",
       "[h]:",
       "  ../out.md",
@@ -221,12 +220,32 @@ test("a definition's target may be on the next line; indented code is not a defi
       "    [j]: missing.md",
       "\t[k]: missing.md",
       "",
+      "[l]:",
+      "> missing.md",
+      "",
+      "[m]: >target.md",
+      "",
     ].join("\n"),
   });
   assert.deepEqual(result.errors, [
     "a.md:3: link leaves the Skill directory -> ../out.md",
     "a.md:5: broken link -> missing.md (missing missing.md)",
+    "a.md:14: broken link -> >target.md (missing >target.md)",
   ]);
+});
+
+test("definitions in block quotes and under list items are not checked", () => {
+  const result = check({
+    "a.md": [
+      "> [a]: missing.md",
+      ">     [b]: missing.md",
+      "- Item",
+      "",
+      "    [c]: ../out.md",
+      "",
+    ].join("\n"),
+  });
+  assert.deepEqual(result.errors, []);
 });
 
 test("run through a symlink, the CLI checks the Skill directory it sits in", () => {

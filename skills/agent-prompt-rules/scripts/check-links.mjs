@@ -86,14 +86,16 @@ function anchorsOf(text) {
 
 const INLINE_LINK =
   /!?\[[^\]]*\]\(([^()\s]+(?:\([^()]*\)[^()\s]*)?)(?:\s+"[^"]*")?\)/g;
-// A reference definition, `[label]: target` or `[label]: <target>` with an
-// optional title, which `[text][label]`, `[label][]` and `[label]` link to.
-// The target may sit on the next line. Four spaces of indent make a code
-// block, not a definition. `[^…]:` starts a footnote, not a definition.
-const DEFINITION =
-  /^ {0,3}(?:>[ \t]*)*\[(?!\^)(?:[^[\]\\]|\\.)+\]:[ \t]*(.*)$/;
+// A top-level reference definition, `[label]: target` or `[label]: <target>`
+// with an optional title, which `[text][label]`, `[label][]` and `[label]`
+// link to; the target may sit on the next line. Definitions inside block
+// quotes or indented under list items are not checked: telling them from
+// code needs a full Markdown parser, and a missed check is better than
+// failing a valid file. Four spaces of indent make a code block, and
+// `[^…]:` starts a footnote.
+const DEFINITION = /^ {0,3}\[(?!\^)(?:[^[\]\\]|\\.)+\]:[ \t]*(.*)$/;
 const DESTINATION =
-  /^[ \t]*(?:>[ \t]*)*(?:<([^<>]*)>|(\S+))(?:[ \t]+(?:"[^"]*"|'[^']*'|\([^()]*\)))?[ \t]*$/;
+  /^[ \t]*(?:<([^<>]*)>|(\S+))(?:[ \t]+(?:"[^"]*"|'[^']*'|\([^()]*\)))?[ \t]*$/;
 
 /**
  * Check every Markdown file under `root`. `scope` is "skill" (links may not
@@ -183,9 +185,11 @@ export function checkLinks({
         checkTarget(file, where, match[1]);
       const definition = line.match(DEFINITION);
       if (!definition) return;
-      const destination = (definition[1] || lines[index + 1] || "").match(
-        DESTINATION,
-      );
+      // A block quote on the next line starts a new block, not the target.
+      const next = lines[index + 1] ?? "";
+      const destination = (
+        definition[1] || (/^\s*>/.test(next) ? "" : next)
+      ).match(DESTINATION);
       if (destination) checkTarget(file, where, destination[1] ?? destination[2]);
     });
   }
