@@ -19,8 +19,8 @@ The Skills in this repository use these terms with one meaning each. The Chinese
 | spec | spec | `spec.md`, the core decisions and constraints |
 | verify | verify | `verify.md`, the acceptance requirements: how to prove an implementation meets the spec |
 | gap check | 查漏 | A model from another family reads spec, verify, source agreements and the repository in a new session and reports gaps |
-| freeze | 冻结 | After the user confirms, spec and verify are fixed by their sha256 and no longer change during delivery |
-| handoff, handoff commit | 交接、交接提交 | The commit that adds the frozen spec and verify to the feature branch, with `Frozen-Spec` and `Frozen-Verify` trailers. In agent-prompt-rules, "handoff" has its general sense: passing work between roles or sessions |
+| freeze | 冻结 | After the user confirms, spec and verify are fixed by their sha256 and no longer change during delivery. In recon-to-contract, "freeze" means fixing the dimension vocabulary, the reference set and the criteria before the parallel research starts |
+| handoff, handoff commit | 交接、交接提交 | Passing the frozen spec and verify from core-spec to deliver. Normally through the handoff commit, which adds them to the feature branch with `Frozen-Spec` and `Frozen-Verify` trailers; when pushing or committing them is not allowed, through their local paths and sha256 values instead. In agent-prompt-rules, "handoff" has its general sense: passing work between roles or sessions |
 | feature branch | 需求分支 | The branch the handoff commit and the delivery go to |
 | decision list | 决定清单 | The list at the top of plan.md and the MR description: product choices, changed judging methods, fact corrections, and parts that could not be done |
 | irreversible operation | 不可逆操作 | Merging, force-pushing a shared branch, deleting shared data, sending messages outside, changing a shared environment. Always left to the user |
