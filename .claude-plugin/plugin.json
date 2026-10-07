@@ -1,0 +1,12 @@
+{
+  "name": "dev-skills",
+  "description": "A self-verifying development workflow for coding agents: core-grill settles the decisions, core-spec writes and freezes spec and verify, deliver takes them to a mergeable MR.",
+  "author": {
+    "name": "Xie Shijie",
+    "url": "https://github.com/coder-xieshijie"
+  },
+  "homepage": "https://github.com/coder-xieshijie/dev-skills",
+  "repository": "https://github.com/coder-xieshijie/dev-skills",
+  "license": "MIT",
+  "keywords": ["workflow", "spec", "verification", "skills"]
+}
