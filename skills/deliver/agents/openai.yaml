@@ -1,2 +1,5 @@
+interface:
+  display_name: "Deliver"
+  short_description: "Take a frozen spec and verify to a mergeable MR/PR"
 policy:
   allow_implicit_invocation: false

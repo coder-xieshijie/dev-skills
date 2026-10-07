@@ -1,6 +1,6 @@
 ---
 name: review-rules
-description: Apply personal review criteria to code and design reviews, finding rechecks, and review-related repair plans.
+description: Applies five review criteria (correctness, minimal change, proportionate complexity, extensibility, clear ownership) to code and designs. Use when reviewing code or a design, rechecking review findings, or judging a proposed fix.
 disable-model-invocation: true
 ---
 

@@ -1,6 +1,6 @@
 # dev-skills
 
-This repository maintains personal development Skills. Each Skill's entry point is `skills/<skill-name>/SKILL.md`.
+This repository maintains a production-grade collection of development Skills. Each Skill's entry point is `skills/<skill-name>/SKILL.md`.
 
 - Scope a new Skill by the real task and use case the user gives; keep changes to existing Skills within the request.
 - `name` matches the directory name. `description` states what the Skill does and when to use it; the body holds the judgment criteria and procedure needed at run time.

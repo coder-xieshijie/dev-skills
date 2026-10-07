@@ -1,2 +1,5 @@
+interface:
+  display_name: "Plan for Agents"
+  short_description: "Write or check a complete plan for agents to execute"
 policy:
   allow_implicit_invocation: false

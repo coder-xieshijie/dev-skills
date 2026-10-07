@@ -1,2 +1,5 @@
+interface:
+  display_name: "Agent Prompt Rules"
+  short_description: "Source-backed rules for writing agent prompts and Skills"
 policy:
   allow_implicit_invocation: false
