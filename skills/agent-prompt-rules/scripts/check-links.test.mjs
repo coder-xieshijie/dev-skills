@@ -234,7 +234,7 @@ test("a definition's target may be on the next line; indented code is not a defi
   ]);
 });
 
-test("lines starting with > or indented four spaces, and paragraph lines, are not definitions", () => {
+test("lines starting with > or indented four spaces, and paragraph lines, are not definitions; a fenced block ends a paragraph", () => {
   const result = check({
     "a.md": [
       "> [a]: missing.md",
@@ -246,9 +246,19 @@ test("lines starting with > or indented four spaces, and paragraph lines, are no
       "Example:",
       "[d]: missing.md",
       "",
+      "`Example:`",
+      "[e]: missing.md",
+      "",
+      "```",
+      "x",
+      "```",
+      "[f]: missing-after-fence.md",
+      "",
     ].join("\n"),
   });
-  assert.deepEqual(result.errors, []);
+  assert.deepEqual(result.errors, [
+    "a.md:16: broken link -> missing-after-fence.md (missing missing-after-fence.md)",
+  ]);
 });
 
 test("run through a symlink, the CLI checks the Skill directory it sits in", () => {

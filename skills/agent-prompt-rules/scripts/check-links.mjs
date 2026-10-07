@@ -89,12 +89,14 @@ const INLINE_LINK =
 // A reference definition, `[label]: target` or `[label]: <target>` with an
 // optional title, which `[text][label]`, `[label][]` and `[label]` link to;
 // the target may sit on the next line. A line is taken as a definition only
-// at the start of a block (after a blank line, at the top of the file, or
-// right after another definition), not starting with `>` and indented at
-// most three spaces. Definitions that need more context to tell from
-// paragraph text or code, such as those in block quotes or indented further
-// under list items, go unchecked: a missed check is better than failing a
-// valid file without a full Markdown parser. `[^…]:` starts a footnote.
+// after a blank line or a fenced code block, at the top of the file, or
+// right after another definition; not starting with `>`; indented at most
+// three spaces. Definitions that need more context to tell from paragraph
+// text or code, such as those in block quotes or indented further under list
+// items, go unchecked: a missed check is better than failing a valid file
+// without a full Markdown parser. Like inline links, definitions inside HTML
+// blocks or indented code are still read as links; put such examples in a
+// fenced code block. `[^…]:` starts a footnote.
 const DEFINITION = /^ {0,3}\[(?!\^)(?:[^[\]\\]|\\.)+\]:[ \t]*(.*)$/;
 const DESTINATION =
   /^[ \t]*(?:<([^<>]*)>|(\S+))(?:[ \t]+(?:"[^"]*"|'[^']*'|\([^()]*\)))?[ \t]*$/;
@@ -181,6 +183,8 @@ export function checkLinks({
   for (const file of files) {
     if (archivedOriginals.some((prefix) => file.startsWith(prefix))) continue;
     const lines = stripCode(contents.get(file)).split("\n");
+    // Blank lines as written: inline code blanked out by stripCode is text.
+    const unfenced = stripFences(contents.get(file)).split("\n");
     // Index of the line after the last definition, where another may start.
     let afterDefinition = -1;
     lines.forEach((line, index) => {
@@ -188,7 +192,7 @@ export function checkLinks({
       for (const match of line.matchAll(INLINE_LINK))
         checkTarget(file, where, match[1]);
       const blockStart =
-        index === 0 || !lines[index - 1].trim() || index === afterDefinition;
+        index === 0 || !unfenced[index - 1].trim() || index === afterDefinition;
       const definition = blockStart && line.match(DEFINITION);
       if (!definition) return;
       // A block quote on the next line starts a new block, not the target.
