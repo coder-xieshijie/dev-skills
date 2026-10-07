@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Design rules for prompts, pipelines and Skills written for agents
 
-When you write, change or review any of the following, check it against these rules one by one, and make the change by the process in section 4: prompts that a dispatcher (the agent or script that hands out a task) writes to an executor (the subagent or external agent that receives the task), multi-agent pipelines, `SKILL.md` files (including the `description` in the frontmatter), and Skills the executor will read. Each rule lists the official sources behind it. The archive in [references/sources/](references/sources/README.md) keeps verbatim excerpts of the cited passages, with each document's official URL and the sha256 of its full text; the full texts are kept privately for comparison.
+When you write, change or review any of the following, check it against these rules one by one, and make the change by the process in section 4: prompts that a dispatcher (the agent or script that hands out a task) writes to an executor (the subagent or external agent that receives the task), multi-agent pipelines, `SKILL.md` files (including the `description` in the frontmatter), and Skills the executor will read. Each rule lists the official sources behind it. The archive in [references/sources/](references/sources/README.md) keeps verbatim excerpts of the cited passages, with each document's official URL and the sha256 of its full text; the full texts are kept privately for comparison. When a citation and the live page differ, the archived text is what the rule cites.
 
 ## General principles
 
