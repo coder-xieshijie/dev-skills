@@ -1,6 +1,6 @@
 # 跨模型调用
 
-三处由另一家模型在新 session 里做：core-spec 第 7 步的查漏，deliver 交付中的决定咨询，deliver 的独立验证。同一家模型、相近的上下文容易犯同样的错；新 session 只拿到调用方给的文件，看不到调用方的会话。
+这几处由另一家模型在新 session 里做：core-spec 第 7 步的查漏；deliver 开工时的预判、交付中的决定咨询、独立验证前的代码审查和独立验证。同一家模型、相近的上下文容易犯同样的错；新 session 只拿到调用方给的文件，看不到调用方的会话。
 
 ## 选哪一家
 
@@ -24,19 +24,21 @@
 | Claude Code | `claude -p --resume <session id> "<下一轮>"`，权限参数与第一次相同 |
 | MiniMax Code | `mcode exec --session <session id> "<下一轮>"` |
 
-### 只读：查漏、交付中的决定
+### 只读：查漏、开工预判、交付中的决定、代码审查
 
 ```bash
-codex exec -C <仓库> -s read-only -o <回复文件> "按 <gap-check.md 的绝对路径> 查漏。spec：<路径>，sha256 <值>；verify：<路径>，sha256 <值>；原始约定：<路径>；仓库：<路径>。" < /dev/null
+codex exec -C <仓库> -s read-only -o <回复文件> "按 <gap-check.md 的绝对路径> 查漏。spec：<路径>，sha256 <值>；verify：<路径>，sha256 <值>；条款清单：<路径>；原始约定：<路径>；仓库：<路径>。" < /dev/null
 ```
 
 ```bash
-claude -p "按 <gap-check.md 的绝对路径> 查漏。spec：<路径>，sha256 <值>；verify：<路径>，sha256 <值>；原始约定：<路径>；仓库：<路径>。" --permission-mode dontAsk --allowedTools Read Grep Glob "Bash(git log:*)" "Bash(git show:*)" "Bash(ls:*)" > <回复文件>
+claude -p "按 <gap-check.md 的绝对路径> 查漏。spec：<路径>，sha256 <值>；verify：<路径>，sha256 <值>；条款清单：<路径>；原始约定：<路径>；仓库：<路径>。" --permission-mode dontAsk --allowedTools Read Grep Glob "Bash(git log:*)" "Bash(git show:*)" "Bash(ls:*)" > <回复文件>
 ```
 
 `dontAsk` 拒绝所有未列出的工具，因此不能写文件。`--allowedTools`、`--add-dir` 会把后面的参数都当成自己的值，所以提示词紧跟在 `-p` 后面。
 
 交付中的决定用同样的命令，提示词换成：要决定的问题、相关的 spec 原文、可选做法、各自的证据，请它给出选择和理由。不写调用方的倾向。
+
+开工预判和代码审查也用只读命令，提示词给出 deliver 验证说明的绝对路径、本次要做的部分和输入文件的路径；代码审查在检出待审 head 的目录里运行。
 
 ### 运行应用：独立验证
 
