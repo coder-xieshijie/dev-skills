@@ -8,7 +8,7 @@ These tasks are done by a model from another family in a new session: the gap ch
 |---|---|
 | Claude (in Claude Code) | Codex: `codex exec` |
 | GPT (in Codex) | Claude Code: `claude -p` |
-| Either of the above | MiniMax Code: `mcode exec`, which uses MiniMax's own model by default; you can also choose another vendor's model with `--model <provider/model>` |
+| Either of the above | Any other CLI that runs a model from another family and can take a prompt and write its reply to a file |
 
 Use the model and effort currently configured in the other CLI; when the user specifies otherwise, follow the user. The report states the actual model. When the other CLI cannot be used (not installed, not logged in, or still failing after a retry), switch to another CLI of a different family; when none can be used, do not substitute the same family, and handle it as the place that makes the call says. `claude -p` requires being logged in: `loggedIn` is `true` in `claude auth status`.
 
@@ -22,7 +22,7 @@ To continue talking or working in the same session, record the session id (`code
 |---|---|
 | Codex | In the original directory, run `codex exec resume <session id> "<next turn>"`; it has no `-s`, so set the sandbox with `-c sandbox_mode=<read-only or danger-full-access>`; `-o` works as usual |
 | Claude Code | `claude -p --resume <session id> "<next turn>"`, with the same permission flags as the first call |
-| MiniMax Code | `mcode exec --session <session id> "<next turn>"` |
+| Other CLIs | Their own option for continuing a session by id |
 
 ### Read-only: gap check, up-front review, decisions during delivery, code review
 
@@ -42,7 +42,7 @@ The up-front review and the code review also use read-only commands; the prompt 
 
 ### Running the app: independent verification
 
-The verifier must start and operate the application, so all three CLIs run without a sandbox: Codex with `-s danger-full-access`, Claude with `--permission-mode bypassPermissions`, MiniMax Code with `--permission full`. Run in a dedicated directory that has the head under verification checked out (`mcode` uses `--cwd <verification checkout directory>`), and add the evidence directory with `--add-dir`; `mcode` has no such flag, so write the absolute path of the evidence directory in the verification input. Use 60 minutes as one cycle, wrapping the command in `perl -e 'alarm 3600; exec @ARGV'` (macOS has no `timeout`):
+The verifier must start and operate the application, so every CLI runs without a sandbox: Codex with `-s danger-full-access`, Claude with `--permission-mode bypassPermissions`, another CLI with its equivalent. Run in a dedicated directory that has the head under verification checked out, and add the evidence directory with `--add-dir`; for a CLI without such a flag, write the absolute path of the evidence directory in the verification input. Use 60 minutes as one cycle, wrapping the command in `perl -e 'alarm 3600; exec @ARGV'` (macOS has no `timeout`):
 
 ```bash
 perl -e 'alarm 3600; exec @ARGV' codex exec -C <verification checkout directory> -s danger-full-access --add-dir <evidence directory> -o <report file> "Verify per <absolute path of verifier-brief.md>. Verification input: <path>." < /dev/null

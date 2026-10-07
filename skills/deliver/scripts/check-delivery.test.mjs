@@ -246,7 +246,7 @@ test("full: spec changed after the handoff fails even with a good report", () =>
 test("full: several reports, each must pass", () => {
   const r = delivered();
   const second = path.join(r.dir, REQ, "evidence/verification-b.md");
-  r.write(`${REQ}/evidence/verification-b.md`, report(r.head, { model: "mcode minimax-m3" }));
+  r.write(`${REQ}/evidence/verification-b.md`, report(r.head, { model: "gemini-3-pro" }));
   assert.equal(full(r, "--report", second).code, 0);
   r.write(`${REQ}/evidence/verification-b.md`, report(r.head, { verdict: "UNVERIFIED" }));
   const { code, out } = full(r, "--report", second);
