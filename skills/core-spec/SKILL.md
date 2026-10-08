@@ -1,6 +1,5 @@
 ---
 name: core-spec
-disable-model-invocation: true
 description: Converges a conversation and its materials into spec.md, the core decisions; when delivery will be automated, also writes verify.md, the acceptance requirements. Use after discussion and clarification are finished.
 ---
 
