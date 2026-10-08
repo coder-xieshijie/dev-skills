@@ -45,7 +45,7 @@ flowchart LR
 
 ## 安装
 
-在 Claude Code 和 Codex 里，core-grill 和 core-spec 既支持手动调用，也支持 Agent 在请求符合描述时主动触发。其他 Skill 仍只支持手动调用。MCode 目前不读仅手动调用的设置，请求和描述对得上时也可能自动加载这些 Skill；要确定用的是哪个，就按名字调用。
+在 Claude Code 和 Codex 里，core-spec 既支持手动调用，也支持 Agent 在讨论和澄清完成后主动触发，包括用户确认 core-grill 的决定汇总后。core-grill 和其他 Skill 只支持手动调用。MCode 目前不读仅手动调用的设置，请求和描述对得上时也可能自动加载这些 Skill；要确定用的是哪个，就按名字调用。
 
 **MCode**（插件，从 Git 导入）：在桌面应用里打开插件页，选择 **Create → Import from a Git repository**（中文界面为“创建 → 从 Git 仓库导入”），粘贴 `https://github.com/coder-xieshijie/dev-skills`，再点 **Preview**、**Import**。MCode 一次导入一个插件，不读 marketplace 文件；它读取仓库根目录的插件清单和 `skills/` 下的所有 Skill。插件里的 Skill 带命名空间，调用写成 `/dev-skills:core-grill`、`/dev-skills:core-spec` 等。
 

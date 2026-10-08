@@ -1,5 +1,6 @@
 ---
 name: core-grill
+disable-model-invocation: true
 description: Question the user in rounds to settle the decisions that change user-visible results, record terms, and compile a decision summary for core-spec. Use at the start of a requirement.
 ---
 
