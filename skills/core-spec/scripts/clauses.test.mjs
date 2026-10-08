@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -82,6 +82,17 @@ test("CLI writes the list with the spec hash and count", () => {
   assert.match(text, /\| §4\.1-3 \| 14 \| 嵌套的规定。 \|/);
   const row = text.split("\n").find((l) => l.startsWith("| §4.1-5 |"));
   assert.equal(row.split(" | ").length, 3, row);
+});
+
+test("CLI runs when called through a symlink, as installed Skills are", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "clauses-"));
+  const link = path.join(dir, "clauses.mjs");
+  symlinkSync(script, link);
+  const file = path.join(dir, "spec.md");
+  const out = path.join(dir, "clauses.md");
+  writeFileSync(file, spec);
+  execFileSync(process.execPath, [link, "--spec", file, "--out", out]);
+  assert.match(readFileSync(out, "utf8"), /sha256 [0-9a-f]{64}, 7 clauses\./);
 });
 
 test("CLI rejects a missing spec", () => {
