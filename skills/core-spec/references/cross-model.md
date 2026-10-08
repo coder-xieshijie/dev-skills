@@ -37,6 +37,8 @@ codex exec -C <repository> -s read-only -o <reply file> "Run a gap check per <ab
 claude -p "Run a gap check per <absolute path of gap-check.md>. spec: <path>, sha256 <value>; verify: <path>, sha256 <value>; clause list: <path>; source agreements: <path>; repository: <path>." --permission-mode dontAsk --allowedTools Read Grep Glob "Bash(git log:*)" "Bash(git show:*)" "Bash(ls:*)" > <reply file>
 ```
 
+For the check limited to changed clauses in core-spec step 7, add the IDs of the changed clauses, or the spec diff, to the same command.
+
 `dontAsk` denies every tool that is not listed, so it cannot write files. `--allowedTools` and `--add-dir` take all the arguments after them as their own values, so the prompt goes right after `-p`.
 
 For decisions during delivery, use the same commands with the prompt replaced by: the question to decide, the relevant spec text, the possible approaches and the evidence for each, asking it to give a choice and the reason. Do not write the caller's leaning.
