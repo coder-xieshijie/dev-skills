@@ -96,7 +96,7 @@ done
 
 | Skill | 用途 |
 |---|---|
-| [core-grill](skills/core-grill/SKILL.md) | 需求起步时逐轮追问会改变用户可见结果的决定，写好术语，把你确认的决定汇总交给 core-spec |
+| [core-grill](skills/core-grill/SKILL.md) | 需求起步时逐轮追问会改变用户可见结果的决定（重构、瘦身类需求改问范围和预期收益），写好术语，把你确认的决定汇总交给 core-spec |
 | [core-spec](skills/core-spec/SKILL.md) | 把讨论收敛成 spec.md（决定与约束）和 verify.md（自动交付的验收要求），请另一家模型查漏，一次确认后冻结。也可以只产出 spec |
 | [deliver](skills/deliver/SKILL.md) | 依据冻结的 spec 和 verify，由一个 owner 实现、逐里程碑在应用里验证、请另一家模型独立验证，并把 PR 做到 CI 通过、可合入；自己做的决定列在最前面 |
 | [review-rules](skills/review-rules/SKILL.md) | 代码与设计评审、复核问题、判断修复方案时用的准则：复用、必要改造、复杂度、扩展性、责任边界 |

@@ -6,6 +6,19 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-08
+
+### Changed
+
+- **core-spec** gap check also reports over-specification: requirements, scenarios or checks that restate implementation steps, prove again what a test or another requirement proves, or need a tool built only for acceptance. A finding adds to verify only when a wrong implementation would otherwise pass.
+- **core-spec** limits the two gap-check rounds to the author's own revisions. When the user's answers add or change requirements, one more check covers the changed clauses, so the version sent for freezing has always been checked.
+- **core-spec** has a starting point for behavior-preserving changes (refactoring, slimming, migration): list the kinds of unintended change, and prove equivalence by running the existing scenarios and tests on the baseline and on the new head.
+- **core-grill** asks about scope, authorization and the expected gain when user-visible results must not change, and the done criteria state the gain or when to stop. It says when a recommendation departs from research in the conversation or an earlier confirmed decision, never files a decision under discussion as a default, and runs a short trial before asking about a measurable trade-off.
+
+### Fixed
+
+- **core-spec** `clauses.mjs` exited without writing the clause list when called through a symlink, which is how installed Skills are called.
+
 ## [0.2.1] - 2026-10-08
 
 ### Fixed
