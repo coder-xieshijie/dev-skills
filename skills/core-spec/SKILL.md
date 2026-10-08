@@ -143,11 +143,11 @@ An author checking their own work tends to let their own omissions pass, and mod
 
 The gap checker only reports; this session handles the report item by item and makes the changes:
 
-- Problems in verify (missing coverage, checkpoints that cannot fail, going beyond the spec, entry points that do not exist): fix verify.md directly.
+- Problems in verify (missing coverage, checkpoints that cannot fail, going beyond the spec, entry points that do not exist, over-specification): fix verify.md directly. Before adding a requirement, scenario, check or tool for a finding, look for an existing clause, test or runtime check that already covers it; add only what would otherwise let a wrong implementation pass, and give the reason in the final reply for findings you did not add.
 - Problems in the spec: when the source agreements already give a basis, fix the spec directly per steps 1–4; when the spec contradicts itself, lacks a decision that would change the judging, or lacks delivery and authorization, and the source agreements give no basis, turn it into a minimum necessary question for the user; after the answer is written into the spec per steps 1–4, update the corresponding scenarios.
 - Findings that do not hold: give a one-sentence reason in the final reply.
 
-When the user's answers add or change requirements in the spec, check the two changed files once more. The gap check runs at most two rounds. Issues still unresolved after the second round stay as not passed and go into the final reply; of these, only those that need the user to choose a goal, behavior or trade-off are turned into questions.
+The gap check runs at most two rounds over your own revisions. Issues still unresolved after the second round stay as not passed and go into the final reply; of these, only those that need the user to choose a goal, behavior or trade-off are turned into questions. When the user's answers add or change requirements, including after the second round, run one more check limited to the changed clauses: the files sent to the user for freezing must have been checked by the other family. This check does not count toward the two rounds, and you run it without asking the user.
 
 When the other family's model cannot be used (not installed, not logged in, or still failing after a retry), first switch to another CLI of a different family; if none can be used, record "cross-model gap check not completed": you may deliver a draft pending confirmation, but do not ask the user to freeze. Run the gap check with the same family only when the user explicitly relaxes this requirement, and say so in the final reply.
 
