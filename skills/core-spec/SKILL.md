@@ -1,6 +1,6 @@
 ---
 name: core-spec
-description: Converges a conversation and its materials into spec.md, the core decisions; when delivery will be automated, also writes verify.md, the acceptance requirements. Use after discussion and clarification are finished.
+description: Converges a conversation and its materials into spec.md, the core decisions; when delivery will be automated, also writes verify.md, the acceptance requirements. Use after discussion and clarification are finished, including when the user confirms core-grill's decision summary.
 ---
 
 # Converge a discussion into a spec, and write the acceptance requirements

@@ -45,7 +45,7 @@ Rules that hold throughout:
 
 ## Install
 
-In Claude Code and Codex, core-grill and core-spec support both manual invocation and automatic selection by the agent when the request matches their descriptions. The other Skills are manual-only. MCode does not read the manual-only setting yet, so it may also load those Skills when a request matches their descriptions; call the Skills by name to be sure which one runs.
+In Claude Code and Codex, core-spec supports both manual invocation and automatic selection by the agent after discussion and clarification are finished, including after the user confirms core-grill's decision summary. core-grill and the other Skills are manual-only. MCode does not read the manual-only setting yet, so it may also load those Skills when a request matches their descriptions; call the Skills by name to be sure which one runs.
 
 **MCode** (plugin, imported from Git): in the desktop app, open the Plugins page, choose **Create → Import from a Git repository**, paste `https://github.com/coder-xieshijie/dev-skills`, then **Preview** and **Import**. MCode imports one plugin at a time and does not read marketplace files; it reads the plugin manifest at the repository root and every Skill under `skills/`. Plugin Skills are namespaced: call them as `/dev-skills:core-grill`, `/dev-skills:core-spec` and so on.
 

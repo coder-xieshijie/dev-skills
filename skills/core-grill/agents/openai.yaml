@@ -2,4 +2,4 @@ interface:
   display_name: "Core Grill"
   short_description: "Settle a requirement's decisions before the spec is written"
 policy:
-  allow_implicit_invocation: true
+  allow_implicit_invocation: false
