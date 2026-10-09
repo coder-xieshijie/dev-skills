@@ -13,7 +13,8 @@
 //
 // Exit 0 on success, 2 on usage errors. Zero dependencies.
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 const USAGE = "usage: clauses.mjs --spec <spec.md> [--out <file>]";
 
@@ -160,4 +161,8 @@ function usage(message) {
   return 2;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) process.exit(main(process.argv.slice(2)));
+// Compare real paths: Skills are usually installed through symlinks, and
+// import.meta.url resolves them while process.argv[1] does not.
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  process.exit(main(process.argv.slice(2)));
+}

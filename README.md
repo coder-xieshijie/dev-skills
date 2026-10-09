@@ -96,7 +96,7 @@ The commands above work as written in MCode and Claude Code; in Codex, write `$d
 
 | Skill | What it does |
 |---|---|
-| [core-grill](skills/core-grill/SKILL.md) | At the start of a requirement, asks in rounds about the decisions that change user-visible results, records terms, and hands a decision summary you confirmed to core-spec |
+| [core-grill](skills/core-grill/SKILL.md) | At the start of a requirement, asks in rounds about the decisions that change user-visible results (for refactoring or slimming, about scope and the expected gain), records terms, and hands a decision summary you confirmed to core-spec |
 | [core-spec](skills/core-spec/SKILL.md) | Turns the discussion into spec.md (decisions and constraints) and verify.md (acceptance requirements for automated delivery), has another family gap-check them, and freezes them after one confirmation. Can also produce only a spec |
 | [deliver](skills/deliver/SKILL.md) | From the frozen spec and verify, one owner implements, verifies each milestone in the app, gets independent verification by another family, and takes the PR through CI to mergeable, listing its decisions at the top |
 | [review-rules](skills/review-rules/SKILL.md) | Criteria for code and design review, for re-checking findings and for judging fixes: reuse, necessary change, complexity, extensibility, ownership |

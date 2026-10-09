@@ -17,7 +17,7 @@ Collect these four first. Look up yourself anything you can find in the reposito
 | Item | What to write |
 |---|---|
 | Goal | What the user can do once it is done, and how they see it take effect; the request text or a link to it |
-| Done criteria | How far the work must go to count as done; the deadline and the branch it ships on |
+| Done criteria | How far the work must go to count as done; for optimization or cleanup work, the expected gain or when to stop; the deadline and the branch it ships on |
 | Authorization | Whether the feature branch may be pushed and an MR opened. Merging and other irreversible operations (force-pushing a shared branch, deleting shared data, sending messages outside, changing a shared environment) are always left to the user |
 | Scope | The range of impact that must be kept under control; what is explicitly not done |
 
@@ -25,9 +25,11 @@ Collect these four first. Look up yourself anything you can find in the reposito
 
 Ask in rounds. In each round, ask every question you can ask now: a question goes into this round only when its prerequisites are all settled; a question whose answer depends on another question in this round belongs to the next round. Number each question, state the options and the consequences of each, and give your recommended answer. When the user has answered, work out the next round.
 
-Ask only about decisions that change user-visible results, for example UI and interaction, user-facing text, default values, entry points, whether data can be lost, and how the change coexists with existing features. Decide the rest yourself (interface naming, file layout, implementation approach) and record each as a default decision, with its reason and how to overturn it.
+Ask only about decisions that change user-visible results, for example UI and interaction, user-facing text, default values, entry points, whether data can be lost, and how the change coexists with existing features. Decide the rest yourself (interface naming, file layout, implementation approach) and record each as a default decision, with its reason and how to overturn it. A decision the questions are about is never recorded as a default decision.
 
-Finding facts is your job; do not ask the user for them. When you need code, documents or run results, look them up yourself; you may dispatch subagents to look them up in parallel. While you wait for results, ask the questions that do not depend on them first. When what the user says about the current state does not match the code, point it out right away and ask the user to confirm which one to go by.
+When the requirement must not change user-visible results (refactoring, slimming, migration), the test above leaves nothing to ask. Ask instead about the scope, the authorization and the expected gain: how much to reduce or speed up, which areas come first, and when to stop; and, when it is unclear what counts as unchanged (internal logs, diagnostic fields, timing), about that boundary. When what you know is not enough to estimate the gain, sample one or two areas first and bring the estimate to the question; keep the sample to minutes, not a review of the whole change.
+
+Finding facts is your job; do not ask the user for them. When you need code, documents or run results, look them up yourself; you may dispatch subagents to look them up in parallel. While you wait for results, ask the questions that do not depend on them first. When what the user says about the current state does not match the code, point it out right away and ask the user to confirm which one to go by. When your recommended answer departs from research done in this conversation or from a decision the user confirmed earlier, say so in the question and give the reason. When a decision turns on a cost, speed or reliability claim that a short trial can measure, run the trial and bring the numbers to the question.
 
 ## Terms and ADRs
 
