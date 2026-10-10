@@ -16,8 +16,8 @@ A lever that only changes a fake's reply proves the check of the fake, not of th
 
 Patching and rebuilding in the working checkout changes the build every other instance from that checkout uses, and a forgotten revert leaves later runs measuring a broken product. Do it in a separate worktree instead:
 
-1. Commit the verification Skill and the maps first (a branch is enough; the hand-off may squash it): a worktree only sees committed files.
-2. `git worktree add <scratch dir> <branch>`; install and build there as the repository's README says.
+1. Commit the verification Skill and the maps first (the hand-off may squash it): a worktree only sees committed files.
+2. `git worktree add --detach <scratch dir> HEAD`: a detached worktree at that commit, since the branch is checked out here and git refuses a second checkout of it. Install and build there as the repository's README says.
 3. Make the smallest source change that breaks one criterion; save it with `git -C <scratch dir> diff > <evidence dir>/counterexample.patch`.
 4. Rebuild, then run the map with the worktree's own copy of the verification Skill: `node <scratch dir>/<skills dir>/verify-<app>/scripts/verify.mjs run <map> --evidence-dir <evidence dir>`. Its root is the worktree, so it drives the patched build. `run-summary.json` lists the patched files under `version.dirtyPaths`.
 5. Confirm the broken criterion is FAIL, then `git worktree remove --force <scratch dir>`.
