@@ -31,14 +31,16 @@ The runner and the adapters enforce these; they are here so you can read a resul
 ## Commands
 
 ```bash
-V=<path to this skill>/scripts/verify.mjs
+# every command runs from the repository root
+S=<this skill's directory, relative to the repository root>
+V=$S/scripts/verify.mjs
 node $V run [<map>|<sub-feature id>|<script path>...] [--entry <slug>] [--jobs N] [--evidence-dir <dir>] [--launch '<json>'] [--detach]
 node $V wait <evidence dir>                  # blocks inside the command until a detached run ends
 node $V up --entry <slug> [--launch '<json>']   # a hand instance: prints runId, run directory and fields
 node $V doctor --run <runId>
-node $V do <tool> --run <runId> '<json args>'   # {field} in an argument is that field of the instance
+node $V do <tool> --run <runId> '<json array>'   # spread as the arguments: '[["a"]]' passes one array; {field} is that field of the instance
 node $V down --run <runId> [--keep-data]   # a second down reports it already stopped
-node $V list                                 # hand instances on this machine, from every session
+node $V list                                 # hand instances on this machine from every session, stopped ones too: a live one has no stoppedAt
 node $V record <evidence dir> <criterion id> pass|fail|confirm --why "<what was observed>" [--file <capture>]
 node $V look <evidence dir> <criterion id> pass|fail --why "<what the capture shows>"
 node $V check                                # structure of maps and scripts; CI runs it
@@ -46,6 +48,8 @@ node $V contract [--entry <slug>]            # an entry's adapter against the ad
 ```
 
 Every command prints one JSON object and exits non-zero when `ok` is false; `node $V --help` lists them. A run gives each scenario its own instance (up, doctor, script, down); `ok` is false when anything is UNVERIFIED, `allPass` is true when everything is PASS. `--launch` merges into every script's launch options: that is how a counterexample run breaks the product to show a criterion gives FAIL.
+
+A hand-driven result goes into the evidence directory of the verification it belongs to: the `evidenceDir` its `run` printed, once that run has ended, so scripted and hand results share one summary; a new directory when nothing is scripted. `record` keeps each result, with a copy of its `--file`, in `<sub-feature>.<entry slug>/` there; copy into the same directory anything else a verdict rests on, such as the adapter's log in the run directory `up` printed.
 
 ## Entries
 
@@ -55,7 +59,9 @@ Every command prints one JSON object and exits non-zero when `ok` is false; `nod
 
 ## Smoke
 
-<The shortest journey per entry that proves the instance is drivable: command, expected output. Run it first when this Skill or the app's startup changed.>
+Run Smoke before the first run in a checkout, and again after a change to `scripts/`, `verify.config.json` or the app's startup.
+
+<The shortest journey per entry that proves the instance is drivable: command, expected output.>
 
 ## Feature maps
 
@@ -63,4 +69,4 @@ Every command prints one JSON object and exits non-zero when `ok` is false; `nod
 
 ## Maintain
 
-When the app's startup, its entries or a mapped behavior change, update this Skill and the affected maps and scripts in the same MR. After a change under `scripts/`, `node --test scripts/test/*.test.mjs` (which runs the adapter contract on every entry) and `node $V check` pass before any run counts. Product problems are reported, not fixed here.
+When the app's startup, its entries or a mapped behavior change, update this Skill and the affected maps and scripts in the same MR. After a change under `scripts/`, `node --test $S/scripts/test/*.test.mjs` (which runs the adapter contract on every entry) and `node $V check` pass before any run counts. Product problems are reported, not fixed here.
