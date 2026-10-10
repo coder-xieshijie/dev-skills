@@ -72,6 +72,16 @@ test('a criterion under an entry its sub-feature does not declare is reported', 
   assert.ok(problemsOf(repo).includes('criteria: notes.list-empty#2 is under Web, which notes.list-empty does not declare'));
 });
 
+test('criteria are read only from the steps section: elsewhere a criterion id is a reference', () => {
+  const repo = makeRepo();
+  editMap(repo, '- Titles are required; an empty title answers 400.', '- `notes.create#2` reads the list once; a second read in the same second may lag.');
+  assert.deepEqual(problemsOf(repo), []);
+  assert.equal(checkMaps(repo.config).maps[0].criteria, 5);
+  // Counterexample: under the steps section but outside an entry heading, it is still a misplaced criterion.
+  editMap(repo, '### API\n', '- `notes.create#5` shared steps hold no criteria.\n\n### API\n');
+  assert.ok(problemsOf(repo).includes('criteria: criterion notes.create#5 is not under an entry heading of "## Drive"'));
+});
+
 test('a look criterion outside a ui entry is reported', () => {
   const repo = makeRepo();
   editMap(repo, '`notes.create#2` the list', '`notes.create#2` (look) the list');

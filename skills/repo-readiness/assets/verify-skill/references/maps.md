@@ -27,7 +27,7 @@ A feature map says which sub-features a feature has, how a user reaches each one
 
 ## Criteria
 
-Each criterion is a list item in an entry subsection, starting with its ID, then one observable expected result:
+Each criterion is a list item in an entry subsection of `## Drive`, starting with its ID, then one observable expected result (in other sections, such as Gotchas, an item may start with a criterion ID to refer to it):
 
 ```markdown
 - **Create** (`notes.create`). Post a note titled `alpha`, then read the list:

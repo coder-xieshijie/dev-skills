@@ -2,7 +2,8 @@
 //   index     - the maps the index links and the feature-map/*.md files under mapRoots match one to one;
 //   id        - sub-feature ids `<map>.<short>` are unique across maps and start with their map name;
 //   criteria  - each criterion `- \`<sub-feature>#<n>\` <expected>` sits under `### <entry>` of the
-//               steps section; ids are unique; every driven entry a sub-feature declares has criteria;
+//               steps section (list items in other sections are not criteria); ids are unique; every
+//               driven entry a sub-feature declares has criteria;
 //               look criteria sit only under entries the config marks `"ui": true`;
 //   scenario  - every scripted entry has scenarios/<id>.<slug>.mjs; each script checks every criterion
 //               of its sub-feature at that entry exactly once (t.criterion / t.confirm, t.look for look
@@ -141,6 +142,9 @@ export function parseMap(file, config) {
       inSteps = line.trim() === `## ${headings.steps}`;
       entry = null;
     } else if (line.startsWith('### ')) entry = inSteps ? (driven[line.trim()] ?? null) : null;
+    // Only the steps section holds criteria; an item elsewhere (Gotchas, Not covered) that starts
+    // with a criterion id refers to it.
+    if (!inSteps) continue;
     const match = CRITERION_RE.exec(line);
     if (!match) continue;
     const id = `${match[2]}#${match[3]}`;
