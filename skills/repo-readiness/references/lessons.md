@@ -1,6 +1,6 @@
 # Lessons the kit encodes
 
-Read this when a rule in the kit looks unnecessary, before removing it, or when a run passes and you doubt it. Each lesson is a failure that happened while building one repository's verification, and the mechanism that now stops it.
+Read this when a rule in the kit looks unnecessary, before removing it, or when a run passes and you doubt it. Each lesson is a failure that happened while building one repository's verification, and the mechanism that stops it.
 
 ## Judging
 
@@ -15,9 +15,9 @@ Read this when a rule in the kit looks unnecessary, before removing it, or when 
 ## The map and its scripts
 
 8. **One fact, one place, machine-linked.** A criterion written in both the map and a script drifted within a day. Mechanism: criteria text only in the map with an ID; the script cites the ID as a literal exactly once; `check` in CI compares the two both ways.
-9. **Results do not belong in the spec.** Run records committed beside the maps went stale on every tool change (the hash covered the whole tool), needed a separate commit per run, and answered only "which version was checked once", not "is the code right". About 1,200 lines of code and tests and 373 lines of records were deleted. Mechanism: `check` rejects a run-record heading; results live in the evidence directory and the MR description.
+9. **Results do not belong in the spec.** Run records committed beside the maps went stale on every tool change (the hash covered the whole tool), needed a separate commit per run, and answered only "which version was checked once", not "is the code right". About 1,200 lines of code and tests and 373 lines of records were deleted. Mechanism: `check` rejects a run-record heading and results written into the maps or the verification Skill; results live in the evidence directory and the MR description.
 10. **Write what each criterion catches.** "Status is active after resume" passed on an implementation that showed running and never started. Mechanism: `maps.md` asks every criterion to name the wrong implementation it rules out.
-11. **Add, then subtract.** Gap checks only ever added clauses; the spec grew from 69 to 78 clauses before the user stopped it, and the verification code later lost 20 % with no loss of coverage. Four adjacent maps had been built for completeness and were cut from 74 to 19 sub-features to what the requirement touched. Mechanism: map what the next requirement touches; every part must help prove the business code correct and complete.
+11. **Add, then subtract; map what the next requirement touches first.** Gap checks only ever added clauses; the spec grew from 69 to 78 clauses before the user stopped it, and the verification code later lost 20 % with no loss of coverage. The first six maps covered the requirement being delivered and found 6 product bugs on their second day; four adjacent maps built for completeness were cut from 74 to 19 sub-features, to what the requirement touched. Mechanism: the default scope is the features the next requirement touches; every part must help prove the business code correct and complete.
 
 ## Running
 
@@ -33,6 +33,5 @@ Read this when a rule in the kit looks unnecessary, before removing it, or when 
 
 ## Process
 
-21. **Map what the next requirement touches first.** The first six maps covered the requirement being delivered and found 6 product bugs on their second day; four maps added later for completeness were cut back to what the requirement touched.
-22. **A cold session is the test of the Skill.** The first fresh session that followed the new verification Skill found 9 problems the author could not see. Mechanism: step 7 of `repo-readiness`.
-23. **Live runs find what review cannot, and the reverse.** A full run found a home-page slash-command error that cleared the input box (the unit test stubbed the component); a code-as-truth audit found 8 criteria that disagreed with the code, one of them in a scenario that passed. Both are needed: the map is checked against the code when it is written or audited, and the code against the map on every run.
+21. **A cold session is the test of the Skill.** The first fresh session that followed the new verification Skill found 9 problems the author could not see. Two later sub-agents asked to report where they hesitated or guessed were refused as reasoning extraction; asked for the documentation gaps they met, they finished. Mechanism: done criterion 7 of `repo-readiness`, which asks for gaps in the text.
+22. **Live runs find what review cannot, and the reverse.** A full run found a home-page slash-command error that cleared the input box (the unit test stubbed the component); a code-as-truth audit found 8 criteria that disagreed with the code, one of them in a scenario that passed. Both are needed: the map is checked against the code when it is written or audited, and the code against the map on every run.

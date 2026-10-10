@@ -1,6 +1,6 @@
 # Checking a map against the code
 
-Read this when a map is written or rewritten (step 4), or when someone asks whether a map is still true. `check` proves only the map's structure; whether each criterion says what the product does is settled by someone who reads the code instead of the map, and then by running it.
+Read this when a map is written or rewritten, or when someone asks whether a map is still true. `check` proves only the map's structure; whether each criterion says what the product does is settled by someone who reads the code instead of the map, and then by running it.
 
 Give the audit to a sub-agent that did not write the map, with read-only access and only the inputs below; the author's reasoning stays out of its context. One sub-agent per map, or per few small maps, keeps each context on one feature.
 
@@ -35,9 +35,9 @@ Cite file:line for every claim. Say "none" for an empty list.
 
 ## Acting on the report
 
-- **Disagrees.** Fix the map to what the code does, or, when the code looks wrong, keep the criterion as the intended behavior, check it with `otherwise: 'confirm'` (TO-CONFIRM until a product owner answers), and name the question in Gotchas. Never keep a criterion that the code contradicts as a plain PASS/FAIL check without one of the two.
+- **Disagrees.** Fix the map to what the code does, or, when the code looks wrong, keep the criterion as the intended behavior, check it with `otherwise: 'confirm'` (TO-CONFIRM until a product owner answers), and name the question in Gotchas. Every criterion the code contradicts ends in one of the two.
 - **Cannot tell.** The live run settles it; make sure the scenario's evidence can show it.
 - **Missing behavior or entries.** Add the criterion or sub-feature, or name it under Not covered with its reason.
-- A second audit after large fixes is worth it; repeat until a round finds no disagreement you did not already decide.
+- After large fixes, audit again with a new sub-agent, up to two more rounds, until a round finds no disagreement you have not already decided; hand what remains to the user.
 
-Keep the report with the step 4 notes for the hand-off, not in the map.
+The report goes into the hand-off; the map keeps only the corrected criteria.

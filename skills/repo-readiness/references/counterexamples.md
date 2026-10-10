@@ -1,6 +1,6 @@
 # Counterexample runs
 
-Read this before step 5's counterexamples, or whenever a check needs proof that it can fail. A counterexample breaks the product for one criterion and runs that criterion's map; it counts only when the broken criterion gives FAIL. UNVERIFIED means the break never reached the product.
+Read this when proving a map's scripts can fail, or whenever a check needs that proof. A counterexample breaks the product for one criterion and runs that criterion's map; it counts only when the broken criterion gives FAIL. UNVERIFIED means the break never reached the product.
 
 ## Choosing the lever
 
@@ -16,13 +16,13 @@ A lever that only changes a fake's reply proves the check of the fake, not of th
 
 Patching and rebuilding in the working checkout changes the build every other instance from that checkout uses, and a forgotten revert leaves later runs measuring a broken product. Do it in a separate worktree instead:
 
-1. Commit the verification Skill and the maps first (a branch is enough; step 8 may squash): a worktree only sees committed files.
+1. Commit the verification Skill and the maps first (a branch is enough; the hand-off may squash it): a worktree only sees committed files.
 2. `git worktree add <scratch dir> <branch>`; install and build there as the repository's README says.
 3. Make the smallest source change that breaks one criterion; save it with `git -C <scratch dir> diff > <evidence dir>/counterexample.patch`.
 4. Rebuild, then run the map with the worktree's own copy of the verification Skill: `node <scratch dir>/<skills dir>/verify-<app>/scripts/verify.mjs run <map> --evidence-dir <evidence dir>`. Its root is the worktree, so it drives the patched build. `run-summary.json` lists the patched files under `version.dirtyPaths`.
 5. Confirm the broken criterion is FAIL, then `git worktree remove --force <scratch dir>`.
 
-If the patch must happen in the working checkout, revert it, rebuild, and confirm `doctor` is green afterwards: the adapter's build check (`builds`) is what refuses a reverted source with a stale patched build.
+If the patch must happen in the working checkout, revert it, rebuild, and confirm `doctor` is green afterwards: the adapter's build-freshness check is what refuses a reverted source with a stale patched build.
 
 ## Reporting
 
