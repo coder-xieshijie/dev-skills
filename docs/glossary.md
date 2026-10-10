@@ -50,7 +50,8 @@ The Skills in this repository use these terms with one meaning each. The Chinese
 | criterion | 判据 | One observable expected result of a sub-feature at one entry point, ID `<sub-feature>#<n>`, kept only in the feature map |
 | scenario script | 场景脚本 | The script that drives one sub-feature at one entry point and checks each of its criteria once |
 | counterexample run | 反例对照 | A run on a deliberately broken product; it counts only when the broken criterion gives FAIL |
-| structure check | 结构检查 | The read-only `check` command that links maps, criteria, scenario scripts and spec IDs; CI runs it |
+| structure check | 结构检查 | The read-only `check` command that links maps, criteria, scenario scripts and spec IDs, and keeps results out of maps and the verification Skill; CI runs it |
+| entry adapter | 入口适配器 | The module in a verification Skill that starts, checks, drives and stops an isolated instance for one entry point; every adapter passes the kit's contract test |
 | result: PASS, FAIL, BLOCKED, UNVERIFIED, TO-CONFIRM | 结果 | One per sub-feature and entry point in a verification Skill run. BLOCKED: the precondition could not be built; TO-CONFIRM: a product owner must say whether it is intended |
 | control commands | 控制命令 | Commands that start, stop, reset and read the state of the app |
 | quality commands | 质量命令 | Lint, type check, tests |

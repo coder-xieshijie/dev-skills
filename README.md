@@ -86,7 +86,7 @@ Other agents that read the [Agent Skills format](https://agentskills.io/specific
 
 ## A complete run
 
-Once per repository, before the first requirement: `/dev-skills:repo-readiness The next requirement is <link or text>`. It answers what it can from the code, asks you the rest in one batch, and commits a verification Skill and the first feature maps.
+Once per repository, before the first requirement: `/dev-skills:repo-readiness The next requirement is <link or text>`. It answers what it can from the code, asks you the rest in one batch, and commits a verification Skill and the first feature maps once a fresh session has used them to verify a feature.
 
 1. In the target repository: `/dev-skills:core-grill The requirement is <link or text>; put the requirement documents in <requirement directory>/`. Answer the questions and confirm the decision summary.
 2. In the same session: `/dev-skills:core-spec Write spec.md and verify.md from the decision summary`. Read the gap check result and confirm spec and verify. It commits them to the feature branch and opens a Draft PR.
@@ -115,7 +115,7 @@ The development workflow uses repo-readiness, core-grill, core-spec, deliver, re
 ## Documentation
 
 - [Why the workflow looks the way it does](docs/basis.md): the three sources, where they agree and disagree, what this workflow adds, and a rule-by-rule basis for core-grill, core-spec and deliver.
-- [Repository readiness](docs/repository-readiness.md): what stage A needs and why, from our first setup, with its [templates](docs/templates/) and [example](docs/examples/feature-map-example.md). The [repo-readiness](skills/repo-readiness/SKILL.md) Skill carries the current map format and a runnable kit; the guide lists where the two differ.
+- [Repository readiness](docs/repository-readiness.md): what stage A needs and why, from our first setup, with its [templates](docs/templates/) and [example](docs/examples/feature-map-example.md). The [repo-readiness](skills/repo-readiness/SKILL.md) Skill states the end state and carries the current map format, a runnable kit and example adapters; the guide lists where the two differ.
 - [Glossary](docs/glossary.md): the terms the Skills use, with their Chinese equivalents.
 - Design records, in Chinese: [core-grill](docs/core-grill-design.md), [core-spec](docs/core-spec-design.md), [deliver](docs/deliver-design.md), [mr-for-human](docs/mr-for-human-design.md) and its [validation](docs/mr-for-human-validation.md).
 

@@ -86,7 +86,7 @@ done
 
 ## 一次完整的用法
 
-每个仓库在第一个需求之前做一次：`/dev-skills:repo-readiness 下一个需求是 <链接或原文>`。它先从代码里回答能回答的，其余一次问你，最后提交验证 Skill 和第一批功能地图。
+每个仓库在第一个需求之前做一次：`/dev-skills:repo-readiness 下一个需求是 <链接或原文>`。它先从代码里回答能回答的，其余一次问你，等一个全新会话用它们验证过一个功能后，提交验证 Skill 和第一批功能地图。
 
 1. 在目标仓库里：`/dev-skills:core-grill 需求是 <链接或原文>，需求文档放 <需求目录>/`。回答问题，确认决定汇总。
 2. 同一个 session 里：`/dev-skills:core-spec 依据决定汇总写 spec.md 和 verify.md`。看查漏结果，确认 spec 和 verify；它会提交到需求分支并开 Draft PR。
@@ -115,7 +115,7 @@ done
 ## 文档
 
 - [流程为什么是这个样子](docs/basis.md)（英文）：三家来源、它们的共识与分歧、本流程自己加的东西，以及 core-grill、core-spec、deliver 逐条规则的依据。
-- [仓库准备](docs/repository-readiness.md)（英文）：A 阶段需要什么、为什么，来自我们第一次搭建，附当时的[模板](docs/templates/)和[示例](docs/examples/feature-map-example.md)。[repo-readiness](skills/repo-readiness/SKILL.md) Skill 带有当前的地图格式和可运行的 kit；两者的差异列在指南里。
+- [仓库准备](docs/repository-readiness.md)（英文）：A 阶段需要什么、为什么，来自我们第一次搭建，附当时的[模板](docs/templates/)和[示例](docs/examples/feature-map-example.md)。[repo-readiness](skills/repo-readiness/SKILL.md) Skill 写明要达到的终态，带有当前的地图格式、可运行的 kit 和适配器示例；两者的差异列在指南里。
 - [术语表](docs/glossary.md)：Skill 用到的术语，附中文对照。
 - 设计记录（中文）：[core-grill](docs/core-grill-design.md)、[core-spec](docs/core-spec-design.md)、[deliver](docs/deliver-design.md)、[mr-for-human](docs/mr-for-human-design.md) 及其[验证记录](docs/mr-for-human-validation.md)。
 
