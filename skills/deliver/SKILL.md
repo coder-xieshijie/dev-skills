@@ -68,7 +68,7 @@ Once every milestone has been checked and the affected scenarios pass, first ask
 
 Then your full self-verification and the independent verification start at the same time, on the same head. Ask a model from another family to verify in a separate session: in a dedicated directory where this head is checked out, run it as described in "independent verification" in Cross-model calls, and give it the verifier brief and a verification input. You and the verifier must both start the app, each with your own checkout directory and instance (profile, port, data directory).
 
-Verification runs in 60-minute cycles. When a cycle ends, look at its output and the evidence directory: if it has not finished, have it continue in the same session; if it failed, decide the next step from the cause.
+Verification runs under the [stall guard](scripts/stall-guard.mjs), as Cross-model calls shows: it runs as long as it keeps producing output or results, and is stopped only after 60 minutes with neither. When it ends, look at its output and the evidence directory: if it stalled before finishing, have it continue in the same session; if it failed, decide the next step from the cause.
 
 The verifier only reports; you make the changes. If you change code, verify the new head again. If, after verification, you changed only Markdown, tests, or the directory holding plan.md (plan, evidence), you do not need to verify again. The code quality comments and test coverage gaps it lists do not affect the verdict; for each one, make the change or write why you are not making it, and list them in the MR.
 

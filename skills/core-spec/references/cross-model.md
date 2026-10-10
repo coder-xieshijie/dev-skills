@@ -47,13 +47,13 @@ The up-front review and the code review also use read-only commands; the prompt 
 
 ### Running the app: independent verification
 
-The verifier must start and operate the application, so every CLI runs without a sandbox: Codex with `-s danger-full-access`, Claude with `--permission-mode bypassPermissions`, another CLI with its equivalent. Run in a dedicated directory that has the head under verification checked out, and add the evidence directory with `--add-dir`; for a CLI without such a flag, write the absolute path of the evidence directory in the verification input. Use 60 minutes as one cycle, wrapping the command in `perl -e 'alarm 3600; exec @ARGV'` (macOS has no `timeout`):
+The verifier must start and operate the application, so every CLI runs without a sandbox: Codex with `-s danger-full-access`, Claude with `--permission-mode bypassPermissions`, another CLI with its equivalent. Run in a dedicated directory that has the head under verification checked out, and add the evidence directory with `--add-dir`; for a CLI without such a flag, write the absolute path of the evidence directory in the verification input. Wrap the command in deliver's [stall guard](../../deliver/scripts/stall-guard.mjs). It stops the run only when it stalls: no output and no change in the evidence directory, where the verifier appends a result per scenario, for 60 minutes. A verification that keeps producing results runs to the end, however long it takes:
 
 ```bash
-perl -e 'alarm 3600; exec @ARGV' codex exec -C <verification checkout directory> -s danger-full-access --add-dir <evidence directory> -o <report file> "Verify per <absolute path of verifier-brief.md>. Verification input: <path>." < /dev/null
+node <deliver's directory>/scripts/stall-guard.mjs --idle 60m --watch <evidence directory> -- codex exec -C <verification checkout directory> -s danger-full-access --add-dir <evidence directory> -o <report file> "Verify per <absolute path of verifier-brief.md>. Verification input: <path>." < /dev/null
 ```
 
-When time is up, the process is killed and `-o` does not write the report. Look at the output and at `results.md` in the evidence directory: if it is not done, resume the same session (for example `codex exec resume <session id> -c sandbox_mode=danger-full-access -o <report file> "Continue verifying the scenarios that have no result yet"`), wrapped in another 60 minutes; if it failed, decide the next step from the cause. When it is killed, the application it started may still be running; when you will not resume, the caller stops it.
+On a stall the guard stops the command's whole process group and exits 124 with a line starting `stall-guard: stalled`, and `-o` does not write the report. Look at the output and at `results.md` in the evidence directory: if it is not done, resume the same session (for example `codex exec resume <session id> -c sandbox_mode=danger-full-access -o <report file> "Continue verifying the scenarios that have no result yet"`) under the guard again; if it failed, decide the next step from the cause. An application the verifier started in a process group of its own may still be running; when you will not resume, the caller stops it.
 
 After verification, `git status --porcelain` in the checkout directory is empty and `HEAD` has not changed: the verifier did not change the code.
 
