@@ -33,7 +33,7 @@ Do not change spec.md or verify.md during delivery.
 
 ## Done criteria
 
-1. Every item in the "Done criteria" section of verify.md is met, by actually running on the final code; the quality commands (lint, type check, tests) pass. Checkpoints in coverage blind spots are marked UNVERIFIED and listed separately in the MR.
+1. Every item in the "Done criteria" section of verify.md is met, by actually running on the final code, except the wrap-up items in criterion 4; the quality commands (lint, type check, tests) pass. Checkpoints in coverage blind spots are marked UNVERIFIED and listed separately in the MR.
 2. A model from another family has independently verified the final code, with the verdict PASS.
 3. Run the check below against the MR's actual head on the platform, and it passes:
 
@@ -41,7 +41,7 @@ Do not change spec.md or verify.md during delivery.
    node <this Skill's directory>/scripts/check-delivery.mjs --repo <worktree> --base <remote ref of the target branch> --head <MR head> --plan <plan.md> --report <verification report> [--report <another report>]
    ```
 
-4. Draft status is removed; CI passes on the final head; every review comment has either a code change or a reply giving the reason.
+4. Draft status is removed; CI passes on the final head; every review comment has either a code change or a reply giving the reason. The wrap-up items, done criteria in verify about the MR or the platform rather than the product (Draft status, the MR description, CI, review comments), are met, checked on the platform.
 5. plan.md reflects what actually happened, and you have reported to the user.
 
 ## Start
@@ -76,7 +76,7 @@ When waiting on long tasks such as verification, builds or CI, run them in the b
 
 ## MR
 
-Push to the Draft MR from the handoff. Once done criteria 1–3 are met, update the description, remove Draft status, and handle CI and review comments. For CI failures, fix only problems this change introduced or problems that block delivery. When a review comment asks to change behavior the spec defines, do not make that change; put it in the decision list.
+Push to the Draft MR from the handoff. Independent verification does not wait for any of this: it runs while the MR is still Draft. Once done criteria 1–3 are met, update the description, remove Draft status, and handle CI and review comments; then check verify's wrap-up items on the platform and list each, with what you read, in the MR description. For CI failures, fix only problems this change introduced or problems that block delivery. When a review comment asks to change behavior the spec defines, do not make that change; put it in the decision list.
 
 Write the MR description for the person who decides whether to merge:
 
