@@ -19,7 +19,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { kitHash } from './config.mjs';
+import { kitFilesHash, kitHash } from './config.mjs';
 import { criteriaOf, listMaps, looksOf, mapScenarios, parseMap } from './map-check.mjs';
 import {
   EvidenceError,
@@ -67,7 +67,7 @@ export function versionOf(root) {
 // The version of the product and of the ruler: results with another kit hash do not count for this one.
 export const runVersion = (config) => ({
   ...versionOf(config.root),
-  kit: { from: config.kit ?? null, hash: kitHash(config) },
+  kit: { from: config.kit ?? null, files: kitFilesHash(), hash: kitHash(config) },
 });
 
 // The result, in this order: an error or unreadable evidence -> UNVERIFIED; a failed precondition ->

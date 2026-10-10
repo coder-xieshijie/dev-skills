@@ -1,5 +1,5 @@
 {
-  "kit": "dev-skills repo-readiness <version or commit copied from>",
+  "kit": "dev-skills repo-readiness <version or commit copied from, or the kit hash verify.mjs --help prints>",
   "index": "features/README.md",
   "mapRoots": ["docs"],
   "entries": {

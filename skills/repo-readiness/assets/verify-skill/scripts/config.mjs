@@ -82,6 +82,16 @@ export function judgedConfig(raw) {
   return judged;
 }
 
+// The kit as copied: its own scripts in this directory, not adapters or tests. The copy stays as it
+// was copied, so this hash names the kit version it came from when the copy carries no version.
+export function kitFilesHash() {
+  const hash = createHash('sha256');
+  const scripts = path.dirname(fileURLToPath(import.meta.url));
+  for (const name of readdirSync(scripts).filter((item) => item.endsWith('.mjs')).sort())
+    hash.update(name).update('\0').update(readFileSync(path.join(scripts, name))).update('\0');
+  return hash.digest('hex').slice(0, 12);
+}
+
 // A hash of the ruler, recorded with every run: the scripts running it (runner, primitives, check,
 // adapters; not tests), adapters named from elsewhere, and what verify.config.json says that can
 // change a result (not its formatting, nor the fields judgedConfig leaves out). Results recorded with

@@ -16,14 +16,14 @@
 //   list                                    instances started by hand on this machine, by every session:
 //                                           pass --run <runId> from your own up to doctor, do and down
 //   --skill-dir <dir>                       any command: the verification Skill to use (default: above this script)
-//   --help                                  this list
+//   --help                                  this list, and `kit`: the hash of the kit's own scripts as copied
 
 import { mkdirSync, readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { entryByName, loadConfig } from './config.mjs';
+import { entryByName, kitFilesHash, loadConfig } from './config.mjs';
 import { checkContract } from './contract.mjs';
 import { checkMaps } from './map-check.mjs';
 import { defaultEvidenceDir, detach, loadAdapter, recordHand, recordLook, runScenarios, waitRun } from './runner.mjs';
@@ -97,7 +97,7 @@ const save = (config, record) =>
 async function main() {
   const [command, ...rest] = process.argv.slice(2);
   const { positional, flags } = parse(rest);
-  if (!command || ['--help', '-h', 'help'].includes(command) || flags.help) return { ok: true, usage: HELP };
+  if (!command || ['--help', '-h', 'help'].includes(command) || flags.help) return { ok: true, usage: HELP, kit: kitFilesHash() };
   const config = loadConfig({ skillDir: flags['skill-dir'] ? path.resolve(flags['skill-dir']) : undefined });
 
   if (command === 'check') return checkMaps(config);

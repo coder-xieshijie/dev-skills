@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { kitHash, loadConfig } from '../config.mjs';
+import { kitFilesHash, kitHash, loadConfig } from '../config.mjs';
 import { BLOCKED, FAIL, PASS, TO_CONFIRM, UNVERIFIED, judge, recordHand, recordLook, runScenarios } from '../runner.mjs';
 import { SCRIPTS, makeRepo } from './helpers.mjs';
 
@@ -152,6 +153,19 @@ test('the summary names the dirty paths and the kit that measured the run', asyn
   assert.ok(summary.version.dirtyPaths.includes('patched.txt'), summary.version.dirtyPaths);
   assert.equal(summary.version.kit.from, 'dev-skills test');
   assert.match(summary.version.kit.hash, /^[0-9a-f]{12}$/);
+  assert.equal(summary.version.kit.files, kitFilesHash());
+});
+
+test('the kit names its own version: a copy of its scripts prints the same hash, an edited copy another', () => {
+  const help = (dir) => JSON.parse(execFileSync('node', [path.join(dir, 'verify.mjs'), '--help'], { encoding: 'utf8' })).kit;
+  const copy = mkdtempSync(path.join(os.tmpdir(), 'verify-kit-copy-'));
+  for (const name of readdirSync(SCRIPTS).filter((item) => item.endsWith('.mjs'))) copyFileSync(path.join(SCRIPTS, name), path.join(copy, name));
+  mkdirSync(path.join(copy, 'entries'));
+  writeFileSync(path.join(copy, 'entries', 'api.mjs'), '// an adapter is not part of the kit\n');
+  assert.match(help(SCRIPTS), /^[0-9a-f]{12}$/);
+  assert.equal(help(copy), help(SCRIPTS));
+  writeFileSync(path.join(copy, 'primitives.mjs'), `${readFileSync(path.join(copy, 'primitives.mjs'), 'utf8')}\n`);
+  assert.notEqual(help(copy), help(SCRIPTS));
 });
 
 test('the kit hash changes with what judges a result, not with jobs, limits, paths or the kit label', () => {
