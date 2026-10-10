@@ -720,3 +720,55 @@ deliver“里程碑”一节加一段：写代码、集成、里程碑检查用�
 
 - 代码审查和并行验证的效果，要在下一个需求上观察：审查报出的问题数和属实数，独立验证还报出几个代码问题，owner 自验有没有独立验证没发现的问题。
 - 开工预判只在一个需求上试过一次。
+
+## 检查按需求定档：验证档位、去掉作者全量自验、里程碑检查收窄、收尾与验证分开、停滞才中止（2026-10-10）
+
+### 起因
+
+super-auto 的复盘（`discussions/2026-10-09-deliver-cost-and-theory.md`、`discussions/2026-10-10-deliver-weight-review.md`）：
+
+- 第三个真实需求的 deliver 净墙钟约 490 分钟，作者三轮全量自验 177 分钟（36%），独立验证 105 分钟，实现 133 分钟。作者三次全量结果稳定，三轮独立验证的 FAIL 都不是作者全量先发现的；第二个真实需求的回放也记录“owner 自验没找到 Codex 漏掉的产品问题”。
+- 每个需求都走同一套检查：只占 MR 改动约 1% 的瘦身需求也走完整 deliver。
+- 里程碑检查的收益不均：第三个需求 M1 的检查在下游依赖处发现 5 个有效问题；第二个需求 7 次里程碑检查没发现只读代码审查报出的 5 个问题。完全去掉的代价也有记录：撤掉检查脚本后，“里程碑检查晚做”又复发。
+- 第三个需求的 verify 把“MR 非 Draft、描述完整”列为完成条件，而 deliver 要求完成条件 1–3 满足后才去掉 Draft，独立验证因此被排到记录提交和去 Draft 之后。
+- 跨模型调用用 `perl -e 'alarm 3600'` 定时强杀；第三个需求第三轮独立验证在写最终报告时被杀，只能续跑。
+
+用户的理念（super-auto `research/dev-process-evolution-2026-10-10/report.md` 第 2 章）：约束放在两端、中间交给模型；确定的事交给脚本，不确定的交给 agent；要人决定的点前置。上面几条里，中间固定的检查层和作者用 agent 重复全量，与前两条有张力；所有需求同一强度，与第三条不一致。
+
+### 用户的决定（2026-10-10）
+
+用户看过分析后，要求四项都做并开 PR：检查强度在定义阶段定档；全量只跑一次，作者不再另做全量自验；里程碑检查收窄到下游依赖处；行为验证与 MR 收尾分开、60 分钟强杀改为按进度判断。
+
+### 改动
+
+| 改动 | 位置 | 依据 |
+|---|---|---|
+| verify 的要点里写 `Verification depth: light` 或 `full` 加一句理由，随冻结由用户确认。light 跳过开工预判、里程碑检查和验证前的只读代码审查；两档都以同样的独立验证、同样的完成条件收尾。full 用于多入口或多模块、默认启动接线、持久化、并发、计量、恢复、安全、迁移、本仓库出过错的同类改动；拿不准选 full；verify 没有这一行按 full。owner 发现风险更高时可以补做跳过的检查 | `core-spec/references/verify.md`、`verify-example.md`、`core-spec/SKILL.md` 第 8 步、`deliver/SKILL.md`“开工”和各检查处 | evaluator “is worth the cost when the task sits beyond what the current model does reliably solo”（Anthropic harness design）；“excessive for a typo fix”（OpenAI GPT-6 Astra 指南）；poteto-mode 按任务选 playbook（pstack）；定档放在冻结时，是用户“决策点前置”的要求；agent-prompt-rules 一（每一步都编码了模型做不到什么的假设） |
+| 作者不再另做全量自验。独立验证者在最终 head 上跑完成条件要求的全部检查；同时 owner 用自己的实例只跑质量命令和由脚本判定的场景；修复后先跑受影响的场景，再验新 head | `deliver/SKILL.md`“独立验证”、完成条件第 1 条 | autopilot-full 的验证 lanes 是重跑门禁、“Prove the load-bearing behavior live”、审 diff，“The live lane is the floor”（pstack）；Anthropic 一次删一个组件看影响；确定的部分交给脚本（用户原则 2.1）；两个需求的数据见起因 |
+| 里程碑检查只在后续里程碑要用到它（接口、工具、数据）时做，在后续里程碑开始前做；没有下游的留给验证前的代码审查。plan 的里程碑写明哪些后续里程碑依赖它 | `deliver/SKILL.md`“里程碑”、`references/plan-format.md` | “Sequence Work into Verifiable Units”：每个单元验过再做下一个（pstack）；Anthropic 去掉 sprint 后 evaluator 只在末尾一次；数据见起因 |
+| verify 里关于 MR 或平台而不是产品的完成条件（Draft、MR 描述、CI、评审意见）是收尾项：owner 验证后在平台上核对并写进 MR 描述；验证者写“Checked at wrap-up”，不计入 verdict；独立验证在 Draft 状态下进行 | `deliver/SKILL.md` 完成条件第 1、4 条和“MR”、`references/verifier-brief.md` | shipping 把代码结论和合入状态分开，“keep the code verdict but re-run mergeability and CI at the current head”（pstack）；并行前提是没有互锁（agent-prompt-rules 2.1） |
+| 新脚本 `stall-guard.mjs`：命令在自己的进程组里运行，只有超过空闲上限（默认 60 分钟）既没有输出、被监视的路径（证据目录）也没变化时，才整组停掉，退出码 124；否则透传命令的退出码。替换 `cross-model.md` 里的 `alarm 3600` | `deliver/scripts/stall-guard.mjs`、`stall-guard.test.mjs`、`core-spec/references/cross-model.md`、`deliver/SKILL.md`、CI | autopilot-full 把超过预期时长“without a side effect”的 lane 视为卡住，只算副作用为进展（pstack）；OpenAI Symphony 区分失败、超时与停滞（见 super-auto 10-09 讨论）；这是确定性的判断，做成脚本（用户原则 2.1） |
+
+`check-delivery.mjs` 不变。
+
+### 接受的代价
+
+- light 档没有开工预判和验证前的代码审查，问题会晚到独立验证才发现，改了代码要重验新 head。定档由用户冻结时确认，拿不准默认 full。
+- 作者不再全量自验：最终 head 上不由脚本判定的场景只有验证者跑一遍。验证者 Environment blocked 时，没有作者的全量结果兜底，只能修环境后续跑。
+- 没有下游依赖的里程碑不再单独检查，靠验证前的代码审查（full）或验证者第 5 步（light）。
+- stall-guard 只看输出和证据目录有没有变化：一个不停输出却没有进展的会话不会被它停掉。
+- 第 1 至 3 项都是删检查。agent-prompt-rules 第四节第 3 条要求一次删一个组件；用户要求一起做，所以拆成独立提交，真实需求上的效果要分项观察。
+
+### 验证
+
+- `stall-guard.test.mjs` 6 个用例：透传输出和退出码；静默超过上限时停掉、退出码 124；持续输出不被停；静默但证据目录在变不被停；目录不变时停掉；用法错误退出码 2。两次真实的 `codex exec` 在 stall-guard 下跑完，退出码 0。
+- 新会话对照（2026-10-10）：同一组 9 个情境题（档位、无档位、里程碑依赖、最终 head 上 owner 跑什么、Draft 收尾项、75 分钟仍有进展、light 下谁审 diff、两个定档题），Claude Code 子代理（`claude-opus-5-5`）和 Codex（`gpt-6-astra`，`-s read-only`）各读改前（`2063613`）和改后一次，只许读 Skill 文件。题目与四份回答存在 super-auto `research/deliver-lighter-2026-10-10/probes/`。
+  - 改前：两家在档位题上都答“没有规定”，第 3 题每个里程碑都查，第 4 题自己全量重跑，第 6 题 60 分钟时已被杀。第 5 题两家都独立指出了循环：verdict 要求完成条件全满足，Draft 又要等 PASS 才去掉。
+  - 改后：两家 9 题的回答都与设计一致，并都引用了改后的原句；第 8 题判 full（迁移），第 9 题判 light（行为保持、已有覆盖）。
+  - 这只说明文字能被读成本意，不说明交付变快或质量没降。
+
+### 未验证
+
+- 真实需求上的效果：净墙钟、独立验证的轮数与发现、晚发现的问题、light 档的漏检。下一个完整需求按档位交付后，对比作者不再全量自验前后的独立验证发现数和净时间。
+- 定档在真实 core-spec 会话里是否稳定；用户冻结时是否会改档。
+- stall-guard 在长时间独立验证（数小时）和 Claude CLI 下的表现。
