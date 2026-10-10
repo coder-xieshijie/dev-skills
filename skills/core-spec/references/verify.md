@@ -96,7 +96,7 @@ The document contains, in order:
    > Based on the spec, this document defines what counts as doing this requirement right and how to prove it. It is the shared basis for implementation, independent verification and final acceptance. During implementation, the implementing agent runs these scenarios itself, and a scenario passes only when it actually runs through; after freezing, scenarios and checkpoints do not change. This document only describes acceptance requirements; it does not mean verification has been run or has passed.
 
    Then write the sources: the spec path and sha256, the related repositories and commits, and the verification Skill or feature map referenced.
-2. **Key points**: the number of requirements and scenarios, and the 3–5 scenarios most likely to go wrong, usually real cross-module paths, default wiring and key exceptions; readable within one screen.
+2. **Key points**: the number of requirements and scenarios, and the 3–5 scenarios most likely to go wrong, usually real cross-module paths, default wiring and key exceptions; then the verification depth, as the line `Verification depth: light` or `Verification depth: full` followed by its reason in one sentence (see below); readable within one screen.
 3. **Smoke set**: a few core user journeys chosen by the risk of this change, preferring existing features this change touches, to confirm that the environment and existing features are not broken.
 4. **Requirements table**: ID, requirement, spec location, proof method.
 5. **Scenarios**.
@@ -104,6 +104,13 @@ The document contains, in order:
 7. **Verification tooling gaps**.
 8. **Coverage blind spots**.
 9. **Done criteria**, written as a list, one item each: the smoke set, the regression scope and all scenarios (except checkpoints in coverage blind spots) pass by actually running; checkpoints in blind spots are marked UNVERIFIED and listed separately, and the substitute test or check written for each has been run and passed; the evidence matches the code and running instance of the delivered version; scenarios that lack tools are truthfully marked blocked, not replaced by unit tests or other lower-level checks. When the requirement has other done criteria, add them here. The implementation and the independent verification both judge against this section, item by item.
+
+**Verification depth** sets how many intermediate checks delivery runs; both depths end with the same independent verification by another family against the same done criteria. At `full`, deliver also has another family preview the plan, checks milestones that later work builds on, and has another family review the code before verification. Such checks are worth their cost only where the model does not reliably get the work right on its own, so choose by that:
+
+- `full`: behavior across several entry points or modules; default startup wiring; persistence, concurrency, metering, recovery or security; a migration; or a kind of change that has gone wrong in this repository before.
+- `light`: a small, local change, or a behavior-preserving change whose touched code existing scenarios and tests already cover.
+
+When in doubt, choose `full`. Write the line in English as shown, whatever the language of verify; deliver reads it.
 
 When deciding split granularity, how tight checkpoints should be, the proof method, or how to write a decoy implementation, read [the example and check cases](verify-example.md).
 

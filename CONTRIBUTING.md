@@ -26,6 +26,7 @@ node scripts/check-links.mjs
 node skills/agent-prompt-rules/scripts/check-links.mjs
 node --test skills/agent-prompt-rules/scripts/check-links.test.mjs
 node --test skills/deliver/scripts/check-delivery.test.mjs
+node --test skills/deliver/scripts/stall-guard.test.mjs
 node --test skills/core-spec/scripts/clauses.test.mjs
 node --test skills/repo-readiness/assets/verify-skill/scripts/test/*.test.mjs
 node --test skills/repo-readiness/references/adapters/test/*.test.mjs

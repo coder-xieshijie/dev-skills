@@ -6,8 +6,19 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-10
+
+### Changed
+
+- **core-spec** writes a verification depth into verify.md's key points, `Verification depth: light` or `full` with a one-sentence reason, and the user confirms it with the freeze. Full is for work the model does not reliably get right on its own (several entry points or modules, default wiring, persistence, concurrency, metering, recovery, security, migrations, kinds of change that went wrong before) and the choice when in doubt.
+- **deliver** reads the depth. At light it skips the up-front review, the milestone checks and the read-only code review; both depths end with the same independent verification. A verify without the line is delivered at full.
+- **deliver** no longer has the owner run its own full self-verification beside the independent one. While the verifier runs every done-criteria check on the final head, the owner runs only the quality commands and the scenarios judged by script, and after a fix it runs the affected scenarios.
+- **deliver** checks a milestone only when later milestones build on it, before they start; plan.md names those dependencies.
+- **deliver** treats done criteria about the MR or the platform (Draft status, description, CI, review comments) as wrap-up items the owner checks on the platform after verification; independent verification runs while the MR is still Draft and marks them "Checked at wrap-up".
+
 ### Added
 
+- **deliver** `scripts/stall-guard.mjs`, which runs independent verification and stops it only when it stalls: no output and no change in the evidence directory for the idle limit (default 60 minutes). It replaces the fixed 60-minute `alarm` kill in cross-model calls. Its tests run in CI.
 - **repo-readiness**, a manual-only Skill for stage A. It states the end state and leaves the route to the agent: a project-local verification Skill with one isolated adapter per entry point (`up`, `doctor`, `do`, `down`); feature maps whose criteria carry IDs (`<sub-feature>#<n>`) and a Not covered section, checked against the code; scenario scripts that cite each criterion once, judged by shared primitives in five results (PASS, FAIL, BLOCKED, UNVERIFIED, TO-CONFIRM), with a counterexample run per map that gives FAIL; a structure check in CI; and a fresh session that verified a feature from the repository alone and handed back the documentation gaps it met. The kit that repositories copy is only what behaves the same everywhere: the command entry, a runner with one instance per scenario, the primitives, the structure check (which also rejects run results committed to maps or the verification Skill and warns when AGENTS.md or CLAUDE.md does not name it), `record` for entries driven by hand, a hash of itself in every run summary, and an adapter contract test each repository runs on its own adapters (`verify.mjs contract`: two instances side by side, identity, own HOME and TMPDIR, no leaked caller variables, `down` stopping only its own processes and keeping evidence). Adapters are written per repository; working examples for an HTTP service, a CLI and web pages are in `references/adapters/` and pass the contract test in CI. References give one route through the work with a check after each stage, the adapter contract and isolation, how far to build (L0 to L3), checking a map against the code, counterexample runs, and the failures behind each rule. The kit's scripts and the examples have their own tests, which CI runs.
 
 ## [0.3.0] - 2026-10-08

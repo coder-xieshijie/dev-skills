@@ -26,15 +26,15 @@ flowchart LR
 | 阶段 | Skill | agent 做什么 | 你做什么 |
 |---|---|---|---|
 | A 仓库准备 | [repo-readiness](skills/repo-readiness/SKILL.md) 搭建项目自己的验证 Skill（[指南](docs/repository-readiness.md)，英文） | 让 agent 能在 worktree 里启动、操作、观察应用：每个入口隔离的控制命令、带判据编号的功能地图、场景脚本、冒烟集、CI 里的结构检查 | 回答仓库里查不到的（下一个需求、用户实际用的入口、哪些不能碰）；每个仓库建一次，之后按需补 |
-| B 定义 | [core-grill](skills/core-grill/SKILL.md) → [core-spec](skills/core-spec/SKILL.md) | 逐轮追问，整理决定汇总；相关功能地图先与产品对齐；写 spec.md 和 verify.md，请另一家模型逐条款查漏；冻结后提交到需求分支，开 Draft PR（GitLab 上叫 MR） | 回答问题；确认一次决定汇总；确认一次 spec 和 verify |
-| C 交付 | [deliver](skills/deliver/SKILL.md) | 一个 owner 全程不停：开工时请另一家模型预判最终验证怎样判这份 plan；逐个里程碑实现并在应用里跑场景；另一家模型先只读审代码，owner 修一轮，再与 owner 的全量自验同时做独立验证；处理 CI 和评审，做到可合入；要定的事先问另一家模型，决定列在 plan.md 和 PR 描述最前面 | 合入前看决定清单，合入 |
+| B 定义 | [core-grill](skills/core-grill/SKILL.md) → [core-spec](skills/core-spec/SKILL.md) | 逐轮追问，整理决定汇总；相关功能地图先与产品对齐；写 spec.md 和 verify.md（含验证档位：轻档或完整档），请另一家模型逐条款查漏；冻结后提交到需求分支，开 Draft PR（GitLab 上叫 MR） | 回答问题；确认一次决定汇总；确认一次 spec 和 verify，连同验证档位 |
+| C 交付 | [deliver](skills/deliver/SKILL.md) | 一个 owner 全程不停：逐个里程碑实现并在应用里跑场景；完整档另外请另一家模型开工预判最终验证怎样判这份 plan、在后续里程碑依赖它时做里程碑检查、验证前请另一家模型只读审代码并修一轮；最后另一家模型对最终 head 独立验证，owner 同时只跑质量命令和脚本判定的场景；处理 CI 和评审，做到可合入；要定的事先问另一家模型，决定列在 plan.md 和 PR 描述最前面 | 合入前看决定清单，合入 |
 | D 回流 | — | 在 PR 和 plan.md 里列出这次暴露的仓库缺口 | 决定哪些补回 A 阶段或 Skill |
 
 几条贯穿全程的约定：
 
 - **约束放在两端。** 定义阶段把要人决定的事和验收要求定全；结尾由另一家模型按 verify 的完成条件验证。中间交给 owner 自己完成，有分歧记进决定清单、不停下，合入前交给你看。
 - **不可逆操作留给你。** 合入、强推共享分支、删除共享数据、对外发消息、改共享环境。其余工作 agent 自己做完，做不了的写明原因。
-- **检查交给另一家模型。** spec 和 verify 的查漏、交付开工时的预判、交付中的决定、最终验证前的代码审查和最终验证，都请另一家模型在新 session 里做（[跨模型调用](skills/core-spec/references/cross-model.md)）。
+- **检查交给另一家模型。** spec 和 verify 的查漏、交付中的决定、最终验证，以及完整档的开工预判和最终验证前的代码审查，都请另一家模型在新 session 里做（[跨模型调用](skills/core-spec/references/cross-model.md)）。
 - **查结果，不查过程。** 脚本只核对两件事：spec、verify 是你确认的版本；最终代码由另一家模型验证通过。其余由说明文字约定，交给模型判断。
 
 ## 前提
@@ -123,7 +123,7 @@ done
 
 - 每个 Skill 放在 `skills/<skill-name>/`，入口是 `SKILL.md`，需要时再加 `scripts/`、`references/` 或 `assets/`。`name` 与目录名一致；其他工具按路径引用这些目录，目录名不改。
 - Skill 正文用英文写，术语按[术语表](docs/glossary.md)；见 [AGENTS.md](AGENTS.md)。改规则按 [agent-prompt-rules](skills/agent-prompt-rules/SKILL.md)：一次改一个组件，记下依据，在新 session 里对照。
-- CI 运行链接与锚点检查和脚本测试：`node scripts/check-links.mjs`、`node skills/agent-prompt-rules/scripts/check-links.mjs`、`node --test skills/agent-prompt-rules/scripts/check-links.test.mjs`、`node --test skills/deliver/scripts/check-delivery.test.mjs`、`node --test skills/core-spec/scripts/clauses.test.mjs`、`node --test skills/repo-readiness/assets/verify-skill/scripts/test/*.test.mjs`。
+- CI 运行链接与锚点检查和脚本测试：`node scripts/check-links.mjs`、`node skills/agent-prompt-rules/scripts/check-links.mjs`、`node --test skills/agent-prompt-rules/scripts/check-links.test.mjs`、`node --test skills/deliver/scripts/check-delivery.test.mjs`、`node --test skills/deliver/scripts/stall-guard.test.mjs`、`node --test skills/core-spec/scripts/clauses.test.mjs`、`node --test skills/repo-readiness/assets/verify-skill/scripts/test/*.test.mjs`。
 - `skills/agent-prompt-rules/references/sources/` 保存规则引用的厂商文档的逐字摘录；怎样更新见[它的 README](skills/agent-prompt-rules/references/sources/README.md)。
 
 ## 反馈
