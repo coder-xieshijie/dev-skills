@@ -9,7 +9,8 @@
 //   t.confirm(id, detail)            - observed, but a product owner must confirm it (TO-CONFIRM);
 //   t.look(id, name, standard)       - a look criterion: saves a capture for an agent to judge;
 //                                      UNVERIFIED until `look` writes the verdict;
-//   t.unreadable(message)            - evidence a shared step found unusable (UNVERIFIED).
+//   t.unreadable(message)            - evidence a shared step found unusable (UNVERIFIED);
+//   t.defer(fn)                      - a cleanup run after the script, however it ended, before down.
 // A run the adapter's `down` reports invalid, or whose instance did not start or pass doctor, runs
 // once more; a valid FAIL, BLOCKED or timeout never does.
 

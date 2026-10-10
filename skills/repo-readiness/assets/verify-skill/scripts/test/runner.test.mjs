@@ -141,6 +141,25 @@ test('paths reach adapters as real paths when the repository is reached through 
   assert.equal(result.instance.runDir, path.join(realpathSync(repo.root), 'evidence', 'notes.list-empty.api'));
 });
 
+test('t.defer: cleanups run in reverse order after a script that threw, before down; a failing one becomes a note', async () => {
+  const repo = makeRepo({
+    scripts: {
+      'notes.list-empty.api.mjs': `export const scenario = { id: 'notes.list-empty', entry: 'API', timeoutSeconds: 10 };
+export async function run(t) {
+  t.defer(async () => t.note(\`still up: \${(await t.read('/notes')).notes.length} notes\`));
+  t.defer(() => { throw new Error('boom'); });
+  t.defer(() => t.note('last deferred, first run'));
+  throw new Error('script broke');
+}
+`,
+    },
+  });
+  const summary = await run(repo, { targets: ['notes.list-empty'] });
+  const result = JSON.parse(readFileSync(path.join(summary.evidenceDir, 'notes.list-empty.api', 'result.json'), 'utf8'));
+  assert.equal(result.result, UNVERIFIED);
+  assert.deepEqual(result.notes, ['last deferred, first run', 'cleanup: boom', 'still up: 0 notes']);
+});
+
 test('the summary names the dirty paths and the kit that measured the run', async () => {
   const repo = makeRepo({ config: { kit: 'dev-skills test' } });
   const git = (...args) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@example.invalid', ...args], { cwd: repo.root, stdio: 'ignore' });

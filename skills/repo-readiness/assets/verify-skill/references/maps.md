@@ -76,6 +76,7 @@ export async function run(t) {
 - `launch` is passed to the entry adapter's `up` (for example `{ env: { ... } }`); `run --launch '<json>'` merges into it for every script, which is how a counterexample run breaks the product.
 - Read evidence with the adapter's strict reads (`t.read` and whatever the adapter adds); select by boundary with `t.select.after / before / between`; wait with `t.until(read, wanted, { timeout, terminal })`, `t.hold(read, wanted, seconds)` and `t.observe(seconds)`. Plain value comparisons stay in the script.
 - A shared step only arranges preconditions and reads evidence; criteria are checked in the scenario script. A script imports only files in its own `scenarios/` directory.
+- `t.defer(fn)` undoes something the script arranged that `down` does not remove: deferred functions run in reverse order after the script, whether it passed, failed or threw, and before `down`; an error in one becomes a note.
 - Unreadable evidence, a script error or a timeout makes the result UNVERIFIED and can never satisfy "nothing happened"; an empty state counts only when it was read successfully. Use `t.unreadable(message)` when a shared step finds evidence unusable.
 - During `t.until`, `t.hold` and `t.observe`, a read the adapter marks as having a side effect is refused. Observe through reads without side effects; do the other reads after the window.
 - When the script replaces an external system's reply (a scripted model reply, a fault), record it in the result (`t.note`) and keep the claim to "the product's behavior after that reply".
