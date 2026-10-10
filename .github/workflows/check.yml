@@ -35,3 +35,16 @@ jobs:
         with:
           node-version: 24
       - run: node --test skills/core-spec/scripts/clauses.test.mjs
+  repo-readiness-kit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      # The kit's tests also run its structure check (`verify.mjs check`) on the example map they build;
+      # the contract test on the kit's own unfilled template skips itself.
+      - run: node --test skills/repo-readiness/assets/verify-skill/scripts/test/*.test.mjs
+      # The example adapters pass the kit's contract test with the toy products (page tests need Playwright and skip).
+      - run: node --test skills/repo-readiness/references/adapters/test/*.test.mjs

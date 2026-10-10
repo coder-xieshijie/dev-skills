@@ -4,7 +4,24 @@ The workflow in this repository, [core-grill](../skills/core-grill/SKILL.md), [c
 
 This guide is for engineers who want to run those Skills on their own app. It comes from our own stage A: making an existing agent product drivable by agents. The product has a desktop app, a terminal UI (TUI) and a local HTTP API, all backed by one local runtime. We then delivered two real requirements on it with the Skills. "Our runs" below means that work. Where advice is our own judgment, we say so. Terms follow the [glossary](glossary.md). The reasoning behind the whole workflow is in [Why the workflow looks the way it does](basis.md).
 
-Fill-in templates: [control commands](templates/control-commands.md) and [feature map](templates/feature-map.md). A de-identified example from our runs: [feature map example](examples/feature-map-example.md).
+Fill-in templates from our first setup: [control commands](templates/control-commands.md) and [feature map](templates/feature-map.md). A de-identified example from our runs: [feature map example](examples/feature-map-example.md).
+
+## This guide and the repo-readiness Skill
+
+The [repo-readiness](../skills/repo-readiness/SKILL.md) Skill builds this setup in a repository. It states the end state as done criteria and leaves the route to the agent, with one worked route in a reference. Its runnable kit is a verification Skill to copy with a runner, judging primitives, a structure check and a contract test that every entry adapter must pass, all with their own tests; working HTTP and CLI adapters and a page tool for web entries driven by hand come as examples to start from. This guide records how our first setup came about and why each part exists; the Skill holds where our setup ended after the rebuild described in step 5. Where the two differ, follow the Skill:
+
+| Part | This guide, our first setup | The Skill |
+|---|---|---|
+| Form | Steps in order, then a readiness checklist | The end state as done criteria and the few boundaries; one route through the work in [references/route.md](../skills/repo-readiness/references/route.md), as guidance |
+| Criteria | Each step says what to read and the value it should have | Each criterion has an ID, `<sub-feature>#<n>`, and names the wrong implementation it rules out; scenario scripts cite each ID exactly once |
+| Results | A run record in each map: PASS, FAIL, Not run, Blocked | No run record. Results stay in each run's evidence directory and the MR description, as PASS, FAIL, BLOCKED, UNVERIFIED or TO-CONFIRM, one per sub-feature and entry point |
+| What is left out | Blocked rows in the run record | A Not covered section in every map, naming each spec ID no sub-feature references and why |
+| Control commands | A command table per entry point (step 2), with `poll` for waiting | `verify.mjs` with one adapter per entry point (`up`, `doctor`, `do`, `down`) that passes the kit's contract test, `run` for scenario scripts with one instance per scenario, and waiting inside the scripts' primitives or `run --detach` with `wait` |
+| Structure check | Four checks, including one run-record row per sub-feature and entry point (step 5) | Keeps the index and ID checks; links criteria, scenario scripts and spec IDs both ways; rejects scripts that read files or set timers themselves; rejects a run record instead of requiring one, and results written into the maps or the verification Skill; warns when the agent instructions do not point to the verification Skill. CI runs it; live runs are still not a gate |
+| How much to build | "Start small, then grow" | Levels L0 to L3 with the trigger for each next level ([levels](../skills/repo-readiness/references/levels.md)) |
+| Templates | [templates/](templates/) and the [example](examples/feature-map-example.md) in this directory | The Skill's [map template](../skills/repo-readiness/assets/feature-map.template.md) and the kit's [maps.md](../skills/repo-readiness/assets/verify-skill/references/maps.md) |
+
+The Skill's [lessons](../skills/repo-readiness/references/lessons.md) give the failure behind each change.
 
 ## What "ready" means
 

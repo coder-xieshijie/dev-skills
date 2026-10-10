@@ -6,6 +6,10 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ## [Unreleased]
 
+### Added
+
+- **repo-readiness**, a manual-only Skill for stage A. It states the end state and leaves the route to the agent: a project-local verification Skill with one isolated adapter per entry point (`up`, `doctor`, `do`, `down`); feature maps whose criteria carry IDs (`<sub-feature>#<n>`) and a Not covered section, checked against the code; scenario scripts that cite each criterion once, judged by shared primitives in five results (PASS, FAIL, BLOCKED, UNVERIFIED, TO-CONFIRM), with a counterexample run per map that gives FAIL; a structure check in CI; and a fresh session that verified a feature from the repository alone and handed back the documentation gaps it met. The kit that repositories copy is only what behaves the same everywhere: the command entry, a runner with one instance per scenario, the primitives, the structure check (which also rejects run results committed to maps or the verification Skill and warns when AGENTS.md or CLAUDE.md does not name it), `record` for entries driven by hand, a hash of itself in every run summary, and an adapter contract test each repository runs on its own adapters (`verify.mjs contract`: two instances side by side, identity, own HOME and TMPDIR, no leaked caller variables, `down` stopping only its own processes and keeping evidence). Adapters are written per repository; working examples for an HTTP service, a CLI and web pages are in `references/adapters/` and pass the contract test in CI. References give one route through the work with a check after each stage, the adapter contract and isolation, how far to build (L0 to L3), checking a map against the code, counterexample runs, and the failures behind each rule. The kit's scripts and the examples have their own tests, which CI runs.
+
 ## [0.3.0] - 2026-10-08
 
 ### Changed

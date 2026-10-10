@@ -1,0 +1,5 @@
+interface:
+  display_name: "Repo Readiness"
+  short_description: "Build a verification Skill and feature maps for a repository"
+policy:
+  allow_implicit_invocation: false

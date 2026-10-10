@@ -1,0 +1,38 @@
+{
+  "kit": "dev-skills repo-readiness <version or commit copied from, or the kit hash verify.mjs --help prints>",
+  "index": "features/README.md",
+  "mapRoots": ["docs"],
+  "entries": {
+    "api": {
+      "name": "API",
+      "adapter": "scripts/entries/api.mjs",
+      "options": {},
+      "contract": { "read": ["read", "/health"], "doctorChecks": [] }
+    },
+    "web": {
+      "name": "Web",
+      "ui": true,
+      "max": 4,
+      "adapter": "scripts/entries/web.mjs",
+      "options": {},
+      "contract": { "read": ["read", "/health"], "doctorChecks": [] }
+    },
+    "cli": {
+      "name": "CLI",
+      "adapter": "scripts/entries/cli.mjs",
+      "options": {},
+      "contract": { "read": ["query", ["--version"]], "doctorChecks": [] }
+    }
+  },
+  "scripted": [],
+  "jobs": 8,
+  "runsRoot": null,
+  "headings": {
+    "subfeatures": "Sub-features",
+    "steps": "Drive",
+    "uncovered": "Not covered",
+    "scriptedColumn": "Also scripted",
+    "runRecord": ["Run record"]
+  },
+  "lookMarker": "(look)"
+}
