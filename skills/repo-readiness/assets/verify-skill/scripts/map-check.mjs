@@ -13,6 +13,8 @@
 //               maps on that spec or named in their uncovered section; referenced ids exist;
 //   uncovered - each map has the uncovered section;
 //   status    - no run results in a map: they belong in the run's report.
+// Warnings (they do not fail the check): a tool scripts call as t.<name> or maps drive with `do <name>`
+// that the verification Skill (SKILL.md, references/) never names, so an agent cannot look it up.
 // It does not check that the map matches the product; only running it does.
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
@@ -300,7 +302,13 @@ export function checkMaps(config) {
       continue;
     }
     const ids = specIds(spec, config);
-    if (ids.length === 0) add(spec, 'spec', 0, 'no requirement id headings for the maps to reference');
+    if (ids.length === 0)
+      add(
+        spec,
+        'spec',
+        0,
+        'no requirement id headings for the maps to reference; name a source without ids in the index as a code span, not a link',
+      );
     const referenced = new Set(onSpec.flatMap((map) => map.subfeatures.flatMap((f) => f.refs)));
     const uncovered = new Set(onSpec.flatMap((map) => map.uncoveredRefs));
     const prefixes = new Set(ids.map((id) => id.replace(/-\d+$/, '')));
@@ -313,5 +321,34 @@ export function checkMaps(config) {
       add(spec, 'spec', 0, `${id} is referenced by no sub-feature and not named under "${config.headings.uncovered}"`);
     specs.push({ spec: rel(spec), ids: ids.length, referenced: ids.filter((id) => referenced.has(id)).length });
   }
-  return { ok: problems.length === 0, index: rel(indexPath), maps: summary, specs, problems };
+  const warnings = undocumentedTools(config, maps).map(({ file, line, message }) => ({ file: rel(file), check: 'tools', line, message }));
+  return { ok: problems.length === 0, index: rel(indexPath), maps: summary, specs, problems, warnings };
+}
+
+// t.<name> members the runner itself provides; every other one comes from an adapter's tools().
+const RUNNER_MEMBERS = new Set(['id', 'entry', 'runDir', 'instance', 'until', 'hold', 'observe', 'select', 'precondition', 'criterion', 'confirm', 'look', 'unreadable', 'note', 'defer']);
+
+function undocumentedTools(config, maps) {
+  const docs = [path.join(config.skillDir, 'SKILL.md')];
+  const refs = path.join(config.skillDir, 'references');
+  if (existsSync(refs)) docs.push(...readdirSync(refs).filter((f) => f.endsWith('.md')).map((f) => path.join(refs, f)));
+  if (!existsSync(docs[0])) return [];
+  const text = docs.filter(existsSync).map((file) => readFileSync(file, 'utf8')).join('\n');
+  const documented = (name) => new RegExp(`\`(?:t\\.)?${name}[\`(\\s]`).test(text);
+  const used = new Map();
+  const use = (name, file, line) => {
+    if (!RUNNER_MEMBERS.has(name) && !used.has(name)) used.set(name, { file, line });
+  };
+  for (const map of maps) {
+    for (const [i, line] of readFileSync(map.file, 'utf8').split('\n').entries())
+      for (const m of line.matchAll(/(?:\$V|verify\.mjs)\s+do\s+([A-Za-z_]\w*)/g)) use(m[1], map.file, i + 1);
+    const dir = scenariosDirOf(map.file);
+    if (!existsSync(dir)) continue;
+    for (const file of readdirSync(dir).filter((f) => f.endsWith('.mjs')))
+      for (const [i, line] of readFileSync(path.join(dir, file), 'utf8').split('\n').entries())
+        for (const m of line.matchAll(/\bt\.([A-Za-z_]\w*)\b/g)) use(m[1], path.join(dir, file), i + 1);
+  }
+  return [...used]
+    .filter(([name]) => !documented(name))
+    .map(([name, { file, line }]) => ({ file, line, message: `tool ${name} is used but the verification Skill never names it (\`${name}\`)` }));
 }

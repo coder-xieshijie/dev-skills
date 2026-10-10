@@ -4,26 +4,33 @@
 //   run [target...] [--entry <e>] [--jobs N] [--evidence-dir D] [--launch '<json>'] [--detach]
 //   wait <evidence dir> [--timeout S]       blocks until a detached run ends, prints its summary
 //   look <evidence dir> <criterion id> pass|fail --why "<what the capture shows>"
+//   record <evidence dir> <criterion id> pass|fail|confirm --why "<what was observed>" [--file <capture>]
+//                                           a criterion judged by hand, into that directory's summary
 //   up --entry <e> [--launch '<json>']      start an instance by hand (for entries driven by hand)
 //   doctor [--run <id>]                     is this instance worth driving?
-//   do <tool> [--run <id>] ['<json args>']  call one of the entry adapter's tools on the instance
+//   do <tool> [--run <id>] ['<json args>']  call one of the entry adapter's tools on the instance;
+//                                           {field} in a string argument is that field of the instance
+//   page [--run <id>] [<path or url>] [--text "<wait for>"] [--timeout S] [--seconds N] [--name <n>]
+//                                           open a page of the instance in a headless browser: text + screenshot
 //   down [--run <id>] [--keep-data]         stop what this run started; keeps the evidence
-//   list                                    all instances started by hand, live or stopped
+//   list                                    instances started by hand on this machine, by every session:
+//                                           pass --run <runId> from your own up to doctor, do, page and down
+//   --skill-dir <dir>                       any command: the verification Skill to use (default: above this script)
+//   --help                                  this list
 
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { entryByName, loadConfig } from './config.mjs';
 import { checkMaps } from './map-check.mjs';
-import { defaultEvidenceDir, detach, loadAdapter, recordLook, runScenarios, waitRun } from './runner.mjs';
+import { defaultEvidenceDir, detach, loadAdapter, recordHand, recordLook, runScenarios, waitRun } from './runner.mjs';
 
 const HELP = readFileSync(fileURLToPath(import.meta.url), 'utf8')
   .split('\n')
   .filter((line) => line.startsWith('//   '))
-  .map((line) => line.slice(5))
-  .join('\n');
+  .map((line) => line.slice(5));
 
 function parse(argv) {
   const positional = [];
@@ -38,6 +45,21 @@ function parse(argv) {
 }
 
 const json = (value) => (value === undefined ? undefined : JSON.parse(value));
+
+// {field} in strings (deeply) becomes that field of the instance when it is a string or a number.
+function expandFields(value, instance) {
+  if (typeof value === 'string')
+    return value.replace(/\{([A-Za-z0-9_]+)\}/g, (whole, name) =>
+      ['string', 'number'].includes(typeof instance[name]) ? String(instance[name]) : whole,
+    );
+  if (Array.isArray(value)) return value.map((item) => expandFields(item, instance));
+  if (value && typeof value === 'object')
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, expandFields(item, instance)]));
+  return value;
+}
+
+// What `up` prints: the instance without its environment (that stays in the record file).
+const shown = ({ env, ...instance }) => instance;
 
 function runsRootOf(config) {
   const root = config.runsRoot
@@ -74,7 +96,7 @@ const save = (config, record) =>
 async function main() {
   const [command, ...rest] = process.argv.slice(2);
   const { positional, flags } = parse(rest);
-  if (!command || flags.help) return { ok: true, usage: HELP };
+  if (!command || ['--help', '-h', 'help'].includes(command) || flags.help) return { ok: true, usage: HELP };
   const config = loadConfig({ skillDir: flags['skill-dir'] ? path.resolve(flags['skill-dir']) : undefined });
 
   if (command === 'check') return checkMaps(config);
@@ -105,21 +127,29 @@ async function main() {
     return recordLook({ evidenceDir: path.resolve(dir), id, verdict, why: flags.why });
   }
 
+  if (command === 'record') {
+    const [dir, id, verdict] = positional;
+    if (!dir) throw new Error('record <evidence dir> <criterion id> pass|fail|confirm --why "..."');
+    mkdirSync(path.resolve(dir), { recursive: true });
+    return recordHand({ config, evidenceDir: realpathSync(path.resolve(dir)), id, verdict, why: flags.why, file: flags.file });
+  }
+
   if (command === 'up') {
     const entry = entryByName(config, flags.entry ?? '');
     if (!entry) throw new Error(`--entry is one of ${config.entryList.map((e) => e.slug).join(', ')}`);
     const { adapter, options } = await loadAdapter(config, entry.slug);
     const runId = `${entry.slug}-${Date.now().toString(36)}`;
-    const runDir = path.join(path.dirname(runsRootOf(config)), 'manual', runId);
+    let runDir = path.join(path.dirname(runsRootOf(config)), 'manual', runId);
     mkdirSync(runDir, { recursive: true });
+    runDir = realpathSync(runDir);
     const ctx = { runId, runDir, launch: json(flags.launch) ?? {}, options, root: config.root, log: () => {} };
     const instance = await adapter.up(ctx);
     const record = { runId, entry: entry.slug, runDir, launch: ctx.launch, instance, startedAt: new Date().toISOString() };
     save(config, record);
-    return { ok: true, runId, runDir, instance };
+    return { ok: true, runId, runDir, instance: shown(instance) };
   }
 
-  if (['doctor', 'do', 'down'].includes(command)) {
+  if (['doctor', 'do', 'down', 'page'].includes(command)) {
     const record = target(config, flags.run);
     const { adapter, options } = await loadAdapter(config, record.entry);
     const ctx = { runId: record.runId, runDir: record.runDir, launch: record.launch, options, root: config.root, log: () => {} };
@@ -131,16 +161,35 @@ async function main() {
       save(config, record);
       return { runId: record.runId, ...down };
     }
+    if (command === 'page') {
+      const { openPage } = await import('./page.mjs');
+      const instance = record.instance;
+      const target = expandFields(positional[0] ?? '{url}', instance);
+      if (!/^https?:/.test(target) && !instance.url) throw new Error('this instance has no url: pass a full URL');
+      const url = /^https?:/.test(target) ? target : new URL(target, instance.url).href;
+      const name = flags.name ?? `page-${new Date().toISOString().replace(/[:.]/g, '-')}`;
+      const page = await openPage({
+        url,
+        root: config.root,
+        outDir: record.runDir,
+        name,
+        waitText: flags.text,
+        timeout: Number(flags.timeout ?? 30),
+        seconds: Number(flags.seconds ?? 0),
+        headers: instance.headers,
+      });
+      return { runId: record.runId, ...page };
+    }
     const [tool, args] = positional;
     const { observationWindow, strictReader } = await import('./primitives.mjs');
     const window = observationWindow();
     const tools = adapter.tools(record.instance, { ...ctx, window, read: strictReader({ window, sideEffect: adapter.sideEffect }) });
     if (typeof tools[tool] !== 'function') throw new Error(`tools: ${Object.keys(tools).join(', ')}`);
-    return { ok: true, runId: record.runId, value: await tools[tool](...(json(args) ?? [])) };
+    return { ok: true, runId: record.runId, value: await tools[tool](...expandFields(json(args) ?? [], record.instance)) };
   }
 
   if (command === 'list') return { ok: true, instances: records(config) };
-  throw new Error(`unknown command ${command}\n${HELP}`);
+  throw new Error(`unknown command ${command}; --help lists them`);
 }
 
 main()

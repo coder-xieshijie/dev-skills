@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 
-import { BLOCKED, FAIL, PASS, TO_CONFIRM, UNVERIFIED, judge, recordLook, runScenarios } from '../runner.mjs';
+import { loadConfig } from '../config.mjs';
+import { BLOCKED, FAIL, PASS, TO_CONFIRM, UNVERIFIED, judge, recordHand, recordLook, runScenarios } from '../runner.mjs';
 import { SCRIPTS, makeRepo } from './helpers.mjs';
 
 const run = (repo, options = {}) =>
@@ -115,7 +116,72 @@ test('a used evidence directory is refused', async () => {
   await assert.rejects(run(repo, { targets: ['notes.list-empty'] }), /already holds a run/);
 });
 
-test('CLI: check, run --detach and wait, up / doctor / do / down twice', () => {
+test('an adapter whose tools() throws still has its instance stopped', async () => {
+  const repo = makeRepo();
+  const summary = await run(repo, { targets: ['notes.list-empty'], launchOverride: { failTools: true } });
+  const row = resultOf(summary, 'notes.list-empty.api');
+  assert.equal(row.result, UNVERIFIED);
+  assert.match(row.note, /^tools failed: failTools was set/);
+  const result = JSON.parse(readFileSync(path.join(repo.root, 'evidence', 'notes.list-empty.api', 'result.json'), 'utf8'));
+  assert.equal(result.down.ok, true);
+  assert.equal(existsSync(result.instance.dataDir), false);
+});
+
+test('paths reach adapters as real paths when the repository is reached through a symlink', async () => {
+  const repo = makeRepo();
+  const link = `${repo.root}-link`;
+  symlinkSync(repo.root, link);
+  const config = loadConfig({ skillDir: path.join(link, 'skill'), root: link });
+  assert.equal(config.root, realpathSync(repo.root));
+  const summary = await runScenarios({ config, targets: ['notes.list-empty'], evidenceDir: path.join(link, 'evidence') });
+  assert.equal(summary.evidenceDir, path.join(realpathSync(repo.root), 'evidence'));
+  const result = JSON.parse(readFileSync(path.join(repo.root, 'evidence', 'notes.list-empty.api', 'result.json'), 'utf8'));
+  assert.equal(result.instance.root, realpathSync(repo.root));
+  assert.equal(result.instance.runDir, path.join(realpathSync(repo.root), 'evidence', 'notes.list-empty.api'));
+});
+
+test('the summary names the dirty paths and the kit that measured the run', async () => {
+  const repo = makeRepo({ config: { kit: 'dev-skills test' } });
+  const git = (...args) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@example.invalid', ...args], { cwd: repo.root, stdio: 'ignore' });
+  git('init', '-q');
+  git('add', '-A');
+  git('commit', '-q', '-m', 'base');
+  writeFileSync(path.join(repo.root, 'patched.txt'), 'a counterexample patch');
+  const summary = await run(repo, { targets: ['notes.list-empty'] });
+  assert.equal(summary.version.dirty, true);
+  assert.ok(summary.version.dirtyPaths.includes('patched.txt'), summary.version.dirtyPaths);
+  assert.equal(summary.version.kit.from, 'dev-skills test');
+  assert.match(summary.version.kit.hash, /^[0-9a-f]{12}$/);
+});
+
+test('record: hand results are judged like a script result and land in the summary', async () => {
+  const repo = makeRepo();
+  const evidenceDir = path.join(repo.root, 'hand');
+  const record = (id, verdict) => recordHand({ config: repo.config, evidenceDir, id, verdict, why: `${id} seen` });
+  // One of two Web criteria recorded: the other keeps the result UNVERIFIED.
+  assert.deepEqual(record('notes.create#3', 'pass'), { ok: true, scenario: 'notes.create.web', result: UNVERIFIED, missing: ['notes.create#4'] });
+  assert.equal(record('notes.create#4', 'pass').result, PASS);
+  // A later verdict on the same criterion replaces the earlier one.
+  assert.equal(record('notes.create#3', 'fail').result, FAIL);
+  const summary = JSON.parse(readFileSync(path.join(evidenceDir, 'run-summary.json'), 'utf8'));
+  assert.deepEqual(summary.counts, { FAIL: 1 });
+  assert.equal(summary.results[0].hand, true);
+  assert.throws(() => record('notes.create#9', 'pass'), /no criterion notes.create#9/);
+});
+
+test('record: a criterion a script judged in that run is not overwritten by hand', async () => {
+  const repo = makeRepo();
+  const evidenceDir = path.join(repo.root, 'evidence');
+  await run(repo, { targets: ['notes.create'] });
+  assert.throws(
+    () => recordHand({ config: repo.config, evidenceDir, id: 'notes.create#1', verdict: 'fail', why: 'x' }),
+    /was run by a script/,
+  );
+  // A look criterion the script captured is recorded as `look` does.
+  assert.equal(recordHand({ config: repo.config, evidenceDir, id: 'notes.create#4', verdict: 'pass', why: 'beta once' }).result, PASS);
+});
+
+test('CLI: check, run --detach and wait, up / doctor / do / down twice, help', () => {
   const repo = makeRepo();
   const cli = (...args) => {
     try {
@@ -124,6 +190,9 @@ test('CLI: check, run --detach and wait, up / doctor / do / down twice', () => {
       return JSON.parse(error.stdout);
     }
   };
+  const help = cli('--help');
+  assert.equal(help.ok, true);
+  assert.ok(help.usage.some((line) => line.startsWith('--skill-dir')));
   assert.equal(cli('check').ok, true);
   const evidence = path.join(repo.root, 'detached');
   assert.equal(cli('run', 'notes.list-empty', '--evidence-dir', evidence, '--detach').detached, true);
@@ -131,11 +200,17 @@ test('CLI: check, run --detach and wait, up / doctor / do / down twice', () => {
   assert.equal(waited.allPass, true);
   const up = cli('up', '--entry', 'api');
   assert.equal(up.ok, true);
-  assert.equal(cli('doctor').ok, true);
-  assert.equal(cli('do', 'api', '["POST", "/notes", {"title": "x"}]').value.status, 201);
+  assert.equal(up.runDir, realpathSync(up.runDir));
+  assert.equal(cli('doctor', '--run', up.runId).ok, true);
+  assert.equal(cli('do', 'api', '--run', up.runId, '["POST", "/notes", {"title": "x"}]').value.status, 201);
   assert.equal(cli('do', 'read', '["/notes"]').value.notes.length, 1);
-  const down = cli('down');
+  // {field} in an argument is that field of the instance; unknown fields stay as written.
+  assert.deepEqual(cli('do', 'echo', '["{dataDir}/x", "{nope}"]').value, [`${up.instance.dataDir}/x`, '{nope}']);
+  const down = cli('down', '--run', up.runId);
   assert.equal(down.ok, true);
   assert.equal(cli('down', '--run', up.runId).already, 'stopped');
   assert.match(cli('doctor').error, /no live instance/);
+  assert.match(cli('bogus').error, /unknown command bogus; --help lists them/);
+  const hand = cli('record', path.join(repo.root, 'hand'), 'notes.create#3', 'pass', '--why', 'beta is listed');
+  assert.deepEqual(hand, { ok: true, scenario: 'notes.create.web', result: UNVERIFIED, missing: ['notes.create#4'] });
 });

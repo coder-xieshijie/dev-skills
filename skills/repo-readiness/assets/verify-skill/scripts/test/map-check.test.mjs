@@ -4,7 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 
 import { checkMaps } from '../map-check.mjs';
-import { MAP, makeRepo, write } from './helpers.mjs';
+import { INDEX, MAP, makeRepo, write } from './helpers.mjs';
 
 const problemsOf = (repo) => checkMaps(repo.config).problems.map((p) => `${p.check}: ${p.message}`);
 const mapFile = (repo) => path.join(repo.mapDir, 'notes.md');
@@ -122,4 +122,25 @@ export async function run(t) {
 test('a shared step that checks criteria is reported', () => {
   const repo = makeRepo({ scripts: { '_steps.mjs': "export const done = (t) => t.criterion('notes.create#1', true);\n" } });
   assert.ok(problemsOf(repo).includes('script: criteria are checked in the scenario script, not a shared step'));
+});
+
+test('a source without requirement ids is named as a code span; linked, it must have id headings', () => {
+  const unlinked = makeRepo({
+    files: { 'skill/features/README.md': INDEX.replace('[spec.md](../../docs/notes/spec.md)', '`docs/notes/design.md`, `src/notes.ts`') },
+  });
+  assert.deepEqual(checkMaps(unlinked.config).problems, []);
+  assert.deepEqual(checkMaps(unlinked.config).specs, []);
+  const linked = makeRepo({ files: { 'docs/notes/spec.md': '# Notes\n\nNotes are created and listed.\n' } });
+  assert.ok(problemsOf(linked).some((p) => /^spec: no requirement id headings .* as a code span, not a link$/.test(p)));
+});
+
+test('a tool scripts or maps use that the verification Skill never names is a warning', () => {
+  const repo = makeRepo({ files: { 'skill/SKILL.md': '# Verify\n\n- `api(method, path, body)`: an action.\n' } });
+  editMap(repo, '- Titles are required', '- Inspect with `node $V do dump`. Titles are required');
+  const result = checkMaps(repo.config);
+  assert.equal(result.ok, true);
+  assert.deepEqual(
+    result.warnings.map((w) => w.message).sort(),
+    ['tool dump is used but the verification Skill never names it (`dump`)', 'tool read is used but the verification Skill never names it (`read`)'],
+  );
 });

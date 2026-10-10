@@ -74,3 +74,19 @@ test('until stops at the first wanted value; hold fails as soon as the value lea
   const held = await waiters.hold(async () => (n++ < 2 ? 0 : 1), 0, 10, { interval: 1 });
   assert.equal(held.ok, false);
 });
+
+test('a window cannot open while a side-effect read is still in flight', async () => {
+  const window = observationWindow();
+  const read = strictReader({ window, sideEffect: (what) => (what === 'queue' ? 'clears the pause' : undefined) });
+  let finish;
+  const pending = read('queue', () => new Promise((resolve) => (finish = resolve)));
+  // Counterexample: the read began before the wait, so the wait must not observe the state it changes.
+  const waiters = waitersFor({ sleep: async () => {}, window });
+  await assert.rejects(waiters.hold(async () => 0, 0, 1), WindowError);
+  finish(1);
+  assert.equal(await pending, 1);
+  // Once it has finished, the window opens; a read without a side effect never blocks it.
+  const slow = read('status', () => new Promise((resolve) => setImmediate(() => resolve(2))));
+  assert.equal((await waiters.until(async () => 'x', 'x', { timeout: 1 })).ok, true);
+  assert.equal(await slow, 2);
+});

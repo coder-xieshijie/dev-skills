@@ -132,11 +132,15 @@ export function waitersFor({ sleep, now = () => Date.now(), window }) {
   };
 }
 
-// The window state a runner shares between the waiters and the adapter's reads.
+// The window state a runner shares between the waiters and the adapter's reads. Opening a window
+// while a side-effect read is still in flight is refused too: that read could change the state the
+// window is about to observe.
 export function observationWindow() {
   let depth = 0;
+  const inFlight = new Map();
   return {
     open: () => {
+      if (inFlight.size) throw new WindowError(`${[...inFlight.values()].join(', ')} was still in flight when the window opened`);
       depth += 1;
     },
     close: () => {
@@ -144,6 +148,11 @@ export function observationWindow() {
     },
     get isOpen() {
       return depth > 0;
+    },
+    effectStarted: (what) => {
+      const token = Symbol(what);
+      inFlight.set(token, what);
+      return () => inFlight.delete(token);
     },
   };
 }
@@ -154,11 +163,14 @@ export function strictReader({ window, sideEffect = () => undefined }) {
   return async function read(what, fn) {
     const effect = sideEffect(what);
     if (effect && window.isOpen) throw new WindowError(`${what} (${effect})`);
+    const done = effect ? window.effectStarted?.(`${what} (${effect})`) : undefined;
     try {
       return await fn();
     } catch (error) {
       if (error instanceof EvidenceError || error instanceof WindowError) throw error;
       throw new EvidenceError(`${what}: ${error.message}`);
+    } finally {
+      done?.();
     }
   };
 }

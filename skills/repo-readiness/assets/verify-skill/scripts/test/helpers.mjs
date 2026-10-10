@@ -1,5 +1,6 @@
 // Builds a throwaway repository with one feature map, its spec and scenario scripts, wired to the
-// toy notes service. Tests change single files to produce each problem or result.
+// notes stand-in adapter (fixture/notes-entry.mjs). Tests change single files to produce each
+// problem or result; `files` adds or replaces files by path relative to the repository root.
 
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
@@ -63,7 +64,7 @@ export const SPEC = `# Notes spec
 
 export const INDEX = `# Feature maps
 
-| Feature | Map | Spec | Scripted | Content |
+| Feature | Map | Spec | Also scripted | Content |
 |---|---|---|---|---|
 | Notes | [notes.md](../../docs/notes/feature-map/notes.md) | [spec.md](../../docs/notes/spec.md) | API, Web | create, list |
 `;
@@ -100,28 +101,26 @@ export async function run(t) {
 `,
 };
 
-export function makeRepo({ config: extra = {}, scripts = {} } = {}) {
+export function makeRepo({ config: extra = {}, scripts = {}, files = {} } = {}) {
   const root = mkdtempSync(path.join(os.tmpdir(), 'verify-kit-'));
   const skillDir = path.join(root, 'skill');
   const mapDir = path.join(root, 'docs', 'notes', 'feature-map');
   mkdirSync(path.join(skillDir, 'features'), { recursive: true });
   mkdirSync(path.join(mapDir, 'scenarios'), { recursive: true });
-  const toy = path.join(here, 'fixture', 'toy-app.mjs');
   const config = {
     index: 'features/README.md',
     mapRoots: ['docs'],
     entries: {
       api: {
         name: 'API',
-        adapter: path.join(SCRIPTS, 'entries', 'http-service.mjs'),
-        options: { command: ['node', toy], invalidWhen: '^LOGIN LOST' },
+        adapter: path.join(here, 'fixture', 'notes-entry.mjs'),
+        options: { invalidWhen: '^LOGIN LOST' },
       },
       web: {
         name: 'Web',
         ui: true,
         max: 1,
         adapter: path.join(here, 'fixture', 'web-entry.mjs'),
-        options: { command: ['node', toy] },
       },
     },
     scripted: ['api'],
@@ -135,6 +134,10 @@ export function makeRepo({ config: extra = {}, scripts = {} } = {}) {
   writeFileSync(path.join(mapDir, 'notes.md'), MAP);
   for (const [name, text] of Object.entries({ ...SCRIPTS_BY_NAME, ...scripts }))
     if (text !== null) writeFileSync(path.join(mapDir, 'scenarios', name), text);
+  for (const [name, text] of Object.entries(files)) {
+    mkdirSync(path.dirname(path.join(root, name)), { recursive: true });
+    writeFileSync(path.join(root, name), text);
+  }
   return { root, skillDir, mapDir, config: loadConfig({ skillDir, root }) };
 }
 

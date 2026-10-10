@@ -14,11 +14,12 @@
 // once more; a valid FAIL, BLOCKED or timeout never does.
 
 import { execFileSync, spawn } from 'node:child_process';
-import { existsSync, mkdirSync, openSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, openSync, readFileSync, readdirSync, realpathSync, renameSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import { kitHash } from './config.mjs';
 import { criteriaOf, listMaps, looksOf, mapScenarios, parseMap } from './map-check.mjs';
 import {
   EvidenceError,
@@ -43,16 +44,31 @@ const RETRY_WHEN = /^(instance did not start|doctor failed|invalid run)/;
 class Stop extends Error {}
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// The product version a result was measured on: the commit, and which paths differ from it (an
+// uncommitted verification Skill and a patched product both make a tree dirty; the paths tell them apart).
 export function versionOf(root) {
   try {
     const git = (args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
     const head = git(['rev-parse', 'HEAD']).trim();
-    const dirty = git(['status', '--porcelain']).trim() !== '';
-    return { head, dirty };
+    const changed = git(['status', '--porcelain', '--untracked-files=normal'])
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => line.slice(3));
+    return {
+      head,
+      dirty: changed.length > 0,
+      ...(changed.length ? { dirtyPaths: changed.slice(0, 20), ...(changed.length > 20 ? { dirtyCount: changed.length } : {}) } : {}),
+    };
   } catch {
     return { head: null, dirty: null };
   }
 }
+
+// The version of the product and of the ruler: results with another kit hash do not count for this one.
+export const runVersion = (config) => ({
+  ...versionOf(config.root),
+  kit: { from: config.kit ?? null, hash: kitHash(config) },
+});
 
 // The result, in this order: an error or unreadable evidence -> UNVERIFIED; a failed precondition ->
 // BLOCKED; nothing checked -> UNVERIFIED; a criterion that does not hold -> FAIL; a criterion left
@@ -193,12 +209,19 @@ async function attempt({ config, item, runDir, launchOverride, sleepFn = sleep }
     criteria.set(id, { id, ok: Boolean(ok), confirm, ...(detail !== undefined ? { detail } : {}) });
     return Boolean(ok);
   };
+  let tools;
+  try {
+    tools = adapter.tools(instance, ctx);
+  } catch (error) {
+    record.down = await adapter.down(instance, ctx).catch((e) => ({ ok: false, error: e.message }));
+    return finish(record, runDir, started, { error: `tools failed: ${error.message}` });
+  }
   const t = {
     id: item.id,
     entry: item.entry,
     runDir,
     instance,
-    ...adapter.tools(instance, ctx),
+    ...tools,
     ...waitersFor({ sleep: sleepFn, window }),
     select: { after, before, between },
     precondition(name, ok, detail) {
@@ -323,7 +346,7 @@ function summarize(config, results, startedAt) {
     ok: results.every((result) => result.result !== UNVERIFIED),
     allPass: results.length > 0 && results.every((result) => result.result === PASS),
     counts,
-    version: versionOf(config.root),
+    version: runVersion(config),
     startedAt,
     seconds: Math.round((Date.now() - Date.parse(startedAt)) / 1000),
     results: rows,
@@ -338,6 +361,7 @@ export async function runScenarios({ config, targets, entry, jobs, evidenceDir, 
   if (existsSync(path.join(evidenceDir, 'run-summary.json')))
     throw new Error(`${evidenceDir} already holds a run; use a new --evidence-dir`);
   mkdirSync(evidenceDir, { recursive: true });
+  evidenceDir = realpathSync(evidenceDir);
   const timeoutOf = async (item) => (await import(pathToFileURL(item.file).href)).scenario?.timeoutSeconds ?? DEFAULT_TIMEOUT;
   const withTimeouts = await Promise.all(items.map(async (item) => ({ ...item, timeout: await timeoutOf(item) })));
   withTimeouts.sort((a, b) => b.timeout - a.timeout);
@@ -355,6 +379,24 @@ export async function runScenarios({ config, targets, entry, jobs, evidenceDir, 
   const summary = summarize(config, results, startedAt);
   writeFileSync(path.join(evidenceDir, 'run-summary.json'), `${JSON.stringify(summary, null, 2)}\n`);
   return { evidenceDir, ...summary };
+}
+
+// Writes one scenario's result into the run summary, adding the row when the scenario is new.
+function updateSummary(evidenceDir, result, version) {
+  const file = path.join(evidenceDir, 'run-summary.json');
+  const summary = existsSync(file)
+    ? JSON.parse(readFileSync(file, 'utf8'))
+    : { version, startedAt: new Date().toISOString(), results: [], firstAttemptFail: [], leaked: [] };
+  const row = { scenario: result.scenario, result: result.result, note: result.note, ...(result.hand ? { hand: true } : {}) };
+  const index = summary.results.findIndex((r) => r.scenario === result.scenario);
+  if (index >= 0) summary.results[index] = { ...summary.results[index], ...row };
+  else summary.results.push(row);
+  summary.results.sort((a, b) => a.scenario.localeCompare(b.scenario));
+  summary.counts = {};
+  for (const r of summary.results) summary.counts[r.result] = (summary.counts[r.result] ?? 0) + 1;
+  summary.ok = summary.results.every((r) => r.result !== UNVERIFIED);
+  summary.allPass = summary.results.every((r) => r.result === PASS);
+  writeFileSync(file, `${JSON.stringify(summary, null, 2)}\n`);
 }
 
 // `look`: records an agent's verdict on a look criterion and re-judges that scenario and the summary.
@@ -377,20 +419,67 @@ export function recordLook({ evidenceDir, id, verdict, why }) {
       result.note = noteOf(result);
     }
     writeFileSync(file, `${JSON.stringify(result, null, 2)}\n`);
-    const summaryFile = path.join(evidenceDir, 'run-summary.json');
-    if (existsSync(summaryFile)) {
-      const summary = JSON.parse(readFileSync(summaryFile, 'utf8'));
-      const row = summary.results.find((r) => r.scenario === result.scenario);
-      Object.assign(row, { result: result.result, note: result.note });
-      summary.counts = {};
-      for (const r of summary.results) summary.counts[r.result] = (summary.counts[r.result] ?? 0) + 1;
-      summary.ok = summary.results.every((r) => r.result !== UNVERIFIED);
-      summary.allPass = summary.results.every((r) => r.result === PASS);
-      writeFileSync(summaryFile, `${JSON.stringify(summary, null, 2)}\n`);
-    }
+    if (existsSync(path.join(evidenceDir, 'run-summary.json'))) updateSummary(evidenceDir, result);
     return { ok: true, scenario: result.scenario, result: result.result };
   }
   throw new Error(`no look criterion ${id} in ${evidenceDir}`);
+}
+
+// `record`: a criterion judged by hand (an entry without scripts), written into an evidence
+// directory as `<sub-feature>.<entry slug>/result.json` and the run summary, judged like a script's
+// result: criteria of that sub-feature and entry not recorded yet keep it UNVERIFIED. A look
+// criterion a script already captured in this directory is recorded as by `look`.
+export function recordHand({ config, evidenceDir, id, verdict, why, file }) {
+  if (!['pass', 'fail', 'confirm'].includes(verdict)) throw new Error('verdict is pass, fail or confirm');
+  if (!why) throw new Error('--why says what was observed');
+  let found;
+  for (const mapFile of listMaps(config).linked.keys()) {
+    if (!existsSync(mapFile)) continue;
+    const map = parseMap(mapFile, config);
+    const criterion = map.criteria.find((c) => c.id === id);
+    if (criterion) found = { map, criterion };
+  }
+  if (!found) throw new Error(`no criterion ${id} in the maps`);
+  const { map, criterion } = found;
+  const slug = config.entryList.find((e) => e.name === criterion.entry).slug;
+  const scenario = `${criterion.subfeature}.${slug}`;
+  const dir = path.join(evidenceDir, scenario);
+  const resultFile = path.join(dir, 'result.json');
+  const existing = existsSync(resultFile) ? JSON.parse(readFileSync(resultFile, 'utf8')) : null;
+  if (existing && !existing.hand) {
+    if (criterion.look && verdict !== 'confirm') return recordLook({ evidenceDir, id, verdict, why });
+    throw new Error(`${scenario} was run by a script in ${evidenceDir}; record hand results in another directory`);
+  }
+  if (file && !existsSync(file)) throw new Error(`${file} does not exist`);
+  mkdirSync(dir, { recursive: true });
+  const version = runVersion(config);
+  const result = existing ?? {
+    scenario,
+    id: criterion.subfeature,
+    entry: criterion.entry,
+    hand: true,
+    version,
+    expected: criteriaOf(map, criterion.subfeature, criterion.entry),
+    preconditions: [],
+    criteria: [],
+    unreadable: [],
+    notes: [],
+  };
+  result.criteria = result.criteria.filter((c) => c.id !== id);
+  result.criteria.push({
+    id,
+    ok: verdict !== 'fail',
+    confirm: verdict === 'confirm',
+    detail: why,
+    recordedAt: new Date().toISOString(),
+    ...(file ? { file: path.resolve(file) } : {}),
+  });
+  result.missing = result.expected.filter((cid) => !result.criteria.some((c) => c.id === cid));
+  result.result = judge(result);
+  result.note = noteOf(result);
+  writeFileSync(resultFile, `${JSON.stringify(result, null, 2)}\n`);
+  updateSummary(evidenceDir, result, version);
+  return { ok: true, scenario, result: result.result, missing: result.missing };
 }
 
 export function defaultEvidenceDir(config) {
