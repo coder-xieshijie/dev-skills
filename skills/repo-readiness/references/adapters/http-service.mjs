@@ -1,6 +1,8 @@
-// Entry adapter for an app driven over HTTP: starts one isolated instance (own port, own data
-// directory, its identity proven by health), checks it, gives scripts `api` (actions) and `read`
-// (strict evidence reads), and stops only the processes that belong to it.
+// Example entry adapter for an app driven over HTTP: starts one isolated instance (own port, own
+// data directory, its identity proven by health), checks it, gives scripts `api` (actions), `read`
+// (strict evidence reads) and `page` (a page in a headless browser), and stops only the processes
+// that belong to it. Copy it to scripts/entries/<slug>.mjs with _process.mjs (and _page.mjs for
+// pages) and change what your product needs; the kit's contract test runs on the copy.
 // Options (verify.config.json, entries.<slug>.options):
 //   command        ["node", "server.js", "--port", "{port}", "--data", "{dataDir}"]
 //                  how to start the app (cwd: repository root, or `cwd`). {root}, {port}, {dataDir},
@@ -23,15 +25,15 @@
 //   readySeconds   30
 //   invalidWhen    "<regex>"                a line in the app log that voids the run (lost login, ...)
 //   sideEffectReads ["<regex>"]             GET paths that change state: refused inside a window
-// Doctor reads back what this adapter can see. Reading back the app's effective config and checking
-// credentials are product-specific: add them in a copy of this file for your entry.
+// Doctor reads back what this adapter can see. Reading back the app's effective config, checking
+// credentials and proving each replaced external system is the one the app calls are your product's
+// own checks: add them to doctor in your copy.
 
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { closeSync, existsSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-import { pick, strictBody } from '../primitives.mjs';
 import {
   alive,
   buildChecks,
@@ -47,6 +49,7 @@ import {
 } from './_process.mjs';
 
 const DEFAULT_IDENTITY = { field: 'runId', equals: '{runId}' };
+const pick = (value, field) => String(field).split('.').reduce((current, key) => current?.[key], value);
 
 async function request(instance, apiPath, { method = 'GET', body, headers = instance.headers } = {}) {
   try {
@@ -70,6 +73,13 @@ async function request(instance, apiPath, { method = 'GET', body, headers = inst
 }
 
 const is2xx = (response) => response.status >= 200 && response.status < 300;
+
+// The body of a response, or an error: inside ctx.read, any error makes the evidence unreadable.
+function bodyOf(response, what) {
+  if (!is2xx(response)) throw new Error(`${what} returned ${response.status ? `HTTP ${response.status}` : (response.error ?? 'no response')}`);
+  if (response.body === undefined || response.body === null) throw new Error(`${what} returned no body`);
+  return response.body;
+}
 const usesToken = (options) => JSON.stringify(options.headers ?? {}).includes('{token}');
 
 function identityOf(options) {
@@ -169,7 +179,7 @@ export function sideEffect(what) {
   return what.endsWith('(side effect)') ? 'listed in options.sideEffectReads' : undefined;
 }
 
-export function tools(instance, { runDir, read, options = {} }) {
+export function tools(instance, { runDir, read, root, options = {} }) {
   const effects = (options.sideEffectReads ?? []).map((pattern) => new RegExp(pattern));
   const requests = path.join(runDir, 'requests.jsonl');
   const record = (entry) => writeFileSync(requests, `${JSON.stringify({ at: new Date().toISOString(), ...entry })}\n`, { flag: 'a' });
@@ -187,8 +197,27 @@ export function tools(instance, { runDir, read, options = {} }) {
       return read(effect ? `GET ${apiPath} (side effect)` : `GET ${apiPath}`, async () => {
         const response = await request(instance, apiPath);
         record({ method: 'GET', path: apiPath, status: response.status, evidence: true });
-        return strictBody(response, `GET ${apiPath}`);
+        return bodyOf(response, `GET ${apiPath}`);
       });
     },
+    // Evidence: a page of the instance (a path, or a full URL) opened in a headless browser with the
+    // run's headers. Waits up to `timeout` seconds for `text`, then `seconds` more, and saves the
+    // visible text and a full-page screenshot as <runDir>/<name>.txt and .png. Text that never
+    // appears is `ok: false` with why; a page that does not load is unreadable. Needs Playwright in
+    // the repository (_page.mjs).
+    page: (target = '/', { text, timeout = 30, seconds = 0, name } = {}) =>
+      read(`page ${target}`, async () => {
+        const { openPage } = await import('./_page.mjs');
+        const url = /^https?:/.test(target) ? target : new URL(target, instance.url).href;
+        const file = name ?? `page-${new Date().toISOString().replace(/[:.]/g, '-')}`;
+        return openPage({ url, root, outDir: runDir, name: file, waitText: text, timeout, seconds, headers: instance.headers });
+      }),
   };
+}
+
+// A screenshot for a look criterion: `name` is the page path to open ("/" when it is not a path).
+export async function capture(instance, name, ctx) {
+  const target = name.startsWith('/') ? name : '/';
+  const shot = await tools(instance, ctx).page(target, { name: `look-${name.replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+/, '')}` });
+  return shot.screenshot;
 }

@@ -5,41 +5,23 @@
   "entries": {
     "api": {
       "name": "API",
-      "adapter": "scripts/entries/http-service.mjs",
-      "options": {
-        "command": ["node", "{root}/server.js", "--port", "{port}", "--data", "{dataDir}"],
-        "health": "/health",
-        "identity": { "field": "runId", "equals": "{runId}" },
-        "env": { "NODE_ENV": "test" },
-        "builds": [],
-        "readySeconds": 60,
-        "invalidWhen": "^AUTH LOST",
-        "sideEffectReads": []
-      }
+      "adapter": "scripts/entries/api.mjs",
+      "options": {},
+      "contract": { "read": ["read", "/health"], "doctorChecks": [] }
     },
     "web": {
       "name": "Web",
       "ui": true,
       "max": 4,
-      "adapter": "scripts/entries/http-service.mjs",
-      "options": {
-        "command": ["node", "{root}/server.js", "--port", "{port}", "--data", "{dataDir}"],
-        "health": "/health",
-        "readySeconds": 60
-      }
+      "adapter": "scripts/entries/web.mjs",
+      "options": {},
+      "contract": { "read": ["read", "/health"], "doctorChecks": [] }
     },
     "cli": {
       "name": "CLI",
       "adapter": "scripts/entries/cli.mjs",
-      "options": {
-        "command": ["node", "{root}/bin/cli.js"],
-        "dirs": [],
-        "env": {},
-        "builds": [],
-        "pidRecords": [],
-        "keep": [],
-        "sideEffectCommands": []
-      }
+      "options": {},
+      "contract": { "read": ["query", ["--version"]], "doctorChecks": [] }
     }
   },
   "scripted": [],

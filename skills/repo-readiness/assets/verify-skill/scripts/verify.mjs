@@ -12,11 +12,9 @@
 //   doctor [--run <id>]                     is this instance worth driving?
 //   do <tool> [--run <id>] ['<json args>']  call one of the entry adapter's tools on the instance;
 //                                           {field} in a string argument is that field of the instance
-//   page [--run <id>] [<path or url>] [--text "<wait for>"] [--timeout S] [--seconds N] [--name <n>]
-//                                           open a page of the instance in a headless browser: text + screenshot
 //   down [--run <id>] [--keep-data]         stop what this run started; keeps the evidence
 //   list                                    instances started by hand on this machine, by every session:
-//                                           pass --run <runId> from your own up to doctor, do, page and down
+//                                           pass --run <runId> from your own up to doctor, do and down
 //   --skill-dir <dir>                       any command: the verification Skill to use (default: above this script)
 //   --help                                  this list
 
@@ -160,7 +158,7 @@ async function main() {
     return { ok: true, runId, runDir, instance: shown(instance) };
   }
 
-  if (['doctor', 'do', 'down', 'page'].includes(command)) {
+  if (['doctor', 'do', 'down'].includes(command)) {
     const record = target(config, flags.run);
     const { adapter, options } = await loadAdapter(config, record.entry);
     const ctx = { runId: record.runId, runDir: record.runDir, launch: record.launch, options, root: config.root, log: () => {} };
@@ -171,25 +169,6 @@ async function main() {
       Object.assign(record, { stoppedAt: new Date().toISOString(), kept: down.kept ?? [] });
       save(config, record);
       return { runId: record.runId, ...down };
-    }
-    if (command === 'page') {
-      const { openPage } = await import('./page.mjs');
-      const instance = record.instance;
-      const target = expandFields(positional[0] ?? '{url}', instance);
-      if (!/^https?:/.test(target) && !instance.url) throw new Error('this instance has no url: pass a full URL');
-      const url = /^https?:/.test(target) ? target : new URL(target, instance.url).href;
-      const name = flags.name ?? `page-${new Date().toISOString().replace(/[:.]/g, '-')}`;
-      const page = await openPage({
-        url,
-        root: config.root,
-        outDir: record.runDir,
-        name,
-        waitText: flags.text,
-        timeout: Number(flags.timeout ?? 30),
-        seconds: Number(flags.seconds ?? 0),
-        headers: instance.headers,
-      });
-      return { runId: record.runId, ...page };
     }
     const [tool, args] = positional;
     const { observationWindow, strictReader } = await import('./primitives.mjs');

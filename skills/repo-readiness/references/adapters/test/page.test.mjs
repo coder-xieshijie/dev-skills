@@ -6,14 +6,15 @@ import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
-import { EvidenceError } from '../primitives.mjs';
-import { loadPlaywright, openPage } from '../page.mjs';
-import { SCRIPTS, makeRepo } from './helpers.mjs';
+import { SCRIPTS, makeRepo } from '../../../assets/verify-skill/scripts/test/helpers.mjs';
+import { loadPlaywright, openPage } from '../_page.mjs';
 
-// Runs only where Playwright resolves: from the repository (as `verify.mjs page` uses it), or from
-// VERIFY_KIT_PLAYWRIGHT_ROOT, a directory whose node_modules has it.
-const root = process.env.VERIFY_KIT_PLAYWRIGHT_ROOT ?? path.resolve(SCRIPTS, '..');
+// The page helper and the HTTP example's `page` tool. Runs only where Playwright resolves: from
+// VERIFY_KIT_PLAYWRIGHT_ROOT, a directory whose node_modules has it, or from this directory.
+const here = path.dirname(fileURLToPath(import.meta.url));
+const root = process.env.VERIFY_KIT_PLAYWRIGHT_ROOT ?? here;
 let skip = false;
 try {
   createRequire(path.join(root, 'package.json')).resolve('playwright');
@@ -50,8 +51,8 @@ test('page: waits for text that appears later, saves text and a screenshot', { s
     const missing = await openPage({ url, root, outDir, name: 'missing', waitText: 'failed', timeout: 2, headers });
     assert.equal(missing.ok, false);
     assert.match(missing.why, /"failed" did not appear within 2s/);
-    // A page that does not load is unreadable, never an empty page.
-    await assert.rejects(openPage({ url, root, outDir, name: 'denied' }), EvidenceError);
+    // A page that does not load throws (inside ctx.read: unreadable), never an empty page.
+    await assert.rejects(openPage({ url, root, outDir, name: 'denied' }), /returned HTTP 401/);
   } finally {
     server.close();
   }
@@ -71,14 +72,14 @@ test('page: a repository without Playwright gets a message that says what to do'
   await assert.rejects(loadPlaywright(empty), /Playwright is not installed in .*host's browser tool/);
 });
 
-const httpAdapter = path.join(SCRIPTS, 'entries', 'http-service.mjs');
-test('verify.mjs page drives a hand instance and record files the verdict with its capture', { skip: skip || (!existsSync(httpAdapter) && 'entries/http-service.mjs was removed') }, () => {
+const httpAdapter = path.join(here, '..', 'http-service.mjs');
+test('do page drives a hand instance and record files the verdict with its capture', { skip }, () => {
   const repo = makeRepo();
   // The repository's own Playwright, as a target repository would have it.
   symlinkSync(path.join(root, 'node_modules'), path.join(repo.root, 'node_modules'));
-  const api = JSON.parse(readFileSync(path.join(repo.skillDir, 'verify.config.json'), 'utf8'));
-  api.entries.web = { name: 'Web', ui: true, adapter: httpAdapter, options: { command: ['node', path.join(SCRIPTS, 'test', 'fixture', 'toy-app.mjs')] } };
-  writeFileSync(path.join(repo.skillDir, 'verify.config.json'), JSON.stringify(api));
+  const config = JSON.parse(readFileSync(path.join(repo.skillDir, 'verify.config.json'), 'utf8'));
+  config.entries.web = { name: 'Web', ui: true, adapter: httpAdapter, options: { command: ['node', path.join(here, 'fixture', 'toy-app.mjs')] } };
+  writeFileSync(path.join(repo.skillDir, 'verify.config.json'), JSON.stringify(config));
   const cli = (...args) => {
     try {
       return JSON.parse(execFileSync('node', [path.join(SCRIPTS, 'verify.mjs'), ...args, '--skill-dir', repo.skillDir], { encoding: 'utf8' }));
@@ -89,7 +90,7 @@ test('verify.mjs page drives a hand instance and record files the verdict with i
   const up = cli('up', '--entry', 'web');
   try {
     assert.equal(cli('do', 'api', '--run', up.runId, '["POST", "/notes", {"title": "beta"}]').value.status, 201);
-    const page = cli('page', '--run', up.runId, '/notes', '--text', 'beta', '--name', 'list');
+    const page = cli('do', 'page', '--run', up.runId, '["/notes", {"text": "beta", "name": "list"}]').value;
     assert.equal(page.ok, true);
     assert.equal(page.screenshot, path.join(up.runDir, 'list.png'));
     const evidence = path.join(repo.root, 'hand');
@@ -100,4 +101,26 @@ test('verify.mjs page drives a hand instance and record files the verdict with i
   } finally {
     cli('down', '--run', up.runId);
   }
+});
+
+test('capture: a look criterion gets a screenshot of the page its name gives', { skip }, async () => {
+  const { runScenarios } = await import('../../../assets/verify-skill/scripts/runner.mjs');
+  const repo = makeRepo({
+    scripts: {
+      'notes.create.web.mjs': `export const scenario = { id: 'notes.create', entry: 'Web', timeoutSeconds: 60 };
+export async function run(t) {
+  await t.api('POST', '/notes', { title: 'beta' });
+  t.criterion('notes.create#3', (await t.read('/notes')).notes.some((note) => note.title === 'beta'));
+  await t.look('notes.create#4', '/notes', 'the list shows beta exactly once');
+}
+`,
+    },
+  });
+  symlinkSync(path.join(root, 'node_modules'), path.join(repo.root, 'node_modules'));
+  const web = repo.config.entryList.find((entry) => entry.slug === 'web');
+  Object.assign(web, { adapter: httpAdapter, options: { command: ['node', path.join(here, 'fixture', 'toy-app.mjs')] } });
+  const summary = await runScenarios({ config: repo.config, targets: ['notes.create.web'], evidenceDir: path.join(repo.root, 'evidence') });
+  assert.match(summary.results[0].note, /awaits look: .*look-notes\.png/);
+  const result = JSON.parse(readFileSync(path.join(repo.root, 'evidence', 'notes.create.web', 'result.json'), 'utf8'));
+  assert.equal(existsSync(result.criteria.find((c) => c.look).look.file), true);
 });
