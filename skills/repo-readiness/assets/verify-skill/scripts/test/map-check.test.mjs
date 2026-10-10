@@ -144,3 +144,40 @@ test('a tool scripts or maps use that the verification Skill never names is a wa
     ['tool dump is used but the verification Skill never names it (`dump`)', 'tool read is used but the verification Skill never names it (`read`)'],
   );
 });
+
+test('a result tied to a date, a commit or a count is a run record, in a map or in the verification Skill', () => {
+  const repo = makeRepo({
+    files: {
+      'skill/SKILL.md': '# Verify\n\nEvery sub-feature gets one result: PASS, FAIL, BLOCKED, UNVERIFIED or TO-CONFIRM.\n\nLast full run: 18 PASS, 1 TO-CONFIRM.\n',
+      'skill/references/runs.md': '| Scenario | Commit | Result |\n|---|---|---|\n| notes.create.api | `a1b2c3d` | FAIL |\n',
+    },
+  });
+  editMap(repo, '## Not covered', '| 2026-10-10 | notes.create | PASS |\n\n## Not covered');
+  const status = checkMaps(repo.config).problems.filter((p) => p.check === 'status').map((p) => `${p.file}:${p.line}`);
+  assert.deepEqual(status.sort(), ['docs/notes/feature-map/notes.md:37', 'skill/SKILL.md:5', 'skill/references/runs.md:3']);
+});
+
+test('product states and result words on their own are not run records', () => {
+  const repo = makeRepo({
+    files: {
+      'skill/SKILL.md':
+        '# Verify\n\nEvery sub-feature gets one result (PASS, FAIL, BLOCKED, UNVERIFIED, TO-CONFIRM). `jobs` is 4: measured on 2026-10-10 at base 9bf101a. `ok` means nothing is UNVERIFIED.\n\nSmoke: `node $V run notes` gives PASS for every scenario.\n',
+    },
+  });
+  editMap(
+    repo,
+    '- Titles are required',
+    '- A failed save shows FAILED, and since 2026-01-01 an archived note answers `BLOCKED` with code `409`.\n- When the owner has not answered, `notes.create#2` is recorded as TO-CONFIRM.\n- Titles are required',
+  );
+  assert.deepEqual(problemsOf(repo), []);
+});
+
+test('an AGENTS.md or CLAUDE.md that does not name the verification Skill is a warning', () => {
+  const agents = (repo) => checkMaps(repo.config).warnings.filter((w) => w.check === 'agents').map((w) => w.file);
+  assert.deepEqual(agents(makeRepo()), []);
+  assert.deepEqual(agents(makeRepo({ files: { 'AGENTS.md': '# Agents\n\nRun the tests.\n', 'CLAUDE.md': '# Claude\n' } })), ['AGENTS.md', 'CLAUDE.md']);
+  assert.deepEqual(agents(makeRepo({ files: { 'AGENTS.md': '# Agents\n', 'CLAUDE.md': '@AGENTS.md\n' } })), ['AGENTS.md']);
+  const linked = makeRepo({ files: { 'AGENTS.md': '# Agents\n\nVerify a change with [skill](skill/SKILL.md).\n', 'CLAUDE.md': '@AGENTS.md\n' } });
+  assert.deepEqual(agents(linked), []);
+  assert.equal(checkMaps(linked.config).ok, true);
+});

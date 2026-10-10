@@ -12,9 +12,14 @@
 //   spec      - every requirement id a spec defines (headings) is referenced by a sub-feature of the
 //               maps on that spec or named in their uncovered section; referenced ids exist;
 //   uncovered - each map has the uncovered section;
-//   status    - no run results in a map: they belong in the run's report.
+//   status    - no run results in a map or in the verification Skill (SKILL.md, references/, the
+//               index): no run-record heading in a map, and no line that ties a result word (PASS,
+//               FAIL, BLOCKED, UNVERIFIED, TO-CONFIRM, standing alone: not FAILED, not in a code span
+//               or quotes) to a date, a commit or a count. Result words alone are allowed: they also
+//               name expected results and how a script judges.
 // Warnings (they do not fail the check): a tool scripts call as t.<name> or maps drive with `do <name>`
-// that the verification Skill (SKILL.md, references/) never names, so an agent cannot look it up.
+// that the verification Skill (SKILL.md, references/) never names, so an agent cannot look it up; and
+// an AGENTS.md or CLAUDE.md at the repository root that does not name the verification Skill.
 // It does not check that the map matches the product; only running it does.
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
@@ -37,6 +42,37 @@ const SCRIPT_RULES = [
   [/\bsetTimeout\s*\(|\bsetInterval\s*\(/, () => 'a timer: wait with t.until, t.hold or t.observe'],
   [/\bfrom\s+['"]\.\.\//, () => "an import outside this map's scenarios dir"],
 ];
+
+// A result word standing alone (not FAILED, not `BLOCKED` or "PASS"), and what ties it to a run.
+const RESULT = '(?:PASS|FAIL|BLOCKED|UNVERIFIED|TO-CONFIRM)';
+const BARE_RESULT_RE = new RegExp(`(?<![\\w\`'"-])${RESULT}(?![\\w\`'"-])`);
+const DATE_RE = /\b\d{4}-\d{2}-\d{2}\b/;
+const COUNT_RE = new RegExp(`\\b\\d+\\s*(?:×\\s*)?${RESULT}(?![\\w-])|(?<![\\w-])${RESULT}\\s*[:=×]\\s*\\d+\\b`);
+const NAMED_COMMIT_RE = /\b(?:commit|head|base|sha)[\s:=@]+`?[0-9a-f]{7,40}\b/i;
+const COUNTS_JSON_RE = new RegExp(`"${RESULT}"\\s*:\\s*\\d`);
+const isCommit = (cell) => /^[0-9a-f]{7,40}$/.test(cell) && /\d/.test(cell) && /[a-f]/.test(cell);
+
+// Lines that record a run: a sentence (or table row) with a result word and a date, a count or a
+// commit (a table cell that is a commit hash counts), or result counts as JSON; code spans (file
+// names, product values) do not count. A Markdown paragraph is one line, so a date in one sentence
+// and a result word in the next are not tied.
+const recordsRun = (text) => {
+  const bare = text.replace(/`[^`]*`/g, '``');
+  if (!BARE_RESULT_RE.test(bare)) return false;
+  const cells = text.trim().startsWith('|') ? text.split('|').map((cell) => cell.trim().replace(/^`|`$/g, '')) : [];
+  return DATE_RE.test(bare) || COUNT_RE.test(bare) || NAMED_COMMIT_RE.test(text) || cells.some(isCommit);
+};
+
+export function runRecordLines(text) {
+  const found = [];
+  for (const [i, line] of text.split(/\r?\n/).entries()) {
+    const parts = line.trim().startsWith('|') ? [line] : line.split(/(?<=[。；！？])|(?<=[.;!?])\s+/);
+    if (COUNTS_JSON_RE.test(line) || parts.some(recordsRun)) found.push(i + 1);
+  }
+  return found;
+}
+
+const RUN_RECORD = 'a run result tied to a date, a commit or a count: results belong in the run\'s evidence directory and the MR description';
 
 const splitList = (text) =>
   text
@@ -130,6 +166,7 @@ export function parseMap(file, config) {
   for (const [i, line] of lines.entries())
     if (headings.runRecord.some((name) => line.trim() === `## ${name}`))
       problem('status', i + 1, "run results belong in the run's report, not in the map");
+  for (const line of runRecordLines(lines.join('\n'))) problem('status', line, RUN_RECORD);
   return { name: path.basename(file, '.md'), file, subfeatures, criteria, uncoveredRefs, problems };
 }
 
@@ -321,8 +358,38 @@ export function checkMaps(config) {
       add(spec, 'spec', 0, `${id} is referenced by no sub-feature and not named under "${config.headings.uncovered}"`);
     specs.push({ spec: rel(spec), ids: ids.length, referenced: ids.filter((id) => referenced.has(id)).length });
   }
-  const warnings = undocumentedTools(config, maps).map(({ file, line, message }) => ({ file: rel(file), check: 'tools', line, message }));
+  for (const file of skillDocs(config)) for (const line of runRecordLines(readFileSync(file, 'utf8'))) add(file, 'status', line, RUN_RECORD);
+  const warnings = [
+    ...undocumentedTools(config, maps).map(({ file, line, message }) => ({ file: rel(file), check: 'tools', line, message })),
+    ...unlinkedAgentFiles(config).map(({ file, message }) => ({ file: rel(file), check: 'agents', line: 0, message })),
+  ];
   return { ok: problems.length === 0, index: rel(indexPath), maps: summary, specs, problems, warnings };
+}
+
+// The verification Skill's own documents: SKILL.md, references/*.md and the map index.
+function skillDocs(config) {
+  const refs = path.join(config.skillDir, 'references');
+  return [
+    path.join(config.skillDir, 'SKILL.md'),
+    config.indexPath,
+    ...(existsSync(refs) ? readdirSync(refs).filter((f) => f.endsWith('.md')).map((f) => path.join(refs, f)) : []),
+  ].filter(existsSync);
+}
+
+// AGENTS.md and CLAUDE.md at the repository root that do not name the verification Skill's directory.
+// A CLAUDE.md that imports AGENTS.md (`@AGENTS.md`) is judged by AGENTS.md alone.
+function unlinkedAgentFiles(config) {
+  const name = path.basename(config.skillDir);
+  const text = (file) => (existsSync(path.join(config.root, file)) ? readFileSync(path.join(config.root, file), 'utf8') : null);
+  const agents = text('AGENTS.md');
+  const claude = text('CLAUDE.md');
+  const names = (content) => content.includes(name);
+  const out = [];
+  const message = (file) => `${file} does not name the verification Skill (${name}): an agent reading it will not find how to verify`;
+  if (agents !== null && !names(agents)) out.push({ file: path.join(config.root, 'AGENTS.md'), message: message('AGENTS.md') });
+  if (claude !== null && !names(claude) && !(/^@AGENTS\.md\b/m.test(claude) && agents !== null))
+    out.push({ file: path.join(config.root, 'CLAUDE.md'), message: message('CLAUDE.md') });
+  return out;
 }
 
 // t.<name> members the runner itself provides; every other one comes from an adapter's tools().
