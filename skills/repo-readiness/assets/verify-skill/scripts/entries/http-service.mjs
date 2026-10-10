@@ -1,53 +1,58 @@
 // Entry adapter for an app driven over HTTP: starts one isolated instance (own port, own data
-// directory, run ID echoed by the health endpoint), checks it, gives scripts `api` (actions) and
-// `read` (strict evidence reads), and stops only the process group it started.
+// directory, its identity proven by health), checks it, gives scripts `api` (actions) and `read`
+// (strict evidence reads), and stops only the processes that belong to it.
 // Options (verify.config.json, entries.<slug>.options):
-//   command        ["node", "server.mjs"]   how to start the app (cwd: repository root, or `cwd`)
-//   health         "/health"                must answer 2xx with { runId } equal to RUN_ID
-//   inheritEnv     ["PATH", "HOME", ...]    the only variables passed on from the caller's environment
-//                                           (default INHERITED_ENV below); secrets go in env, by name
+//   command        ["node", "server.js", "--port", "{port}", "--data", "{dataDir}"]
+//                  how to start the app (cwd: repository root, or `cwd`). {root}, {port}, {dataDir},
+//                  {home}, {tmp}, {runId} and {token} are replaced in arguments, `cwd`, `env` and `headers`.
+//                  The app also gets PORT, DATA_DIR and RUN_ID in its environment.
+//   health         "/health"                must answer 2xx
+//   identity       { "field": "runId", "equals": "{runId}" }   (default) proof that health answered
+//                  from the process this run started, not a stale one on the port: a body field equal
+//                  to the run ID it was given, or { "field": "pid", "equals": "{pid}" } when the command
+//                  is the server itself. null when `headers` carry {token} and the app refuses a request
+//                  without it: a stale process does not know this run's token.
+//   headers        { "authorization": "Bearer {token}" }   sent with every request; {token} is a secret
+//                  made for this run
+//   inheritEnv     ["PATH", ...]            the only variables passed on from the caller (default
+//                  INHERITED_ENV in _process.mjs: no HOME or TMPDIR, the instance gets its own)
 //   env            {}                       extra environment; launch.env adds more per scenario
+//   builds         [["dist/server.js", "src", "npm run build"]]   up refuses a stale build, doctor reports it
+//   pidRecords     [{ "dir": "{dataDir}/workers", "fields": ["pid"] }]   background processes the app
+//                  records; `down` stops those that belong to this instance too
 //   readySeconds   30
 //   invalidWhen    "<regex>"                a line in the app log that voids the run (lost login, ...)
 //   sideEffectReads ["<regex>"]             GET paths that change state: refused inside a window
-// The app gets PORT, DATA_DIR and RUN_ID in its environment.
-// Copy this file to entries/<slug>.mjs for each HTTP-like entry and adapt it; other kinds of entry
-// (a TUI in a pseudo-terminal, a browser or desktop app through Playwright) implement the same five
-// exports: up, doctor, down, tools, and capture when the entry has look criteria.
+// Doctor reads back what this adapter can see. Reading back the app's effective config and checking
+// credentials are product-specific: add them in a copy of this file for your entry.
 
 import { spawn } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import { closeSync, existsSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import net from 'node:net';
 import path from 'node:path';
 
-import { strictBody } from '../primitives.mjs';
+import { pick, strictBody } from '../primitives.mjs';
+import {
+  alive,
+  buildChecks,
+  expand,
+  freePort,
+  homeChecks,
+  instanceDirs,
+  instanceEnv,
+  recordedPids,
+  refuseStaleBuild,
+  sleep,
+  stopProcesses,
+} from './_process.mjs';
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const DEFAULT_IDENTITY = { field: 'runId', equals: '{runId}' };
 
-// The caller's environment is an allowlist: a user's API key or another run's token in it must not
-// reach the instance. Add to `inheritEnv` what the app needs to start; keep credentials out of it.
-export const INHERITED_ENV = ['PATH', 'HOME', 'USER', 'LOGNAME', 'SHELL', 'LANG', 'LC_ALL', 'TZ', 'TERM', 'TMPDIR'];
-
-const inherited = (names) =>
-  Object.fromEntries(names.filter((name) => process.env[name] !== undefined).map((name) => [name, process.env[name]]));
-
-function freePort() {
-  return new Promise((resolve, reject) => {
-    const server = net.createServer();
-    server.unref();
-    server.on('error', reject);
-    server.listen(0, '127.0.0.1', () => {
-      const { port } = server.address();
-      server.close(() => resolve(port));
-    });
-  });
-}
-
-async function request(url, method = 'GET', body) {
+async function request(instance, apiPath, { method = 'GET', body, headers = instance.headers } = {}) {
   try {
-    const response = await fetch(url, {
+    const response = await fetch(`${instance.url}${apiPath}`, {
       method,
-      headers: body === undefined ? {} : { 'content-type': 'application/json' },
+      headers: { ...(headers ?? {}), ...(body === undefined ? {} : { 'content-type': 'application/json' }) },
       body: body === undefined ? undefined : JSON.stringify(body),
       signal: AbortSignal.timeout(15_000),
     });
@@ -64,84 +69,99 @@ async function request(url, method = 'GET', body) {
   }
 }
 
-const alive = (pid) => {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
+const is2xx = (response) => response.status >= 200 && response.status < 300;
+const usesToken = (options) => JSON.stringify(options.headers ?? {}).includes('{token}');
+
+function identityOf(options) {
+  if (options.identity === null) {
+    if (!usesToken(options)) throw new Error('options.identity is null but options.headers carry no {token}');
+    return null;
   }
-};
+  return options.identity ?? DEFAULT_IDENTITY;
+}
+
+// Health answered, and from this run's process.
+function ours(health, instance, options) {
+  const identity = identityOf(options);
+  if (!is2xx(health)) return false;
+  if (!identity) return true;
+  return String(pick(health.body, identity.field)) === expand(identity.equals, instance);
+}
 
 export async function up({ runId, runDir, launch = {}, options = {}, root }) {
-  const [command, ...args] = options.command ?? [];
-  if (!command) throw new Error('options.command is not set for this entry');
+  if (!options.command?.length) throw new Error('options.command is not set for this entry');
+  identityOf(options);
+  refuseStaleBuild(root, options.builds);
+  const dirs = instanceDirs(runDir);
   const port = await freePort();
-  const dataDir = path.join(runDir, 'data');
+  const token = randomBytes(16).toString('hex');
+  const fields = { ...dirs, root, port, runId, token };
   const logFile = path.join(runDir, 'app.log');
+  const [command, ...args] = expand(options.command, fields);
+  const env = { ...instanceEnv({ options, launch, dirs, fields }), PORT: String(port), DATA_DIR: dirs.dataDir, RUN_ID: runId };
   const out = openSync(logFile, 'a');
   const child = spawn(command, args, {
-    cwd: path.resolve(root, options.cwd ?? '.'),
-    env: {
-      ...inherited(options.inheritEnv ?? INHERITED_ENV),
-      ...options.env,
-      ...launch.env,
-      PORT: String(port),
-      DATA_DIR: dataDir,
-      RUN_ID: runId,
-    },
+    cwd: path.resolve(root, expand(options.cwd ?? '.', fields)),
+    env,
     stdio: ['ignore', out, out],
     detached: true,
   });
   closeSync(out);
   child.unref();
-  const instance = { pid: child.pid, port, url: `http://127.0.0.1:${port}`, dataDir, logFile };
+  const instance = {
+    pid: child.pid,
+    port,
+    runId,
+    token,
+    url: `http://127.0.0.1:${port}`,
+    ...dirs,
+    logFile,
+    env: { HOME: env.HOME, TMPDIR: env.TMPDIR },
+    ...(options.headers ? { headers: expand(options.headers, { ...fields, pid: child.pid }) } : {}),
+  };
   const end = Date.now() + (options.readySeconds ?? 30) * 1000;
   while (Date.now() < end) {
-    const health = await request(`${instance.url}${options.health ?? '/health'}`);
-    if (health.status >= 200 && health.status < 300 && health.body?.runId === runId) return instance;
+    if (ours(await request(instance, options.health ?? '/health'), instance, options)) return instance;
     if (!alive(child.pid)) break;
     await sleep(200);
   }
   await down(instance, { options });
-  throw new Error(`not ready within ${options.readySeconds ?? 30}s; see ${logFile}`);
+  throw new Error(`not ready within ${options.readySeconds ?? 30}s (or health did not prove it is this run's); see ${logFile}`);
 }
 
-export async function doctor(instance, { runId, options = {} }) {
-  const health = await request(`${instance.url}${options.health ?? '/health'}`);
+export async function doctor(instance, { root, options = {} }) {
+  const health = await request(instance, options.health ?? '/health');
   const checks = [
     { name: 'process alive', ok: alive(instance.pid), fix: 'down, then up again' },
-    { name: 'health answers 2xx', ok: health.status >= 200 && health.status < 300, fix: `read ${instance.logFile}` },
-    { name: 'instance is ours', ok: health.body?.runId === runId, fix: 'another process holds the port: up again' },
+    { name: 'health answers 2xx', ok: is2xx(health), fix: `read ${instance.logFile}` },
+    { name: "health proves it is this run's instance", ok: ours(health, instance, options), fix: 'another process holds the port: up again' },
+    ...homeChecks(instance, options),
+    ...buildChecks(root, options.builds),
   ];
+  if (usesToken(options)) {
+    const bare = await request(instance, options.health ?? '/health', { headers: {} });
+    checks.push({
+      name: "a request without this run's token is refused",
+      ok: bare.status === 401 || bare.status === 403,
+      fix: 'the app does not require the token: identity must come from another field',
+    });
+  }
   return { ok: checks.every((check) => check.ok), checks };
 }
 
 export async function down(instance, { options = {}, keepData = false } = {}) {
-  if (alive(instance.pid)) {
-    try {
-      process.kill(-instance.pid, 'SIGTERM');
-    } catch {
-      process.kill(instance.pid, 'SIGTERM');
-    }
-    for (let i = 0; i < 50 && alive(instance.pid); i += 1) await sleep(100);
-    if (alive(instance.pid)) {
-      try {
-        process.kill(-instance.pid, 'SIGKILL');
-      } catch {
-        process.kill(instance.pid, 'SIGKILL');
-      }
-    }
-  }
-  const stopped = !alive(instance.pid);
-  if (stopped && !keepData && existsSync(instance.dataDir)) rmSync(instance.dataDir, { recursive: true, force: true });
+  const { stopped, left } = await stopProcesses({
+    pids: [instance.pid, ...recordedPids(expand(options.pidRecords ?? [], instance))],
+    marker: instance.dataDir,
+  });
+  if (left.length === 0 && !keepData && existsSync(instance.dataDir)) rmSync(instance.dataDir, { recursive: true, force: true });
   const kept = [instance.logFile].filter(existsSync);
   let invalid;
   if (options.invalidWhen && existsSync(instance.logFile)) {
     const hit = new RegExp(options.invalidWhen, 'm').exec(readFileSync(instance.logFile, 'utf8'));
     if (hit) invalid = `app log: ${hit[0]}`;
   }
-  return { ok: stopped && kept.length > 0, kept, ...(invalid ? { invalid } : {}) };
+  return { ok: left.length === 0 && kept.length > 0, kept, stopped, ...(left.length ? { left } : {}), ...(invalid ? { invalid } : {}) };
 }
 
 // The runner refuses a read this names while a wait, hold or observation window is open.
@@ -154,17 +174,18 @@ export function tools(instance, { runDir, read, options = {} }) {
   const requests = path.join(runDir, 'requests.jsonl');
   const record = (entry) => writeFileSync(requests, `${JSON.stringify({ at: new Date().toISOString(), ...entry })}\n`, { flag: 'a' });
   return {
-    // An action, as a user or client would send it. The response is returned as is.
-    async api(method, apiPath, body) {
-      const response = await request(`${instance.url}${apiPath}`, method, body);
-      record({ method, path: apiPath, body, status: response.status });
+    // An action, as a user or client would send it. The response is returned as is. `headers`
+    // replaces the run's headers for this request ({} sends none).
+    async api(method, apiPath, body, { headers } = {}) {
+      const response = await request(instance, apiPath, { method, body, ...(headers ? { headers } : {}) });
+      record({ method, path: apiPath, body, status: response.status, ...(headers ? { headers: Object.keys(headers) } : {}) });
       return response;
     },
     // Evidence: a strict GET. A non-2xx status or a missing body is unreadable, never "empty".
     async read(apiPath) {
       const effect = effects.find((pattern) => pattern.test(apiPath));
       return read(effect ? `GET ${apiPath} (side effect)` : `GET ${apiPath}`, async () => {
-        const response = await request(`${instance.url}${apiPath}`);
+        const response = await request(instance, apiPath);
         record({ method: 'GET', path: apiPath, status: response.status, evidence: true });
         return strictBody(response, `GET ${apiPath}`);
       });
