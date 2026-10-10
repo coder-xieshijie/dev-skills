@@ -45,6 +45,13 @@ The Skills in this repository use these terms with one meaning each. The Chinese
 | coverage blind spot, substitute test | 覆盖盲区、替代测试 | A requirement scenarios cannot reach, and the test that covers it instead |
 | verification tooling gap | 验证工具缺口 | A capability the scenarios need that the project does not have yet |
 | feature map | 功能地图 | For each feature: entry, actions, what to observe, what evidence to keep |
+| verification Skill | 验证 Skill | The project-local Skill (`verify-<app>`) that starts, drives, reads and stops the app and indexes the feature maps; [repo-readiness](../skills/repo-readiness/SKILL.md) builds it |
+| sub-feature | 子功能 | One behavior of a feature with its own observable outcome, ID `<map>.<short>` |
+| criterion | 判据 | One observable expected result of a sub-feature at one entry point, ID `<sub-feature>#<n>`, kept only in the feature map |
+| scenario script | 场景脚本 | The script that drives one sub-feature at one entry point and checks each of its criteria once |
+| counterexample run | 反例对照 | A run on a deliberately broken product; it counts only when the broken criterion gives FAIL |
+| structure check | 结构检查 | The read-only `check` command that links maps, criteria, scenario scripts and spec IDs; CI runs it |
+| result: PASS, FAIL, BLOCKED, UNVERIFIED, TO-CONFIRM | 结果 | One per sub-feature and entry point in a verification Skill run. BLOCKED: the precondition could not be built; TO-CONFIRM: a product owner must say whether it is intended |
 | control commands | 控制命令 | Commands that start, stop, reset and read the state of the app |
 | quality commands | 质量命令 | Lint, type check, tests |
 | test double | 替身 | A stand-in for a real dependency in tests (mock, stub, fake) |

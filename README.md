@@ -12,7 +12,7 @@ Production-grade Agent Skills: from requirement to a verified, mergeable pull re
 
 ```mermaid
 flowchart LR
-    A["A. Repository readiness<br/>control commands, feature map,<br/>smoke set, quality commands"] --> B1
+    A["A. Repository readiness: repo-readiness<br/>verification Skill, feature maps,<br/>scenario scripts, smoke set"] --> B1
     subgraph B["B. Definition"]
         B1["core-grill<br/>questions in rounds,<br/>decision summary"] --> B2["core-spec<br/>spec.md + verify.md,<br/>gap check by another family,<br/>freeze, Draft PR"]
     end
@@ -25,7 +25,7 @@ flowchart LR
 
 | Stage | Skill | What the agent does | What you do |
 |---|---|---|---|
-| A. Repository readiness | Your project's own verification setup ([guide](docs/repository-readiness.md)) | Makes the app startable, drivable and observable from a worktree: control commands, a feature map, a smoke set, quality commands | Build it once per repository, then extend it as needed |
+| A. Repository readiness | [repo-readiness](skills/repo-readiness/SKILL.md) builds your project's own verification Skill ([guide](docs/repository-readiness.md)) | Makes the app startable, drivable and observable from a worktree: isolated control commands for every entry point, feature maps with numbered criteria, scenario scripts, a smoke set, a structure check in CI | Answer what the repository cannot (next requirement, entry points, what not to touch); build it once per repository, then extend it as needed |
 | B. Definition | [core-grill](skills/core-grill/SKILL.md) → [core-spec](skills/core-spec/SKILL.md) | Asks in rounds and writes a decision summary; brings the related feature map in line with the product; writes spec.md and verify.md and has another model family check them clause by clause; after freezing, commits them to the feature branch and opens a Draft PR (MR on GitLab) | Answer the questions; confirm the decision summary once; confirm spec and verify once |
 | C. Delivery | [deliver](skills/deliver/SKILL.md) | One owner works without stopping: has another family preview how the final verification will judge the plan; implements milestone by milestone and runs the scenarios in the app; has another family review the code read-only, fixes one round, then runs its full self-verification while another family verifies independently; handles CI and review until the PR is mergeable; asks another family before decisions and lists them at the top of plan.md and the PR | Read the decision list before merging, then merge |
 | D. Feedback | — | Lists the repository gaps this run exposed, in the PR and plan.md | Decide which go back into stage A or the Skills |
@@ -41,7 +41,7 @@ Rules that hold throughout:
 
 - **Two model families.** CLIs for models from two different families, installed and logged in; by default [Claude Code](https://code.claude.com/docs) and [Codex](https://developers.openai.com/codex), and any other CLI that runs another family's model and can write its reply to a file also works ([cross-model calls](skills/core-spec/references/cross-model.md)). You can also work in MCode, MiniMax's coding agent, which runs the model you configure in it; the checks then go to whichever of these CLIs runs a different family. The gap check and the final verification need a model from a family other than the one doing the work; with only one family available, the workflow stops there instead of checking with the same family.
 - **Node.js 24** for the scripts, **git**, and the platform CLI for PRs: `gh` for GitHub or `glab` for GitLab.
-- **An app agents can drive.** Agents must be able to start, operate and observe the app from a worktree, at the entry points users use. See [Repository readiness](docs/repository-readiness.md).
+- **An app agents can drive.** Agents must be able to start, operate and observe the app from a worktree, at the entry points users use. [repo-readiness](skills/repo-readiness/SKILL.md) sets this up once per repository; [Repository readiness](docs/repository-readiness.md) explains why each part exists.
 
 ## Install
 
@@ -86,6 +86,8 @@ Other agents that read the [Agent Skills format](https://agentskills.io/specific
 
 ## A complete run
 
+Once per repository, before the first requirement: `/dev-skills:repo-readiness The next requirement is <link or text>`. It answers what it can from the code, asks you the rest in one batch, and commits a verification Skill and the first feature maps.
+
 1. In the target repository: `/dev-skills:core-grill The requirement is <link or text>; put the requirement documents in <requirement directory>/`. Answer the questions and confirm the decision summary.
 2. In the same session: `/dev-skills:core-spec Write spec.md and verify.md from the decision summary`. Read the gap check result and confirm spec and verify. It commits them to the feature branch and opens a Draft PR.
 3. In a new session: `/dev-skills:deliver Take over <Draft PR link>`. When it says the PR can be merged, read the decision list at the top of the PR, then merge.
@@ -96,6 +98,7 @@ The commands above work as written in MCode and Claude Code; in Codex, write `$d
 
 | Skill | What it does |
 |---|---|
+| [repo-readiness](skills/repo-readiness/SKILL.md) | Sets up agent verification in a repository: a project-local verification Skill with isolated control commands, feature maps with numbered criteria, scenario scripts with a runner and counterexample runs, and a structure check in CI |
 | [core-grill](skills/core-grill/SKILL.md) | At the start of a requirement, asks in rounds about the decisions that change user-visible results (for refactoring or slimming, about scope and the expected gain), records terms, and hands a decision summary you confirmed to core-spec |
 | [core-spec](skills/core-spec/SKILL.md) | Turns the discussion into spec.md (decisions and constraints) and verify.md (acceptance requirements for automated delivery), has another family gap-check them, and freezes them after one confirmation. Can also produce only a spec |
 | [deliver](skills/deliver/SKILL.md) | From the frozen spec and verify, one owner implements, verifies each milestone in the app, gets independent verification by another family, and takes the PR through CI to mergeable, listing its decisions at the top |
@@ -107,12 +110,12 @@ The commands above work as written in MCode and Claude Code; in Codex, write `$d
 | [agent-prompt-rules](skills/agent-prompt-rules/SKILL.md) | Rules, each linked to Anthropic and OpenAI sources, for writing and reviewing prompts for agents, multi-agent pipelines and SKILL.md files |
 | [recon-to-contract](skills/recon-to-contract/SKILL.md) | Converges a comparison of two or more external references into one executable contract with evidence, decisions and acceptance criteria |
 
-The development workflow uses core-grill, core-spec, deliver, review-rules, mr-for-human and explain-as-fool; the others can be used on their own.
+The development workflow uses repo-readiness, core-grill, core-spec, deliver, review-rules, mr-for-human and explain-as-fool; the others can be used on their own.
 
 ## Documentation
 
 - [Why the workflow looks the way it does](docs/basis.md): the three sources, where they agree and disagree, what this workflow adds, and a rule-by-rule basis for core-grill, core-spec and deliver.
-- [Repository readiness](docs/repository-readiness.md): what stage A needs, with [templates](docs/templates/) and an [example](docs/examples/feature-map-example.md).
+- [Repository readiness](docs/repository-readiness.md): what stage A needs and why, from our first setup, with its [templates](docs/templates/) and [example](docs/examples/feature-map-example.md). The [repo-readiness](skills/repo-readiness/SKILL.md) Skill carries the current map format and a runnable kit; the guide lists where the two differ.
 - [Glossary](docs/glossary.md): the terms the Skills use, with their Chinese equivalents.
 - Design records, in Chinese: [core-grill](docs/core-grill-design.md), [core-spec](docs/core-spec-design.md), [deliver](docs/deliver-design.md), [mr-for-human](docs/mr-for-human-design.md) and its [validation](docs/mr-for-human-validation.md).
 
@@ -120,7 +123,7 @@ The development workflow uses core-grill, core-spec, deliver, review-rules, mr-f
 
 - Each Skill lives in `skills/<skill-name>/` with `SKILL.md` as its entry point, plus `scripts/`, `references/` or `assets/` when it needs them. `name` matches the directory name; the directory names are stable because other tools refer to them by path.
 - Skill text is English, using the terms in the [glossary](docs/glossary.md); see [AGENTS.md](AGENTS.md). Changes to rules follow [agent-prompt-rules](skills/agent-prompt-rules/SKILL.md): one component at a time, with the basis recorded, compared in a new session.
-- CI runs the link and anchor checks and the script tests: `node scripts/check-links.mjs`, `node skills/agent-prompt-rules/scripts/check-links.mjs`, `node --test skills/agent-prompt-rules/scripts/check-links.test.mjs`, `node --test skills/deliver/scripts/check-delivery.test.mjs` and `node --test skills/core-spec/scripts/clauses.test.mjs`.
+- CI runs the link and anchor checks and the script tests: `node scripts/check-links.mjs`, `node skills/agent-prompt-rules/scripts/check-links.mjs`, `node --test skills/agent-prompt-rules/scripts/check-links.test.mjs`, `node --test skills/deliver/scripts/check-delivery.test.mjs`, `node --test skills/core-spec/scripts/clauses.test.mjs` and `node --test skills/repo-readiness/assets/verify-skill/scripts/test/*.test.mjs`.
 - `skills/agent-prompt-rules/references/sources/` keeps verbatim excerpts of the vendor documents the rules cite; [its README](skills/agent-prompt-rules/references/sources/README.md) says how to update them.
 
 ## Feedback

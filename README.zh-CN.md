@@ -12,7 +12,7 @@
 
 ```mermaid
 flowchart LR
-    A["A 仓库准备<br/>控制命令、功能地图、<br/>冒烟集、质量命令"] --> B1
+    A["A 仓库准备：repo-readiness<br/>验证 Skill、功能地图、<br/>场景脚本、冒烟集"] --> B1
     subgraph B["B 定义"]
         B1["core-grill<br/>逐轮追问，<br/>决定汇总"] --> B2["core-spec<br/>spec.md + verify.md，<br/>另一家模型查漏，<br/>冻结，Draft PR"]
     end
@@ -25,7 +25,7 @@ flowchart LR
 
 | 阶段 | Skill | agent 做什么 | 你做什么 |
 |---|---|---|---|
-| A 仓库准备 | 项目自己的验证能力（[指南](docs/repository-readiness.md)，英文） | 让 agent 能在 worktree 里启动、操作、观察应用：控制命令、功能地图、冒烟集、质量命令 | 每个仓库建一次，之后按需补 |
+| A 仓库准备 | [repo-readiness](skills/repo-readiness/SKILL.md) 搭建项目自己的验证 Skill（[指南](docs/repository-readiness.md)，英文） | 让 agent 能在 worktree 里启动、操作、观察应用：每个入口隔离的控制命令、带判据编号的功能地图、场景脚本、冒烟集、CI 里的结构检查 | 回答仓库里查不到的（下一个需求、用户实际用的入口、哪些不能碰）；每个仓库建一次，之后按需补 |
 | B 定义 | [core-grill](skills/core-grill/SKILL.md) → [core-spec](skills/core-spec/SKILL.md) | 逐轮追问，整理决定汇总；相关功能地图先与产品对齐；写 spec.md 和 verify.md，请另一家模型逐条款查漏；冻结后提交到需求分支，开 Draft PR（GitLab 上叫 MR） | 回答问题；确认一次决定汇总；确认一次 spec 和 verify |
 | C 交付 | [deliver](skills/deliver/SKILL.md) | 一个 owner 全程不停：开工时请另一家模型预判最终验证怎样判这份 plan；逐个里程碑实现并在应用里跑场景；另一家模型先只读审代码，owner 修一轮，再与 owner 的全量自验同时做独立验证；处理 CI 和评审，做到可合入；要定的事先问另一家模型，决定列在 plan.md 和 PR 描述最前面 | 合入前看决定清单，合入 |
 | D 回流 | — | 在 PR 和 plan.md 里列出这次暴露的仓库缺口 | 决定哪些补回 A 阶段或 Skill |
@@ -41,7 +41,7 @@ flowchart LR
 
 - **两家模型。** 两个不同家族模型的 CLI，都装好并登录；默认是 [Claude Code](https://code.claude.com/docs) 和 [Codex](https://developers.openai.com/codex)，其他能调用另一家模型、能把回复写进文件的 CLI 也可以（[跨模型调用](skills/core-spec/references/cross-model.md)）。也可以在 MCode（MiniMax 的 coding agent）里工作，它运行你在其中配置的模型；检查交给上面 CLI 中与它不同家族的那一个。查漏和最终验证要用与干活的模型不同家族的模型；只有一家可用时，流程会停在那一步，不会降级成同家族检查。
 - **Node.js 24**（运行脚本）、**git**，以及开 PR 用的平台 CLI：GitHub 用 `gh`，GitLab 用 `glab`。
-- **agent 能驱动的应用。** agent 要能在 worktree 里从用户实际使用的入口启动、操作、观察应用。见[仓库准备](docs/repository-readiness.md)。
+- **agent 能驱动的应用。** agent 要能在 worktree 里从用户实际使用的入口启动、操作、观察应用。[repo-readiness](skills/repo-readiness/SKILL.md) 每个仓库搭一次；各部分为什么需要，见[仓库准备](docs/repository-readiness.md)。
 
 ## 安装
 
@@ -86,6 +86,8 @@ done
 
 ## 一次完整的用法
 
+每个仓库在第一个需求之前做一次：`/dev-skills:repo-readiness 下一个需求是 <链接或原文>`。它先从代码里回答能回答的，其余一次问你，最后提交验证 Skill 和第一批功能地图。
+
 1. 在目标仓库里：`/dev-skills:core-grill 需求是 <链接或原文>，需求文档放 <需求目录>/`。回答问题，确认决定汇总。
 2. 同一个 session 里：`/dev-skills:core-spec 依据决定汇总写 spec.md 和 verify.md`。看查漏结果，确认 spec 和 verify；它会提交到需求分支并开 Draft PR。
 3. 新开一个 session：`/dev-skills:deliver 接手 <Draft PR 链接>`。等它说可以合入，看 PR 最前面的决定清单，再合入。
@@ -96,6 +98,7 @@ done
 
 | Skill | 用途 |
 |---|---|
+| [repo-readiness](skills/repo-readiness/SKILL.md) | 在一个仓库里搭好 agent 验证：项目内的验证 Skill（每个入口隔离的控制命令）、带判据编号的功能地图、场景脚本与 runner、反例对照，以及 CI 里的结构检查 |
 | [core-grill](skills/core-grill/SKILL.md) | 需求起步时逐轮追问会改变用户可见结果的决定（重构、瘦身类需求改问范围和预期收益），写好术语，把你确认的决定汇总交给 core-spec |
 | [core-spec](skills/core-spec/SKILL.md) | 把讨论收敛成 spec.md（决定与约束）和 verify.md（自动交付的验收要求），请另一家模型查漏，一次确认后冻结。也可以只产出 spec |
 | [deliver](skills/deliver/SKILL.md) | 依据冻结的 spec 和 verify，由一个 owner 实现、逐里程碑在应用里验证、请另一家模型独立验证，并把 PR 做到 CI 通过、可合入；自己做的决定列在最前面 |
@@ -107,12 +110,12 @@ done
 | [agent-prompt-rules](skills/agent-prompt-rules/SKILL.md) | 写和审查给 agent 的 prompt、多 agent pipeline 与 SKILL.md 的规则，每条都链接到 Anthropic、OpenAI 原文 |
 | [recon-to-contract](skills/recon-to-contract/SKILL.md) | 把两个以上外部参照物的对标调研收敛成一份有证据、有决定、有验收标准的可执行契约 |
 
-开发流程用到 core-grill、core-spec、deliver、review-rules、mr-for-human 和 explain-as-fool；其余可以单独使用。
+开发流程用到 repo-readiness、core-grill、core-spec、deliver、review-rules、mr-for-human 和 explain-as-fool；其余可以单独使用。
 
 ## 文档
 
 - [流程为什么是这个样子](docs/basis.md)（英文）：三家来源、它们的共识与分歧、本流程自己加的东西，以及 core-grill、core-spec、deliver 逐条规则的依据。
-- [仓库准备](docs/repository-readiness.md)（英文）：A 阶段需要什么，附[模板](docs/templates/)和[示例](docs/examples/feature-map-example.md)。
+- [仓库准备](docs/repository-readiness.md)（英文）：A 阶段需要什么、为什么，来自我们第一次搭建，附当时的[模板](docs/templates/)和[示例](docs/examples/feature-map-example.md)。[repo-readiness](skills/repo-readiness/SKILL.md) Skill 带有当前的地图格式和可运行的 kit；两者的差异列在指南里。
 - [术语表](docs/glossary.md)：Skill 用到的术语，附中文对照。
 - 设计记录（中文）：[core-grill](docs/core-grill-design.md)、[core-spec](docs/core-spec-design.md)、[deliver](docs/deliver-design.md)、[mr-for-human](docs/mr-for-human-design.md) 及其[验证记录](docs/mr-for-human-validation.md)。
 
@@ -120,7 +123,7 @@ done
 
 - 每个 Skill 放在 `skills/<skill-name>/`，入口是 `SKILL.md`，需要时再加 `scripts/`、`references/` 或 `assets/`。`name` 与目录名一致；其他工具按路径引用这些目录，目录名不改。
 - Skill 正文用英文写，术语按[术语表](docs/glossary.md)；见 [AGENTS.md](AGENTS.md)。改规则按 [agent-prompt-rules](skills/agent-prompt-rules/SKILL.md)：一次改一个组件，记下依据，在新 session 里对照。
-- CI 运行链接与锚点检查和脚本测试：`node scripts/check-links.mjs`、`node skills/agent-prompt-rules/scripts/check-links.mjs`、`node --test skills/agent-prompt-rules/scripts/check-links.test.mjs`、`node --test skills/deliver/scripts/check-delivery.test.mjs`、`node --test skills/core-spec/scripts/clauses.test.mjs`。
+- CI 运行链接与锚点检查和脚本测试：`node scripts/check-links.mjs`、`node skills/agent-prompt-rules/scripts/check-links.mjs`、`node --test skills/agent-prompt-rules/scripts/check-links.test.mjs`、`node --test skills/deliver/scripts/check-delivery.test.mjs`、`node --test skills/core-spec/scripts/clauses.test.mjs`、`node --test skills/repo-readiness/assets/verify-skill/scripts/test/*.test.mjs`。
 - `skills/agent-prompt-rules/references/sources/` 保存规则引用的厂商文档的逐字摘录；怎样更新见[它的 README](skills/agent-prompt-rules/references/sources/README.md)。
 
 ## 反馈

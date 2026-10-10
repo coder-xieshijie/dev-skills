@@ -6,6 +6,10 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ## [Unreleased]
 
+### Added
+
+- **repo-readiness**, a manual-only Skill for stage A. It interviews the repository, then builds a project-local verification Skill from a kit: one adapter per entry point with isolated `up`, `doctor`, `do` and `down`; feature maps whose criteria carry IDs (`<sub-feature>#<n>`) and a Not covered section; scenario scripts that cite each criterion once, judged by shared primitives in five results (PASS, FAIL, BLOCKED, UNVERIFIED, TO-CONFIRM); a runner with one instance per scenario and counterexample runs; and a structure check for CI. References cover the adapter contract and isolation, how far to build (L0 to L3), and the failures behind each rule. The kit's scripts have their own tests, which CI runs.
+
 ## [0.3.0] - 2026-10-08
 
 ### Changed
