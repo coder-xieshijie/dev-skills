@@ -23,7 +23,7 @@ Every command prints one JSON object and exits non-zero when `ok` is false. `nod
 
 ## Done
 
-Every sub-feature × entry in scope has one result (PASS, FAIL, BLOCKED, UNVERIFIED, TO-CONFIRM); every non-PASS has a note; the report lists the evidence directory, the product version from `run-summary.json`, the selection and why, and what was not verified.
+Every sub-feature × entry in scope has one result (PASS, FAIL, BLOCKED, UNVERIFIED, TO-CONFIRM); every non-PASS has a note; the report lists the evidence directory, `version` from its `run-summary.json` (commit, dirty paths, kit hash), the selection and why, and what was not verified.
 
 ## Run scenario scripts
 
@@ -35,6 +35,8 @@ node $V wait <evidence dir>   # blocks until that run ends
 
 Each scenario gets its own instance (up, doctor, script, down). A run whose instance did not start, failed doctor or was reported invalid runs once more; the first attempt stays as `<scenario>.attempt-1`. `ok` means nothing is UNVERIFIED (FAILs may exist); `allPass` means every result is PASS.
 
+Each scenario's directory holds `result.json` and what its entry's adapter writes there (<list per entry: app log, `cli.jsonl`, `requests.jsonl`, `kept/` ...>). Paths in `result.json` that point into the instance's `data/` are gone after `down`; what the adapter keeps is copied next to `result.json` first.
+
 - Wait with `--detach` then `wait`, or your host's background job; do not sleep-poll files, each wake-up is a model call with the whole context.
 - Look criteria stop at UNVERIFIED with a capture path. Open the capture, judge it against the map's standard, then `node $V look <evidence dir> <criterion id> pass|fail --why "<what the capture shows>"`.
 - Counterexample: `--launch '<json>'` merges into every script's launch options; use it to make the product break a criterion and confirm the result is FAIL.
@@ -42,13 +44,19 @@ Each scenario gets its own instance (up, doctor, script, down). A run whose inst
 ## Drive by hand
 
 ```bash
-node $V up --entry <slug>          # isolated instance; prints runId and its directories
-node $V doctor
-node $V do <tool> '<json args>'    # e.g. do api '["POST","/notes",{"title":"a"}]'
-node $V down [--keep-data]         # safe to repeat
+node $V up --entry <slug>                  # isolated instance; prints runId, its run directory and fields
+node $V doctor --run <runId>
+node $V do <tool> --run <runId> '<json args>'   # {field} in an argument is that field of the instance
+node $V page --run <runId> /path --text "<what to wait for>"   # pages: visible text and a screenshot
+node $V record <evidence dir> <criterion id> pass|fail|confirm --why "<what was observed>" [--file <screenshot>]
+node $V down --run <runId> [--keep-data]   # a second down reports it already stopped
 ```
 
+Hand instances live under `<runs root>/manual/`, which every session on this machine shares, and `list` shows all of them: always pass the `--run` that your own `up` printed.
+
 <One section per entry: what `up` starts, how to drive it (keys, selectors), how to read state, gotchas. Move long ones to references/<entry>.md.>
+
+<A table of every tool `do` and scripts can call, per entry: name and arguments, action or read, what it does. A tool a map or script uses and this Skill does not name makes `check` warn.>
 
 ## Smoke
 
@@ -60,4 +68,4 @@ node $V down [--keep-data]         # safe to repeat
 
 ## Maintain
 
-When the app's startup, entry points or a mapped behavior change, update this Skill and the affected maps and scripts in the same MR. After changing anything under `scripts/`, run `node --test scripts/test/*.test.mjs` and `node $V check`; earlier runs do not count for the new version. Report product problems separately; edit only maps and this Skill.
+When the app's startup, entry points or a mapped behavior change, update this Skill and the affected maps and scripts in the same MR. After changing anything under `scripts/`, run `node --test scripts/test/*.test.mjs` and `node $V check`; earlier runs do not count for the new version (`version.kit.hash` in the run summary changes with it). Report product problems separately; edit only maps and this Skill.

@@ -37,3 +37,4 @@
 ## Not covered
 
 - <Behavior or SPEC-ID left out on purpose>: <reason: no driver, visible only to the model, owned by another map, deferred>.
+- <Entry where a sub-feature's behavior is also visible but not driven here>: <reason>.

@@ -6,7 +6,7 @@ Read this when you write or change a feature map or a scenario script, or pick w
 
 A feature map says which sub-features a feature has, how a user reaches each one at every entry point, what to do, and what counts as correct. It describes the product now. It holds no run results: results live in the run's evidence directory and go into the MR description.
 
-- Map files live at `<map root>/<feature>/feature-map/<map>.md`, next to the feature's own docs. Every `.md` in a `feature-map/` directory is a map and is listed in the index (`features/README.md`). Map names are unique, lowercase, digits and hyphens.
+- Map files live at `<map root>/<feature>/feature-map/<map>.md`, next to the feature's own docs; when features have no doc directory of their own, use `<docs root>/features/<feature>/feature-map/` and add that root to `mapRoots`. Every `.md` in a `feature-map/` directory is a map and is listed in the index (`features/README.md`). Map names are unique, lowercase, digits and hyphens.
 - A sub-feature ID is `<map>.<short>`, unique across maps. Behaviors with different results are different sub-features.
 - Where two features meet, one map holds the steps and the other refers to its IDs.
 
@@ -19,11 +19,11 @@ A feature map says which sub-features a feature has, how a user reaches each one
    - `notes.create` (NOTE-01; API, Web): a created note is stored and listed once.
    ```
 
-   Inside the parentheses, after the last `;`, the entry points it supports (comma-separated, names from `verify.config.json`); before it, the requirement IDs it implements, or the source location of the behavior when there is no spec. An entry with no driver (a phone app, say) may be named; it needs no criteria and goes under Not covered.
+   Inside the parentheses, after the last `;`, the entry points it supports (comma-separated, names from `verify.config.json`); before it, the requirement IDs it implements, or the source location of the behavior when there is no spec. List every entry where a user can see the behavior; an entry with no driver (a phone app, say) may be named, needs no criteria and goes under Not covered.
 3. `## Entry points (user view)`: a table of entry, user action, driver, and the interface underneath.
 4. `## Drive`: shared terms and shared steps first, then one `### <entry>` subsection per driven entry.
-5. `## Gotchas`: traps that waste or void a run, and known product problems with the sub-feature they affect.
-6. `## Not covered`: behaviors left out on purpose, each with its reason (no driver, visible only to the model, owned by another map, deferred). Every spec ID no sub-feature references is named here. User-visible sub-features that only have API steps are named here with the reason. Write "None" when there is nothing.
+5. `## Gotchas`: traps that waste or void a run, and known product problems with the sub-feature they affect. They describe the product and the trap, never what a run returned.
+6. `## Not covered`: behaviors left out on purpose, each with its reason (no driver, visible only to the model, owned by another map, deferred). Every spec ID no sub-feature references is named here, and so is every entry where a sub-feature's behavior is visible but that the sub-feature does not declare. User-visible sub-features that only have API steps are named here with the reason. Write "None" when there is nothing.
 
 ## Criteria
 
@@ -46,7 +46,8 @@ Each criterion is a list item in an entry subsection, starting with its ID, then
 ## Steps per entry
 
 - **Scripted entries** (the config's `scripted`, plus the index row's `Scripted` column): each sub-feature has a scenario script. The map gives a one-sentence outline (what precondition, what action, what is read) and the criteria. Request bodies, keys and selectors, waits and evidence parsing live only in the script.
-- **Entries run by hand**: steps an agent can follow as written: keys, testid or role selectors, which screenshot to take and what to judge. Commands are copied verbatim.
+- **Entries run by hand**: steps an agent can follow as written: keys, testid or role selectors, which screenshot to take and what to judge. Commands are copied verbatim. Each verdict is filed with `node $V record <evidence dir> <criterion id> pass|fail|confirm --why "<what was observed>" [--file <screenshot>]`, so hand results sit in the same evidence directory and summary as scripted ones.
+- Every tool a map or script uses (`do <tool>`, `t.<tool>`) is documented in the verification Skill; `check` warns about one that is not.
 - Shared start, doctor, evidence and cleanup rules live in the verification Skill's references; maps link to them.
 
 ## Scenario scripts
@@ -91,7 +92,7 @@ The order decides: error, timeout, unreadable evidence or a side-effect read in 
 node <skill>/scripts/verify.mjs check
 ```
 
-Read-only, and CI runs it: index and map files match; IDs unique and prefixed by their map; criteria under an entry subsection, unique, belonging to a declared entry, every driven entry has some, look criteria only under UI entries; every scripted entry has its scripts, each script checks each of its criteria exactly once with a literal ID and no other ID; scripts leave reading, waiting and process control to the runner; every spec ID is referenced or named as not covered; each map has the Not covered section and no run record. It does not check that the map matches the product. Wrong evidence or a wrong comparison behind a matching ID is caught by review and counterexample runs; whether the map is true is settled only by running it.
+Read-only, and CI runs it: index and map files match; a linked spec has requirement ID headings (a source without IDs is named in the index as a code span, not linked); IDs unique and prefixed by their map; criteria under an entry subsection, unique, belonging to a declared entry, every driven entry has some, look criteria only under UI entries; every scripted entry has its scripts, each script checks each of its criteria exactly once with a literal ID and no other ID; scripts leave reading, waiting and process control to the runner; every spec ID is referenced or named as not covered; each map has the Not covered section and no run record. It does not check that the map matches the product. Wrong evidence or a wrong comparison behind a matching ID is caught by review and counterexample runs; whether the map is true is settled only by running it.
 
 ## Keeping it true, and what to rerun
 

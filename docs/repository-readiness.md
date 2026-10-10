@@ -8,7 +8,7 @@ Fill-in templates from our first setup: [control commands](templates/control-com
 
 ## This guide and the repo-readiness Skill
 
-The [repo-readiness](../skills/repo-readiness/SKILL.md) Skill builds this setup in a repository, with a runnable kit: a verification Skill to copy, a runner, judging primitives, a structure check and an HTTP adapter, with their own tests. This guide records how our first setup came about and why each part exists; the Skill holds where our setup ended after the rebuild described in step 5. Where the two differ, follow the Skill:
+The [repo-readiness](../skills/repo-readiness/SKILL.md) Skill builds this setup in a repository, with a runnable kit: a verification Skill to copy, a runner, judging primitives, a structure check, HTTP and CLI adapters and a page tool for web entries driven by hand, with their own tests. This guide records how our first setup came about and why each part exists; the Skill holds where our setup ended after the rebuild described in step 5. Where the two differ, follow the Skill:
 
 | Part | This guide, our first setup | The Skill |
 |---|---|---|
