@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 // The verification CLI. Every command prints one JSON object on stdout; `ok: false` exits non-zero.
 //   check                                   structural check of the feature maps (CI runs it)
+//   contract [--entry <e>]                  run an entry's adapter (default: every entry) against the
+//                                           adapter contract; test/contract.test.mjs runs the same
 //   run [target...] [--entry <e>] [--jobs N] [--evidence-dir D] [--launch '<json>'] [--detach]
 //   wait <evidence dir> [--timeout S]       blocks until a detached run ends, prints its summary
 //   look <evidence dir> <criterion id> pass|fail --why "<what the capture shows>"
@@ -24,6 +26,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { entryByName, loadConfig } from './config.mjs';
+import { checkContract } from './contract.mjs';
 import { checkMaps } from './map-check.mjs';
 import { defaultEvidenceDir, detach, loadAdapter, recordHand, recordLook, runScenarios, waitRun } from './runner.mjs';
 
@@ -100,6 +103,14 @@ async function main() {
   const config = loadConfig({ skillDir: flags['skill-dir'] ? path.resolve(flags['skill-dir']) : undefined });
 
   if (command === 'check') return checkMaps(config);
+
+  if (command === 'contract') {
+    const entries = flags.entry ? [entryByName(config, flags.entry)] : config.entryList;
+    if (entries.includes(undefined)) throw new Error(`no entry ${flags.entry} in verify.config.json`);
+    const results = [];
+    for (const entry of entries) results.push(await checkContract({ config, slug: entry.slug }));
+    return { ok: results.every((item) => item.ok), entries: results };
+  }
 
   if (command === 'run') {
     const evidenceDir = path.resolve(flags['evidence-dir'] ?? defaultEvidenceDir(config));
