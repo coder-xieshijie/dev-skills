@@ -214,3 +214,39 @@ test('CLI: check, run --detach and wait, up / doctor / do / down twice, help', (
   const hand = cli('record', path.join(repo.root, 'hand'), 'notes.create#3', 'pass', '--why', 'beta is listed');
   assert.deepEqual(hand, { ok: true, scenario: 'notes.create.web', result: UNVERIFIED, missing: ['notes.create#4'] });
 });
+
+test('CLI: a down that left processes keeps the instance live, and the next down tries again', () => {
+  const repo = makeRepo();
+  const cli = (...args) => {
+    try {
+      return JSON.parse(execFileSync('node', [path.join(SCRIPTS, 'verify.mjs'), ...args, '--skill-dir', repo.skillDir], { encoding: 'utf8' }));
+    } catch (error) {
+      return JSON.parse(error.stdout);
+    }
+  };
+  const up = cli('up', '--entry', 'api', '--launch', '{"failDown": true}');
+  assert.equal(cli('down', '--run', up.runId).ok, false);
+  const again = cli('down', '--run', up.runId);
+  assert.equal(again.already, undefined);
+  assert.equal(again.ok, false);
+  assert.equal(cli('list').instances.find((item) => item.runId === up.runId).stoppedAt, undefined);
+});
+
+test('CLI: wait reports a detached run that ended without a summary, with its output', () => {
+  const repo = makeRepo();
+  const cli = (...args) => {
+    try {
+      return JSON.parse(execFileSync('node', [path.join(SCRIPTS, 'verify.mjs'), ...args, '--skill-dir', repo.skillDir], { encoding: 'utf8' }));
+    } catch (error) {
+      return JSON.parse(error.stdout);
+    }
+  };
+  const evidence = path.join(repo.root, 'detached');
+  assert.equal(cli('run', 'no-such-map', '--evidence-dir', evidence, '--detach').detached, true);
+  const started = Date.now();
+  const waited = cli('wait', evidence, '--timeout', '60');
+  assert.ok(Date.now() - started < 30_000);
+  assert.equal(waited.ok, false);
+  assert.match(waited.error, /ended without run-summary.json/);
+  assert.match(waited.output, /no scenario script matches no-such-map/);
+});

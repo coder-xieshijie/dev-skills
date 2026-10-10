@@ -493,15 +493,34 @@ export function detach({ cliPath, args, evidenceDir }) {
   const out = openSync(path.join(evidenceDir, 'run.out'), 'a');
   const child = spawn(process.execPath, [cliPath, ...args], { detached: true, stdio: ['ignore', out, out] });
   child.unref();
+  writeFileSync(path.join(evidenceDir, 'run.pid'), `${child.pid}\n`);
   return { ok: true, detached: true, pid: child.pid, evidenceDir };
 }
 
+const running = (pid) => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+// Blocks until the run writes its summary; a detached run whose process ended without one is
+// reported with the end of its output instead of being waited for until the timeout.
 export async function waitRun(evidenceDir, timeoutSeconds = 1800) {
   const file = path.join(evidenceDir, 'run-summary.json');
+  const pidFile = path.join(evidenceDir, 'run.pid');
   const end = Date.now() + timeoutSeconds * 1000;
   while (!existsSync(file)) {
+    const pid = existsSync(pidFile) ? Number(readFileSync(pidFile, 'utf8')) : null;
+    if (pid && !running(pid) && !existsSync(file)) {
+      const out = path.join(evidenceDir, 'run.out');
+      const tail = existsSync(out) ? readFileSync(out, 'utf8').slice(-2000) : '';
+      return { ok: false, error: `the run (pid ${pid}) ended without run-summary.json`, output: tail, evidenceDir };
+    }
     if (Date.now() > end) return { ok: false, error: `no run-summary.json after ${timeoutSeconds}s`, evidenceDir };
-    await sleep(2000);
+    await sleep(1000);
   }
   return { evidenceDir, ...JSON.parse(readFileSync(file, 'utf8')) };
 }

@@ -166,7 +166,8 @@ async function main() {
     if (command === 'down') {
       if (record.stoppedAt) return { ok: true, runId: record.runId, already: 'stopped', kept: record.kept ?? [] };
       const down = await adapter.down(record.instance, { ...ctx, keepData: flags['keep-data'] });
-      Object.assign(record, { stoppedAt: new Date().toISOString(), kept: down.kept ?? [] });
+      // Stopped only when down says so: a down that left processes stays live, and the next down tries again.
+      Object.assign(record, down.ok ? { stoppedAt: new Date().toISOString(), kept: down.kept ?? [] } : { lastDown: down });
       save(config, record);
       return { runId: record.runId, ...down };
     }

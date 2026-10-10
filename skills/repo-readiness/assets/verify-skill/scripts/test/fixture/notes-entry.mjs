@@ -3,7 +3,8 @@
 // deletes a kit adapter it does not use. The real adapters have their own tests.
 // launch.env: BUG=1 answers 201 without storing the note (the counterexample a scenario must catch);
 // LOGIN_LOST=<marker file> voids the first instance's run and not later ones.
-// launch: { failUp: true } makes up throw; { failTools: true } makes tools() throw.
+// launch: { failUp: true } makes up throw; { failTools: true } makes tools() throw; { failDown: true }
+// makes down report a process it could not stop.
 
 import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -22,7 +23,7 @@ export async function up({ runId, runDir, launch = {}, root }) {
     appendFileSync(logFile, 'LOGIN LOST\n');
   }
   writeFileSync(path.join(dataDir, 'notes.json'), '[]');
-  return { dataDir, logFile, runDir, root, bug: launch.env?.BUG === '1', failTools: Boolean(launch.failTools) };
+  return { dataDir, logFile, runDir, root, bug: launch.env?.BUG === '1', failTools: Boolean(launch.failTools), failDown: Boolean(launch.failDown) };
 }
 
 export async function doctor(instance) {
@@ -31,6 +32,7 @@ export async function doctor(instance) {
 }
 
 export async function down(instance, { options = {}, keepData = false } = {}) {
+  if (instance.failDown) return { ok: false, kept: [instance.logFile], left: ['a stand-in process'] };
   if (!keepData) rmSync(instance.dataDir, { recursive: true, force: true });
   const log = existsSync(instance.logFile) ? readFileSync(instance.logFile, 'utf8') : '';
   const hit = options.invalidWhen && new RegExp(options.invalidWhen, 'm').exec(log);
