@@ -4,17 +4,17 @@ import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 
-import { EvidenceError, observationWindow, strictReader } from '../primitives.mjs';
-import { FAIL, PASS, runScenarios } from '../runner.mjs';
-import { makeRepo } from './helpers.mjs';
+import { EvidenceError, observationWindow, strictReader } from '../../../assets/verify-skill/scripts/primitives.mjs';
+import { FAIL, PASS, runScenarios } from '../../../assets/verify-skill/scripts/runner.mjs';
+import { makeRepo } from '../../../assets/verify-skill/scripts/test/helpers.mjs';
+import * as adapter from '../cli.mjs';
 
-// The adapter's tests skip themselves when a repository deletes the adapter it does not use.
+// Behaviour of the CLI example beyond the adapter contract (contract.test.mjs covers that): commands,
+// strict reads, pid records and process groups, timeouts, and a full run through the kit's runner.
 const here = path.dirname(fileURLToPath(import.meta.url));
-const adapterFile = path.join(here, '..', 'entries', 'cli.mjs');
-const skip = !existsSync(adapterFile) && 'entries/cli.mjs was removed';
-const adapter = skip ? null : await import(pathToFileURL(adapterFile).href);
+const adapterFile = path.join(here, '..', 'cli.mjs');
 const toy = path.join(here, 'fixture', 'toy-cli.mjs');
 const OPTIONS = {
   command: ['node', toy],
@@ -42,8 +42,7 @@ async function start(options = OPTIONS, launch = {}) {
   return { instance, ctx, window, t: adapter.tools(instance, { ...ctx, read, window }) };
 }
 
-test('cli: HOME and TMPDIR are the instance own, and only allowlisted variables pass', { skip }, async () => {
-  process.env.VERIFY_KIT_SECRET = 'user api key';
+test('cli: commands run in the instance; files a user would pass are arranged there', async () => {
   const { instance, ctx, t } = await start();
   try {
     const printed = await t.cli(['add', 'alpha']);
@@ -51,21 +50,16 @@ test('cli: HOME and TMPDIR are the instance own, and only allowlisted variables 
     // The toy CLI keeps its notes under ~/.toy-cli: inside the instance, never the user's HOME.
     assert.equal((await t.readJson('home/.toy-cli/notes.json'))[0].title, 'alpha');
     assert.equal(existsSync(path.join(os.homedir(), '.toy-cli')), false);
-    assert.deepEqual(instance.env, { HOME: path.join(instance.dataDir, 'home'), TMPDIR: path.join(instance.dataDir, 'tmp') });
-    const value = async (name) => (await t.query(['env', name])).value;
-    assert.equal(await value('VERIFY_KIT_SECRET'), null);
-    assert.equal(await value('PATH'), process.env.PATH);
-    assert.equal(await value('TMPDIR'), path.join(instance.dataDir, 'tmp'));
     assert.equal((await t.cli(['add', '--from', await t.file('m.txt', 'from a file\n')])).code, 0);
     assert.deepEqual((await t.query(['list'])).notes.map((note) => note.title), ['alpha', 'from a file']);
-    assert.equal((await adapter.doctor(instance, ctx)).ok, true);
+    // The probe in doctor runs the program in this instance.
+    assert.ok((await adapter.doctor(instance, ctx)).checks.some((check) => check.name.startsWith('list exits 0') && check.ok));
   } finally {
-    delete process.env.VERIFY_KIT_SECRET;
     await adapter.down(instance, ctx);
   }
 });
 
-test('cli: down stops a recorded background worker and a child left in the command group', { skip }, async () => {
+test('cli: down stops a recorded background worker and a child left in the command group', async () => {
   const { instance, ctx, t } = await start();
   const worker = (await t.cli(['serve'])).json.worker;
   const started = Date.now();
@@ -85,7 +79,7 @@ test('cli: down stops a recorded background worker and a child left in the comma
   assert.equal((await adapter.down(instance, ctx)).already, 'gone');
 });
 
-test('cli: without pidRecords a detached worker is not found, which is why the option exists', { skip }, async () => {
+test('cli: without pidRecords a detached worker is not found, which is why the option exists', async () => {
   // Counterexample for the option: the worker left its process group, so only the product's record names it.
   const { instance, ctx, t } = await start({ ...OPTIONS, pidRecords: [] });
   const worker = (await t.cli(['serve'])).json.worker;
@@ -97,7 +91,7 @@ test('cli: without pidRecords a detached worker is not found, which is why the o
   }
 });
 
-test('cli: a recorded pid that is not this instance is never signalled', { skip }, async () => {
+test('cli: a recorded pid that is not this instance is never signalled', async () => {
   // Counterexample: the record names a pid that now belongs to someone else (a reused pid).
   const stranger = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { stdio: 'ignore' });
   const { instance, ctx, t } = await start();
@@ -115,7 +109,7 @@ test('cli: a recorded pid that is not this instance is never signalled', { skip 
   }
 });
 
-test('cli: reads are strict and stay inside the instance', { skip }, async () => {
+test('cli: reads are strict and stay inside the instance', async () => {
   const { instance, ctx, t, window } = await start();
   try {
     await assert.rejects(t.readJson('home/.toy-cli/missing.json'), EvidenceError);
@@ -140,7 +134,7 @@ test('cli: reads are strict and stay inside the instance', { skip }, async () =>
   }
 });
 
-test('cli: a command that does not exit in time is killed and throws', { skip }, async () => {
+test('cli: a command that does not exit in time is killed and throws', async () => {
   const { instance, ctx, t } = await start({ ...OPTIONS, command: ['node', '-e', 'setInterval(() => {}, 1000)'] });
   try {
     await assert.rejects(t.cli([], { timeout: 1 }), /did not exit within 1s/);
@@ -150,7 +144,7 @@ test('cli: a command that does not exit in time is killed and throws', { skip },
   }
 });
 
-test('cli through the runner: PASS on the good CLI, FAIL on the broken one', { skip }, async () => {
+test('cli through the runner: PASS on the good CLI, FAIL on the broken one', async () => {
   const map = `# Notes
 
 Notes from the command line.

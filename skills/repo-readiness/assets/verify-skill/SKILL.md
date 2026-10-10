@@ -1,71 +1,66 @@
 ---
 name: verify-<app>
-description: Starts an isolated <app> instance, drives it through <entry points> and collects evidence to prove a change works the way a user meets it. Use when verifying a change, reproducing a bug, running a feature map or its scenario scripts, or writing and checking feature maps.
+description: Starts isolated <app> instances, drives them through <entry points> and reports one result per sub-feature and entry with evidence. Use when verifying a change, reproducing a bug, or running, writing or checking feature maps and their scenario scripts.
 ---
 
 # Verify <app>
 
-Prove that a change behaves correctly where users meet it, with evidence another agent can check. Feature maps say what correct is; this Skill starts, drives, reads and stops the app.
-
-```bash
-V=<path to this skill>/scripts/verify.mjs
-```
-
-Every command prints one JSON object and exits non-zero when `ok` is false. `node $V --help` lists them.
+Prove that a change behaves correctly where users meet it, with evidence another agent can check. The feature maps say what correct is, one numbered criterion at a time; this Skill starts, drives, reads and stops the app. Which maps to run, which entries to drive by hand and how is yours to decide; the commands below are what is available.
 
 ## Boundaries
 
-- Drive only instances you started, through `up` or `run`. Never touch the user's own data, ports or running app. `down` stops only the processes it recorded.
-- Use the product's user-facing paths. Arranging stored state is allowed only on a stopped instance's data, and the report says it was arranged.
-- Judge user-visible behavior at the entry users use; the API entry only adds checks. An entry you cannot drive is reported as not verified, never replaced by another entry.
-- Results stay in the run's evidence directory and go into the MR description; they never go into maps or this Skill.
-- Live runs are not a CI gate. CI runs the script tests and `node $V check`.
+- Drive and stop only instances you started, through `run` or `up`, and pass the `--run` your own `up` printed. The user's app and other agents' instances may be running on this machine; `list` shows every session's hand instances, and `down` stops only the processes its own instance recorded.
+- Judge user-visible behavior at the entry users use. An entry you cannot drive is reported as not verified, never replaced by another entry. Stored state may be arranged only on a stopped instance's data, and the report says so.
+- Results go into the run's evidence directory and the MR description, never into the maps or this Skill: they describe the product, and `check` fails on a result tied to a date, a commit or a count.
 
 ## Done
 
-Every sub-feature × entry in scope has one result (PASS, FAIL, BLOCKED, UNVERIFIED, TO-CONFIRM); every non-PASS has a note; the report lists the evidence directory, `version` from its `run-summary.json` (commit, dirty paths, kit hash), the selection and why, and what was not verified.
+- Every sub-feature × entry in scope has one result: PASS (every criterion holds), FAIL (the product breaks the map), BLOCKED (the precondition could not be built), UNVERIFIED (not run, or the run does not count) or TO-CONFIRM (a product owner must say whether it is intended). Every non-PASS has a note.
+- The report gives the evidence directory, `version` from its `run-summary.json` (commit, dirty paths, kit hash), the maps, sub-features and entries selected and the change each covers, what was not verified, and product problems separately from verification problems.
 
-## Run scenario scripts
+## How results are judged
 
-```bash
-node $V run [<map>|<sub-feature id>|<script path>...] [--entry <slug>] [--jobs N] [--evidence-dir <dir>] [--launch '<json>']
-node $V run ... --detach      # returns at once with the evidence directory
-node $V wait <evidence dir>   # blocks until that run ends
-```
+The runner and the adapters enforce these; they are here so you can read a result right.
 
-Each scenario gets its own instance (up, doctor, script, down). A run whose instance did not start, failed doctor or was reported invalid runs once more; the first attempt stays as `<scenario>.attempt-1`. `ok` means nothing is UNVERIFIED (FAILs may exist); `allPass` means every result is PASS.
+- Evidence is read only through the adapter's strict reads. A failed or unreadable read makes the result UNVERIFIED, even if a script catches it; an empty state counts only when a read succeeded and returned empty.
+- The order decides: an error, a timeout, unreadable evidence or a side-effect read inside a wait → UNVERIFIED; a failed precondition → BLOCKED; nothing checked → UNVERIFIED; a criterion that does not hold → FAIL; a criterion left unchecked or a look not yet judged → UNVERIFIED; something to confirm → TO-CONFIRM; otherwise PASS.
+- A scenario whose instance did not start, failed doctor or was reported invalid by `down` runs once more; the first attempt stays as `<scenario>.attempt-1`. A valid FAIL is never rerun.
+- Look criteria stop at UNVERIFIED with a capture path until `look` records your verdict on it. Criteria of an entry without scripts get their result from `record`, judged the same way: a criterion not yet recorded keeps the result UNVERIFIED unless a recorded one fails.
+- A result counts only for the kit hash it was measured with (`version.kit.hash`): a change under `scripts/` or to `verify.config.json` starts over.
 
-Each scenario's directory holds `result.json` and what its entry's adapter writes there (<list per entry: app log, `cli.jsonl`, `requests.jsonl`, `kept/` ...>). Paths in `result.json` that point into the instance's `data/` are gone after `down`; what the adapter keeps is copied next to `result.json` first.
-
-- Wait with `--detach` then `wait`, or your host's background job; do not sleep-poll files, each wake-up is a model call with the whole context.
-- Look criteria stop at UNVERIFIED with a capture path. Open the capture, judge it against the map's standard, then `node $V look <evidence dir> <criterion id> pass|fail --why "<what the capture shows>"`.
-- Counterexample: `--launch '<json>'` merges into every script's launch options; use it to make the product break a criterion and confirm the result is FAIL.
-
-## Drive by hand
+## Commands
 
 ```bash
-node $V up --entry <slug>                  # isolated instance; prints runId, its run directory and fields
+V=<path to this skill>/scripts/verify.mjs
+node $V run [<map>|<sub-feature id>|<script path>...] [--entry <slug>] [--jobs N] [--evidence-dir <dir>] [--launch '<json>'] [--detach]
+node $V wait <evidence dir>                  # blocks inside the command until a detached run ends
+node $V up --entry <slug> [--launch '<json>']   # a hand instance: prints runId, run directory and fields
 node $V doctor --run <runId>
 node $V do <tool> --run <runId> '<json args>'   # {field} in an argument is that field of the instance
-node $V page --run <runId> /path --text "<what to wait for>"   # pages: visible text and a screenshot
-node $V record <evidence dir> <criterion id> pass|fail|confirm --why "<what was observed>" [--file <screenshot>]
 node $V down --run <runId> [--keep-data]   # a second down reports it already stopped
+node $V list                                 # hand instances on this machine, from every session
+node $V record <evidence dir> <criterion id> pass|fail|confirm --why "<what was observed>" [--file <capture>]
+node $V look <evidence dir> <criterion id> pass|fail --why "<what the capture shows>"
+node $V check                                # structure of maps and scripts; CI runs it
+node $V contract [--entry <slug>]            # an entry's adapter against the adapter contract
 ```
 
-Hand instances live under `<runs root>/manual/`, which every session on this machine shares, and `list` shows all of them: always pass the `--run` that your own `up` printed.
+Every command prints one JSON object and exits non-zero when `ok` is false; `node $V --help` lists them. A run gives each scenario its own instance (up, doctor, script, down); `ok` is false when anything is UNVERIFIED, `allPass` is true when everything is PASS. `--launch` merges into every script's launch options: that is how a counterexample run breaks the product to show a criterion gives FAIL.
 
-<One section per entry: what `up` starts, how to drive it (keys, selectors), how to read state, gotchas. Move long ones to references/<entry>.md.>
+## Entries
 
-<A table of every tool `do` and scripts can call, per entry: name and arguments, action or read, what it does. A tool a map or script uses and this Skill does not name makes `check` warn.>
+<One section per entry: what `up` starts, how to drive it (tools, keys, selectors), how to read its state, what its scenario directory holds after a run (`result.json` and what the adapter keeps, such as an app log or `requests.jsonl`; paths into the instance's `data/` are gone after `down`), and its gotchas. Move a long one to references/<entry>.md.>
+
+<A table of every tool `do` and scripts can call, per entry: name and arguments, action or read, what it does. `check` warns about a tool a map or script uses that this Skill does not name.>
 
 ## Smoke
 
-<The shortest journey per entry that proves the instance is drivable: command, expected output. Run it first when the Skill or the app's startup changed.>
+<The shortest journey per entry that proves the instance is drivable: command, expected output. Run it first when this Skill or the app's startup changed.>
 
 ## Feature maps
 
-[features/README.md](features/README.md) lists the maps and what they cover. Before writing or changing a map or scenario script, read [references/maps.md](references/maps.md).
+[features/README.md](features/README.md) lists the maps and what they cover. Read [references/maps.md](references/maps.md) before writing or changing a map or a scenario script.
 
 ## Maintain
 
-When the app's startup, entry points or a mapped behavior change, update this Skill and the affected maps and scripts in the same MR. After changing anything under `scripts/`, run `node --test scripts/test/*.test.mjs` and `node $V check`; earlier runs do not count for the new version (`version.kit.hash` in the run summary changes with it). Report product problems separately; edit only maps and this Skill.
+When the app's startup, its entries or a mapped behavior change, update this Skill and the affected maps and scripts in the same MR. After a change under `scripts/`, `node --test scripts/test/*.test.mjs` (which runs the adapter contract on every entry) and `node $V check` pass before any run counts. Product problems are reported, not fixed here.

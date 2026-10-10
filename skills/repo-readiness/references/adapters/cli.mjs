@@ -1,6 +1,8 @@
-// Entry adapter for a command-line program. There is no long-lived server: `up` makes the instance's
-// directories and environment, `cli` runs one command in them the way a user types it, and `down`
-// stops whatever the commands left running before it deletes the data directory.
+// Example entry adapter for a command-line program. There is no long-lived server: `up` makes the
+// instance's directories and environment, `cli` runs one command in them the way a user types it,
+// and `down` stops whatever the commands left running before it deletes the data directory. Copy it
+// to scripts/entries/<slug>.mjs with _process.mjs, or import it from a file that wraps it, and
+// change what your product needs; the kit's contract test runs on the copy.
 // Options (verify.config.json, entries.<slug>.options):
 //   command        ["node", "{root}/bin/cli.js"]   the program as a user runs it; placeholders as in
 //                  arguments ({root} is the repository root)
@@ -26,15 +28,15 @@
 // data directory belong to this instance, and only those are ever signalled.
 // Every command and its output goes to <runDir>/cli.jsonl; the process group of every command to
 // <runDir>/cli-groups.jsonl, so `down` also finds children a command left in its group.
-// Doctor reads back what this adapter can see. Reading back the program's effective config and
-// checking credentials are product-specific: add them in a file that wraps this one (see
-// control-contract.md, "Extending a kit adapter").
+// Doctor reads back what this adapter can see. Reading back the program's effective config, checking
+// credentials and proving each replaced external system is the one the program calls are your
+// product's own checks: add them in a file that wraps this one.
+// Reads throw plain errors: inside ctx.read, any error makes the evidence unreadable.
 
 import { spawn } from 'node:child_process';
 import { appendFileSync, cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-import { EvidenceError } from '../primitives.mjs';
 import {
   buildChecks,
   expand,
@@ -193,11 +195,11 @@ export function tools(instance, ctx) {
   if (!existsSync(instance.dataDir)) throw new Error(`instance data ${instance.dataDir} is gone; up again`);
   const run = runner(instance, ctx);
   const effects = (options.sideEffectCommands ?? []).map((pattern) => new RegExp(pattern));
-  // A path inside the data directory, or EvidenceError: a read never leaves the instance.
+  // A path inside the data directory, or an error: a read never leaves the instance.
   const inside = (rel, what) => {
     const full = path.resolve(instance.dataDir, expand(rel, instance));
-    if (path.relative(instance.dataDir, full).startsWith('..')) throw new EvidenceError(`${what}: ${rel} is outside the instance`);
-    if (!existsSync(instance.dataDir)) throw new EvidenceError(`${what}: the instance's data directory is gone`);
+    if (path.relative(instance.dataDir, full).startsWith('..')) throw new Error(`${what}: ${rel} is outside the instance`);
+    if (!existsSync(instance.dataDir)) throw new Error(`${what}: the instance's data directory is gone`);
     return full;
   };
   let files = 0;
@@ -215,9 +217,9 @@ export function tools(instance, ctx) {
       return read(effect ? `${what} (side effect)` : what, async () => {
         const result = await run(args, rest);
         if (!codes.includes(result.code))
-          throw new EvidenceError(`${what} exited ${result.code ?? result.signal}${result.stderr ? `: ${result.stderr.trim().slice(0, 200)}` : ''}`);
+          throw new Error(`${what} exited ${result.code ?? result.signal}${result.stderr ? `: ${result.stderr.trim().slice(0, 200)}` : ''}`);
         if (!json) return result.stdout;
-        if (result.json === null) throw new EvidenceError(`${what} printed no JSON`);
+        if (result.json === null) throw new Error(`${what} printed no JSON`);
         return result.json;
       });
     },
@@ -233,25 +235,25 @@ export function tools(instance, ctx) {
     readText: (rel) =>
       read(`file ${rel}`, () => {
         const full = inside(rel, `file ${rel}`);
-        if (!existsSync(full)) throw new EvidenceError(`file ${rel} does not exist`);
+        if (!existsSync(full)) throw new Error(`file ${rel} does not exist`);
         return readFileSync(full, 'utf8');
       }),
     readJson: (rel) =>
       read(`json ${rel}`, () => {
         const full = inside(rel, `json ${rel}`);
-        if (!existsSync(full)) throw new EvidenceError(`json ${rel} does not exist`);
+        if (!existsSync(full)) throw new Error(`json ${rel} does not exist`);
         try {
           return JSON.parse(readFileSync(full, 'utf8'));
         } catch (error) {
-          throw new EvidenceError(`json ${rel}: ${error.message}`);
+          throw new Error(`json ${rel}: ${error.message}`);
         }
       }),
     readJsonl: (rel) =>
       read(`jsonl ${rel}`, () => {
         const full = inside(rel, `jsonl ${rel}`);
-        if (!existsSync(full)) throw new EvidenceError(`jsonl ${rel} does not exist`);
+        if (!existsSync(full)) throw new Error(`jsonl ${rel} does not exist`);
         const text = readFileSync(full, 'utf8');
-        if (text && !text.endsWith('\n')) throw new EvidenceError(`jsonl ${rel}: the last line is cut off`);
+        if (text && !text.endsWith('\n')) throw new Error(`jsonl ${rel}: the last line is cut off`);
         return text
           .split('\n')
           .filter(Boolean)
@@ -259,7 +261,7 @@ export function tools(instance, ctx) {
             try {
               return JSON.parse(line);
             } catch {
-              throw new EvidenceError(`jsonl ${rel}: line ${i + 1} is not JSON`);
+              throw new Error(`jsonl ${rel}: line ${i + 1} is not JSON`);
             }
           });
       }),
@@ -270,7 +272,7 @@ export function tools(instance, ctx) {
         const full = inside(rel, `list ${rel}`);
         if (existsSync(full)) return readdirSync(full).sort();
         if (absent !== undefined && existsSync(path.dirname(full))) return absent;
-        throw new EvidenceError(`list ${rel}: no such directory`);
+        throw new Error(`list ${rel}: no such directory`);
       }),
   };
 }

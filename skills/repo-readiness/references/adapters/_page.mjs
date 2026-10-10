@@ -1,14 +1,13 @@
-// Opens one web page the way a user does and reports what is on it: what `verify.mjs page` uses to
-// drive a web entry by hand, and what a UI adapter's capture() can use. It needs Playwright
+// Example helper for web entries: opens one page the way a user does and reports what is on it. The
+// HTTP example's `page` tool (`verify.mjs do page`) and `capture` use it. It needs Playwright
 // (`playwright` or `playwright-core`) installed in the repository and a Chromium it can launch
 // (`npx playwright install chromium`). The browser is headless, so it never takes the user's focus.
+// Called inside ctx.read, its errors make the evidence unreadable.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-
-import { EvidenceError } from './primitives.mjs';
 
 // Playwright as the repository resolves it.
 export async function loadPlaywright(root) {
@@ -28,7 +27,7 @@ export async function loadPlaywright(root) {
 
 // Opens `url`, waits for `waitText` (up to `timeout` seconds) and then `seconds` more, and saves the
 // visible text and a full-page screenshot as <outDir>/<name>.txt and .png. A page that does not load
-// (no response, non-2xx) is unreadable evidence; text that never appears is `ok: false` with why.
+// (no response, non-2xx) throws; text that never appears is `ok: false` with why.
 // `headers` go with every request the page makes (a token the app requires, say).
 export async function openPage({ url, root, outDir, name = 'page', waitText, timeout = 30, seconds = 0, headers }) {
   const { chromium } = await loadPlaywright(root);
@@ -41,9 +40,9 @@ export async function openPage({ url, root, outDir, name = 'page', waitText, tim
     try {
       response = await page.goto(url, { waitUntil: 'load', timeout: timeout * 1000 });
     } catch (error) {
-      throw new EvidenceError(`page ${url}: ${error.message.split('\n')[0]}`);
+      throw new Error(`page ${url}: ${error.message.split('\n')[0]}`);
     }
-    if (!response || !response.ok()) throw new EvidenceError(`page ${url} returned ${response ? `HTTP ${response.status()}` : 'no response'}`);
+    if (!response || !response.ok()) throw new Error(`page ${url} returned ${response ? `HTTP ${response.status()}` : 'no response'}`);
     let found;
     if (waitText !== undefined) {
       found = await page
