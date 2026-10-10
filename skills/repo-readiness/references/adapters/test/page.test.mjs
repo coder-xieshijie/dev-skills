@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
 import http from 'node:http';
 import { createRequire } from 'node:module';
 import os from 'node:os';
@@ -97,7 +97,9 @@ test('do page drives a hand instance and record files the verdict with its captu
     const recorded = cli('record', evidence, 'notes.create#3', 'pass', '--why', 'the list shows beta', '--file', page.screenshot);
     assert.deepEqual(recorded, { ok: true, scenario: 'notes.create.web', result: 'UNVERIFIED', missing: ['notes.create#4'] });
     const result = JSON.parse(readFileSync(path.join(evidence, 'notes.create.web', 'result.json'), 'utf8'));
-    assert.equal(result.criteria[0].file, page.screenshot);
+    assert.equal(result.criteria[0].copiedFrom, page.screenshot);
+    assert.equal(result.criteria[0].file, path.join(realpathSync(evidence), 'notes.create.web', 'notes.create-3-list.png'));
+    assert.equal(existsSync(result.criteria[0].file), true);
   } finally {
     cli('down', '--run', up.runId);
   }

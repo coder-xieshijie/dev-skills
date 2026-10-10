@@ -213,6 +213,24 @@ test('record: hand results are judged like a script result and land in the summa
   assert.throws(() => record('notes.create#9', 'pass'), /no criterion notes.create#9/);
 });
 
+test('record --file copies a capture from outside the evidence directory into the scenario directory', () => {
+  const repo = makeRepo();
+  const evidenceDir = path.join(repo.root, 'hand');
+  const shot = path.join(repo.root, 'runs', 'manual', 'web-1', 'list.png');
+  mkdirSync(path.dirname(shot), { recursive: true });
+  writeFileSync(shot, 'png bytes');
+  recordHand({ config: repo.config, evidenceDir, id: 'notes.create#3', verdict: 'pass', why: 'beta listed', file: shot });
+  const scenarioDir = realpathSync(path.join(evidenceDir, 'notes.create.web'));
+  const [criterion] = JSON.parse(readFileSync(path.join(scenarioDir, 'result.json'), 'utf8')).criteria;
+  assert.equal(criterion.file, path.join(scenarioDir, 'notes.create-3-list.png'));
+  assert.equal(criterion.copiedFrom, realpathSync(shot));
+  assert.equal(readFileSync(criterion.file, 'utf8'), 'png bytes');
+  // A capture already inside the scenario directory is recorded where it is.
+  recordHand({ config: repo.config, evidenceDir, id: 'notes.create#4', verdict: 'pass', why: 'beta once', file: criterion.file });
+  const look = JSON.parse(readFileSync(path.join(scenarioDir, 'result.json'), 'utf8')).criteria.find((c) => c.id === 'notes.create#4');
+  assert.deepEqual([look.file, look.copiedFrom], [criterion.file, undefined]);
+});
+
 test('record: a criterion a script judged in that run is not overwritten by hand', async () => {
   const repo = makeRepo();
   const evidenceDir = path.join(repo.root, 'evidence');

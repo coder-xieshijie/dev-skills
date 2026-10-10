@@ -7,7 +7,8 @@
 //   wait <evidence dir> [--timeout S]       blocks until a detached run ends, prints its summary
 //   look <evidence dir> <criterion id> pass|fail --why "<what the capture shows>"
 //   record <evidence dir> <criterion id> pass|fail|confirm --why "<what was observed>" [--file <capture>]
-//                                           a criterion judged by hand, into that directory's summary
+//                                           a criterion judged by hand, into that directory's summary;
+//                                           a --file from elsewhere is copied into it
 //   up --entry <e> [--launch '<json>']      start an instance by hand (for entries driven by hand)
 //   doctor [--run <id>]                     is this instance worth driving?
 //   do <tool> [--run <id>] ['<json args>']  call one of the entry adapter's tools on the instance;

@@ -14,7 +14,7 @@
 // once more; a valid FAIL, BLOCKED or timeout never does.
 
 import { execFileSync, spawn } from 'node:child_process';
-import { existsSync, mkdirSync, openSync, readFileSync, readdirSync, realpathSync, renameSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, openSync, readFileSync, readdirSync, realpathSync, renameSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -452,6 +452,15 @@ export function recordHand({ config, evidenceDir, id, verdict, why, file }) {
   }
   if (file && !existsSync(file)) throw new Error(`${file} does not exist`);
   mkdirSync(dir, { recursive: true });
+  // The capture moves with the evidence: a file outside this scenario's directory is copied into it.
+  let capture;
+  if (file) {
+    const from = realpathSync(file);
+    const into = realpathSync(dir);
+    const inside = !path.relative(into, from).startsWith('..');
+    capture = inside ? { file: from } : { file: path.join(into, `${id.replace('#', '-')}-${path.basename(from)}`), copiedFrom: from };
+    if (!inside) cpSync(from, capture.file, { recursive: true });
+  }
   const version = runVersion(config);
   const result = existing ?? {
     scenario,
@@ -472,7 +481,7 @@ export function recordHand({ config, evidenceDir, id, verdict, why, file }) {
     confirm: verdict === 'confirm',
     detail: why,
     recordedAt: new Date().toISOString(),
-    ...(file ? { file: path.resolve(file) } : {}),
+    ...capture,
   });
   result.missing = result.expected.filter((cid) => !result.criteria.some((c) => c.id === cid));
   result.result = judge(result);
