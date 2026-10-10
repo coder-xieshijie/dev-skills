@@ -59,6 +59,19 @@ test('cli: commands run in the instance; files a user would pass are arranged th
   }
 });
 
+test('cli: env given to one command reaches that command only', async () => {
+  const { instance, ctx, t } = await start();
+  try {
+    assert.deepEqual((await t.cli(['env', 'ONE'], { env: { ONE: 'for {runId}' } })).json, { value: 'for cli-test' });
+    assert.deepEqual((await t.query(['env', 'ONE'], { env: { ONE: 'read' } })), { value: 'read' });
+    assert.deepEqual((await t.cli(['env', 'ONE'])).json, { value: null });
+    // The marker that ties the command's processes to this instance cannot be replaced.
+    assert.deepEqual((await t.cli(['env', 'VERIFY_DATA_DIR'], { env: { VERIFY_DATA_DIR: '/elsewhere' } })).json, { value: instance.dataDir });
+  } finally {
+    await adapter.down(instance, ctx);
+  }
+});
+
 test('cli: down stops a recorded background worker and a child left in the command group', async () => {
   const { instance, ctx, t } = await start();
   const worker = (await t.cli(['serve'])).json.worker;

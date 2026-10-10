@@ -75,14 +75,14 @@ function runner(instance, { options = {}, launch = {} }) {
   const dirs = Object.fromEntries(['dataDir', 'home', 'tmp', ...instance.dirs].map((name) => [name, instance[name]]));
   const env = instanceEnv({ options, launch, dirs, fields: instance });
   env.VERIFY_DATA_DIR = instance.dataDir;
-  return function run(args, { input, timeout = options.timeoutSeconds ?? 120, cwd, command = options.command } = {}) {
+  return function run(args, { input, timeout = options.timeoutSeconds ?? 120, cwd, command = options.command, env: extra } = {}) {
     const [program, ...baseArgs] = expand(command, instance);
     const argv = expand(args.map(String), instance);
     const started = new Date().toISOString();
     return new Promise((resolve, reject) => {
       const child = spawn(program, [...baseArgs, ...argv], {
         cwd: expand(cwd ?? options.cwd ?? '{dataDir}', instance),
-        env,
+        env: extra ? { ...env, ...expand(extra, instance), VERIFY_DATA_DIR: instance.dataDir } : env,
         stdio: [input === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'],
         detached: true,
       });
@@ -206,8 +206,9 @@ export function tools(instance, ctx) {
   return {
     // One command as a user types it, returned as is: { code, signal, stdout, stderr, json }. An
     // action: a non-zero exit is the product's answer, not unreadable evidence. Options: `input`
-    // (stdin), `timeout` (seconds), `cwd`, and `command` for another program of the same product
-    // (placeholders as in options.command); it runs in the same instance and is stopped the same way.
+    // (stdin), `timeout` (seconds), `cwd`, `env` (variables for this command only, placeholders
+    // allowed), and `command` for another program of the same product (placeholders as in
+    // options.command); it runs in the same instance and is stopped the same way.
     cli: (args, options) => run(args, options),
     // Evidence: one of the program's own read commands. Its exit code must be one of `codes` and,
     // unless `json: false`, its stdout one JSON value (returned parsed); otherwise unreadable.
