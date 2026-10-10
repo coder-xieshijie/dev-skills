@@ -29,21 +29,19 @@ Committed on a branch, as one change or squashed as the repository prefers:
   features/README.md        map index
   references/maps.md        how to write maps and scenario scripts
   references/<entry>.md     per entry when its section outgrows SKILL.md
-  scripts/                  the kit: verify.mjs, runner.mjs, primitives.mjs, map-check.mjs, config.mjs, test/
+  scripts/                  the kit: verify.mjs, runner.mjs, primitives.mjs, map-check.mjs, config.mjs, contract.mjs, test/
   scripts/entries/          one adapter per entry: <slug>.mjs, shared code in _<name>.mjs
 <map root>/<feature>/feature-map/<map>.md
 <map root>/<feature>/feature-map/scenarios/<id>.<slug>.mjs, _<map>.mjs
 ```
 
-<!-- TODO(kit): confirm the final file list of the copied kit (is `record` its own file or a verify.mjs command; where `page` lands when a web entry copies it from references/adapters/). -->
-
 `<skills dir>` is where the repository's agents load project Skills (`.agents/skills`, `.claude/skills`, `.cursor/skills`); keep one copy and link the others to it. With none yet, use `.agents/skills` for AGENTS.md and `.claude/skills` for CLAUDE.md. `V` below is `<skills dir>/verify-<app>/scripts/verify.mjs`.
 
-1. **Kit in place.** The kit in [assets/verify-skill/](assets/verify-skill/) is copied with its placeholders filled and `kit` in `verify.config.json` naming the dev-skills version or commit. Every adapter passes the kit's adapter contract test, and the kit's tests and the repository's own gates pass with the kit in place. <!-- TODO(kit): name the contract test's command once the kit has it. -->
+1. **Kit in place.** The kit in [assets/verify-skill/](assets/verify-skill/) is copied with its placeholders filled and `kit` in `verify.config.json` naming the dev-skills version or commit. Every adapter passes the kit's adapter contract test (`node $V contract`, also run by the kit's tests), with the checks it cannot make generically, such as effective config, credentials and that the product calls a replacement for an external system, named in the entry's `contract.doctorChecks`. The kit's tests and the repository's own gates pass with the kit in place.
 2. **Every entry drivable by hand.** For each entry, `up → doctor → do <a read> → down → down` with `--run <runId>` works: doctor reads back the product's effective config, the second `down` reports it already stopped, and the evidence survives while the data directory and every process the instance started are gone. The verification Skill records a decision for every row of the isolation table in [references/control-contract.md](references/control-contract.md), "not needed, because …" included. An entry users use that cannot be driven is named under Not covered with its reason, never stood in for by another entry.
 3. **Smoke.** The verification Skill's Smoke section gives the shortest journey per entry and the output that proves it worked, and each passes on the base branch from a clean checkout with the commands copied from the Skill.
 4. **Maps true to the code.** `node $V check` passes with no errors or warnings; it also keeps results out of the maps and the verification Skill, and wants AGENTS.md or CLAUDE.md to point to the verification Skill. Every criterion has been checked against the source by someone reading the code rather than the map.
-5. **Scripts shown able to fail.** Every sub-feature has a scenario script at each scripted entry. A full `run` on the base branch gives every scenario PASS, or FAIL or TO-CONFIRM with the product problem written up; every hand-driven sub-feature × entry has a result filed with `record`; each map has a counterexample run in which the broken criterion gives FAIL (UNVERIFIED means the counterexample did not run). Only runs made after the last change to the kit or an adapter count.
+5. **Scripts shown able to fail.** Every sub-feature has a scenario script at each scripted entry. A full `run` on the base branch gives every scenario PASS, or FAIL or TO-CONFIRM with the product problem written up; every hand-driven sub-feature × entry has a result filed with `record` (`node $V record`); each map has a counterexample run in which the broken criterion gives FAIL (UNVERIFIED means the counterexample did not run). Only runs made after the last change to the kit or an adapter count.
 6. **CI catches a broken map.** A job runs the kit's tests and `node $V check` when the verification Skill or any `feature-map/` directory changes. It has run green on the branch and failed on a deliberately broken map, such as a criterion with no script check. Live runs are not a gate.
 7. **A fresh session can use it.** A sub-agent with no access to this conversation, given only the repository and one task (verify one sub-feature of a mapped feature at every entry and report results with evidence), produces correct results from what the repository says. It hands back the documentation gaps it met: what was missing, wrong or ambiguous, with file and line. Ask for gaps in the text, not for its hesitations or reasoning; a request for its reasoning can be refused as reasoning extraction. Fix the gaps and repeat with a new sub-agent, up to three rounds; hand over what remains.
 8. **Hand-off.** The report to the user gives:
@@ -57,7 +55,7 @@ Committed on a branch, as one change or squashed as the repository prefers:
 
 - [references/route.md](references/route.md): one route through the work, with a check after each stage. Read it before starting; follow it, reorder it or shorten it as the repository allows.
 - [references/control-contract.md](references/control-contract.md): when writing or extending an adapter, or deciding how an instance is isolated.
-- `references/adapters/`: working HTTP and CLI adapters, process helpers and the `page` tool for web pages driven by hand, each passing the contract test. Start from one when an entry is that kind. <!-- TODO(kit): make this a link once the directory exists on this branch. -->
+- [references/adapters/](references/adapters/README.md): working HTTP and CLI adapters, process helpers and a `page` tool for web pages driven by hand, each passing the contract test. Start from one when an entry is that kind; copy it into `scripts/entries/`.
 - [assets/feature-map.template.md](assets/feature-map.template.md) and the kit's [references/maps.md](assets/verify-skill/references/maps.md): when writing a map or a scenario script.
 - [references/map-audit.md](references/map-audit.md): when a map is written or rewritten.
 - [references/counterexamples.md](references/counterexamples.md): when proving a map's scripts can fail.

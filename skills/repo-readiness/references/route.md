@@ -40,7 +40,7 @@ Check: done criterion 4.
 
 ## 5. Script the deterministic entry
 
-Write the scenario scripts for each scripted entry and add the entry to `scripted`. Drive the other entries by hand as the maps say, with `page` for web pages, and file each verdict with `record` into the same evidence directory. Run everything on the base branch, then a counterexample per map with [counterexamples.md](counterexamples.md).
+Write the scenario scripts for each scripted entry and add the entry to `scripted`. Drive the other entries by hand as the maps say, with a `page` tool on the adapter for web pages (`node $V do page --run <id> ...`, as in the HTTP example), and file each verdict with `record` into the same evidence directory. Run everything on the base branch, then a counterexample per map with [counterexamples.md](counterexamples.md).
 
 Check: done criterion 5.
 
