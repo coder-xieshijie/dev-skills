@@ -124,6 +124,7 @@ export async function up({ runId, runDir, launch = {}, options = {}, root }) {
     runId,
     token,
     url: `http://127.0.0.1:${port}`,
+    runDir,
     ...dirs,
     logFile,
     env: { HOME: env.HOME, TMPDIR: env.TMPDIR },

@@ -49,6 +49,7 @@ test('http-service: arguments from a template, identity by the spawned pid and a
   const instance = await adapter.up({ runId: 'pid-test', runDir: dir, options, root: here });
   try {
     assert.equal(instance.headers.authorization, `Bearer ${instance.token}`);
+    assert.equal(instance.runDir, dir);
     const doctor = await adapter.doctor(instance, { root: here, options });
     assert.deepEqual(doctor.checks.filter((check) => !check.ok), []);
     assert.ok(doctor.checks.some((check) => check.name === "a request without this run's token is refused"));
