@@ -1,6 +1,6 @@
 # Counterexample runs
 
-Read this when proving a map's scripts can fail, or whenever a check needs that proof. A counterexample breaks the product for one criterion and runs that criterion's map; it counts only when the broken criterion gives FAIL. UNVERIFIED means the break never reached the product.
+Read this when proving a map's scripts can fail, or whenever a check needs that proof. A counterexample breaks the product for one criterion and runs that criterion's map; it counts only when the broken criterion gives FAIL. UNVERIFIED means the run did not count: the break never reached the product, or it broke something doctor reads.
 
 ## Choosing the lever
 

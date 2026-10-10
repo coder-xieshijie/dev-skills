@@ -15,7 +15,7 @@ The runner and `verify.mjs up/doctor/do/down` call these exports. `ctx` carries 
 | `sideEffect(what)` | a reason string or `undefined` | name reads that change state (reading history wakes a queue, reading a list deletes expired items), so the runner refuses them inside waits and windows |
 | `capture(instance, name, ctx)` | a file path | save a screenshot or screen dump for a look criterion; only entries with look criteria |
 
-`ok: false` from doctor, or a throw from `up`, makes the scenario UNVERIFIED and runs it once more. `invalid` from `down` does the same. A throw from `tools` makes it UNVERIFIED; the instance is stopped either way.
+Doctor reads what makes an instance fit to drive, never behavior a map judges: a counterexample that breaks what doctor reads fails doctor, and the run is UNVERIFIED instead of FAIL. `ok: false` from doctor, or a throw from `up`, makes the scenario UNVERIFIED and runs it once more. `invalid` from `down` does the same. A throw from `tools` makes it UNVERIFIED; the instance is stopped either way.
 
 ## The contract test
 
