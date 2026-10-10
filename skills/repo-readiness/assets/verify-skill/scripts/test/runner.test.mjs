@@ -4,7 +4,7 @@ import { existsSync, readFileSync, realpathSync, symlinkSync, writeFileSync } fr
 import path from 'node:path';
 import test from 'node:test';
 
-import { loadConfig } from '../config.mjs';
+import { kitHash, loadConfig } from '../config.mjs';
 import { BLOCKED, FAIL, PASS, TO_CONFIRM, UNVERIFIED, judge, recordHand, recordLook, runScenarios } from '../runner.mjs';
 import { SCRIPTS, makeRepo } from './helpers.mjs';
 
@@ -152,6 +152,36 @@ test('the summary names the dirty paths and the kit that measured the run', asyn
   assert.ok(summary.version.dirtyPaths.includes('patched.txt'), summary.version.dirtyPaths);
   assert.equal(summary.version.kit.from, 'dev-skills test');
   assert.match(summary.version.kit.hash, /^[0-9a-f]{12}$/);
+});
+
+test('the kit hash changes with what judges a result, not with jobs, limits, paths or the kit label', () => {
+  const repo = makeRepo();
+  const file = path.join(repo.skillDir, 'verify.config.json');
+  const original = JSON.parse(readFileSync(file, 'utf8'));
+  const hashWith = (change) => {
+    const config = structuredClone(original);
+    change(config);
+    writeFileSync(file, JSON.stringify(config, null, 4));
+    return kitHash(loadConfig({ skillDir: repo.skillDir, root: repo.root }));
+  };
+  const base = hashWith(() => {});
+  assert.match(base, /^[0-9a-f]{12}$/);
+  for (const change of [
+    (config) => (config.jobs = 1),
+    (config) => (config.runsRoot = 'elsewhere'),
+    (config) => (config.kit = 'another label'),
+    (config) => (config.entries.web.max = 9),
+    (config) => (config.entries.api.contract = { read: ['read', '/health'], doctorChecks: ['config'] }),
+  ])
+    assert.equal(hashWith(change), base, change.toString());
+  // Counterexamples: what the runner reads to start, drive or judge changes the hash.
+  for (const change of [
+    (config) => (config.entries.api.options = { invalidWhen: '^OTHER' }),
+    (config) => (config.entries.web.ui = false),
+    (config) => (config.scripted = ['api', 'web']),
+    (config) => (config.headings = { steps: 'Steps' }),
+  ])
+    assert.notEqual(hashWith(change), base, change.toString());
 });
 
 test('record: hand results are judged like a script result and land in the summary', async () => {

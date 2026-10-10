@@ -26,7 +26,7 @@ The runner and the adapters enforce these; they are here so you can read a resul
 - The order decides: an error, a timeout, unreadable evidence or a side-effect read inside a wait → UNVERIFIED; a failed precondition → BLOCKED; nothing checked → UNVERIFIED; a criterion that does not hold → FAIL; a criterion left unchecked or a look not yet judged → UNVERIFIED; something to confirm → TO-CONFIRM; otherwise PASS.
 - A scenario whose instance did not start, failed doctor or was reported invalid by `down` runs once more; the first attempt stays as `<scenario>.attempt-1`. A valid FAIL is never rerun.
 - Look criteria stop at UNVERIFIED with a capture path until `look` records your verdict on it. Criteria of an entry without scripts get their result from `record`, judged the same way: a criterion not yet recorded keeps the result UNVERIFIED unless a recorded one fails.
-- A result counts only for the kit hash it was measured with (`version.kit.hash`): a change under `scripts/` or to `verify.config.json` starts over.
+- A result counts only for the kit hash it was measured with (`version.kit.hash`): a change under `scripts/` or to `verify.config.json` starts over, except for `jobs`, `max`, `runsRoot`, `kit` and `contract`, which cannot change a result.
 
 ## Commands
 
