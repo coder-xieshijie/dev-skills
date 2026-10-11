@@ -1,6 +1,6 @@
 # plan.md format
 
-Based on OpenAI's ExecPlan ([Using PLANS.md for multi-hour problem solving](https://cookbook.openai.com/articles/codex_exec_plans)). The owner writes plan.md, revises it while working, and commits it with the code. It has two readers: a new session taking over after an interruption, which must be able to continue from only plan.md and the git history; and the user before merging, who reads the decision list first.
+Based on OpenAI's ExecPlan ([Using PLANS.md for multi-hour problem solving](https://cookbook.openai.com/articles/codex_exec_plans)). The owner writes plan.md, revises it while working, and commits it with the code; plan.md changes are pushed together with code, never alone (see "MR" in SKILL.md). It has two readers: a new session taking over after an interruption, which must be able to continue from only plan.md and the git history; and the user before merging, who reads the decision list first.
 
 spec.md and verify.md are frozen and committed on the feature branch. plan.md refers to them and does not restate the requirements or scenarios; acceptance follows verify.md.
 
@@ -28,10 +28,9 @@ For what goes in it, see "Decision list" in SKILL.md. If there are no decisions,
 - spec: <path in the repository>
 - verify: <path in the repository>
 - baseline: <target branch> @ <commit>
-- owner: <your model ID, e.g. claude-opus-5-5>
 ```
 
-`check-delivery.mjs` reads the owner line to confirm that the independent verifier is from another family. When only local paths were handed over, write "local" on the handoff line, and on the spec and verify lines write the absolute path and the sha256 the user gave (`- spec: <absolute path> sha256=<value>`); a session taking over uses them to run `check-delivery.mjs --spec <path>@<sha256> --verify <path>@<sha256>`.
+The owner model is not written here: you pass it to `check-delivery.mjs` as `--owner`, which uses it to confirm that the independent verifier is from another family. When only local paths were handed over, write "local" on the handoff line, and on the spec and verify lines write the absolute path and the sha256 the user gave (`- spec: <absolute path> sha256=<value>`); a session taking over uses them to run `check-delivery.mjs --spec <path>@<sha256> --verify <path>@<sha256>`.
 
 ### Purpose / Big Picture
 
@@ -39,10 +38,10 @@ One or two sentences: what the user can do once this is done, and how to see it 
 
 ### Progress (kept up to date)
 
-A checklist with timestamps, one line per step: time, what was done, which scenarios passed, commit. Write an unfinished step as "completed: X; remaining: Y".
+A checklist, one line per step: what was done, which scenarios passed, commit. The commit carries the time; write a clock time only when you read it from a command. Write an unfinished step as "completed: X; remaining: Y".
 
 ```text
-- [x] (2026-09-29 14:05+08:00) M1 add read-only quota query; S01 passes; milestone check found no problems; a1b2c3d
+- [x] M1 add read-only quota query; S01 passes; milestone check found no problems; a1b2c3d
 - [ ] M2 quota-exhausted boundary (completed: UI entry point S02; remaining: command-line entry point S03)
 ```
 
@@ -72,4 +71,4 @@ The libraries, modules and services used, and why; parts the spec does not presc
 
 ## Size
 
-For evidence, write only the path and a one-sentence conclusion; full output goes in `evidence/`. When Progress grows so long that reading plan.md at every start takes real time, you may move it to `progress.md` in the same directory and leave a link in plan.md; the decision list and frozen inputs stay in plan.md.
+For evidence, write a one-sentence conclusion; the output stays in the evidence directory outside the repository, so plan.md does not link to it. When Progress grows so long that reading plan.md at every start takes real time, you may move it to `progress.md` in the same directory and leave a link in plan.md; the decision list and frozen inputs stay in plan.md.
