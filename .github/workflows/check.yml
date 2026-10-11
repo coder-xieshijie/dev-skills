@@ -27,6 +27,7 @@ jobs:
           node-version: 24
       - run: node --test skills/deliver/scripts/check-delivery.test.mjs
       - run: node --test skills/deliver/scripts/stall-guard.test.mjs
+      - run: node --test skills/deliver/scripts/ci-watch.test.mjs
   core-spec-check:
     runs-on: ubuntu-latest
     timeout-minutes: 5

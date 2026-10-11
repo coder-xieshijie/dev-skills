@@ -28,6 +28,8 @@ The Skills in this repository use these terms with one meaning each. The Chinese
 | independent verification | 独立验证 | A model from another family runs the scenarios on the final code in its own session and gives a verdict. In agent-prompt-rules the phrase has its general sense: verification by an agent other than the author |
 | milestone, milestone check | 里程碑、里程碑检查 | A piece of behavior that can be verified on its own; at full verification depth, a fresh-context subagent checks a milestone against the spec before later milestones that build on it start |
 | verification depth | 验证档位 | `light` or `full`, set in verify.md's key points and confirmed with the freeze. It decides how many intermediate checks delivery runs (up-front review, milestone checks, code review before verification); both end with the same independent verification |
+| evidence directory | 证据目录 | Where delivery keeps evidence, verification inputs and reports, other families' replies and one-scenario scripts, outside the repository; the MR does not carry it |
+| local gate | 本地闸门 | The checks CI runs for the paths a change touches, run locally before the push that starts CI and independent verification |
 | check results, not process | 只查结果，不查过程 | The only script check is on results: frozen files unchanged, a passing verification of the final code by another family |
 
 ## Verify

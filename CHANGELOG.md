@@ -6,6 +6,21 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-11
+
+### Changed
+
+- **deliver** keeps the MR to the product change, spec.md, verify.md, plan.md and reusable verification capabilities. Evidence, verification inputs and reports, replies from other families and one-scenario scripts go in an evidence directory outside the repository: the location the spec names, otherwise `.deliver/<topic>/` in the worktree, excluded through `.git/info/exclude`. plan.md states conclusions without linking into it.
+- **deliver** pushes only when CI should run: once when the local gate passes, right before independent verification, and again only with a code change. plan.md updates ride along with code pushes; what happens after the last push (verification results, CI, review handling) goes into the MR description.
+- **deliver** runs a local gate before that push: the checks CI runs for the paths the change touches, read from the repository's CI configuration, including cheap static checks such as a sensitive-word diff.
+- **deliver** gives code reading to a read-only exploring subagent that returns only its conclusion, so the owner's context stays small.
+- **deliver** plan.md has no owner line and no hand-written clock times; the commit carries the time.
+
+### Added
+
+- **deliver** `scripts/ci-watch.mjs`: waits for the GitLab pipeline of one MR head, including a merged-result pipeline, ignores pipelines of other heads, and returns at the first failed job. On GitHub, deliver uses `gh pr checks --watch --fail-fast`. Its tests run in CI.
+- **deliver** `check-delivery.mjs --owner <model ID>` gives the owner model on the command line, so plan.md does not name it; plan.md's `- owner:` line is still read when `--owner` is absent.
+
 ## [0.4.0] - 2026-10-10
 
 ### Changed

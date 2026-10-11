@@ -772,3 +772,55 @@ super-auto 的复盘（`discussions/2026-10-09-deliver-cost-and-theory.md`、`di
 - 真实需求上的效果：净墙钟、独立验证的轮数与发现、晚发现的问题、light 档的漏检。下一个完整需求按档位交付后，对比作者不再全量自验前后的独立验证发现数和净时间。
 - 定档在真实 core-spec 会话里是否稳定；用户冻结时是否会改档。
 - stall-guard 在长时间独立验证（数小时）和 Claude CLI 下的表现。
+
+## MR 只带代码和三份文档、只推一次、本地闸门对齐 CI（2026-10-11）
+
+### 起因
+
+super-auto 对第四个真实需求（agent-archon !7812，light 档）的耗时分析（`requirements/goal-verifier-network-access/deliver/timing-analysis.md`、`discussions/2026-10-11-deliver-7812-timing-and-mr-slimming.md`）：
+
+- deliver 墙钟 2h15m：模型调用 60 分钟（221 次），前台工具 18 分钟，空等后台 56 分钟，其中等 CI 47 分钟。三块几乎没有并行。
+- 6 条 pipeline，每条 16–18 分钟。其中 4 条由只改文档或测试的推送触发；最后一条只为 plan.md 收尾，单独卡了 18 分钟。
+- 证据进了 MR：32 个文件、2437 行。plan.md 的 owner 行写了模型 ID，证据里有含 `.claude` 的绝对路径，撞上仓库的敏感词检查；只好把 owner 写成 `cc`，`check-delivery` 再用临时副本读。
+- 推送前只跑了自选的相关测试，漏掉同包另一处集成测试里的回归；两轮独立验证也没发现，CI 才抓到，多出一轮修复、复验和 CI，约 25 分钟。
+- 等 CI 的循环盯的是 MR 最新的 pipeline，被之后的纯文档推送替换，失败晚 10–27 分钟才看到。
+- 查代码是主会话串行 grep，读代码类调用约占模型时间四成；上下文从 78k 涨到约 374k，每次调用都变慢。
+
+### 用户的决定（2026-10-11）
+
+- spec、verify、plan 进 MR；证据、一次性的验证脚本等中间过程不进。
+- 采纳助手的配套建议：plan 只随代码推送、收尾写进 MR 描述；owner 不写进 plan，改为命令行参数；plan 写短、不手写时刻；推送前跑对齐 CI 的本地检查；用脚本盯 CI；查代码交给子 Agent。
+
+### 改动
+
+| 改动 | 位置 | 依据 |
+|---|---|---|
+| 新增“What the MR carries”：MR 只带产品改动、spec、verify、plan.md 和可复用的验证能力；证据、验证输入与报告、另一家的回复、一次性脚本放仓库外的证据目录（spec 指定的位置，否则 worktree 里的 `.deliver/<topic>/`，用 `.git/info/exclude` 排除）；plan.md 只写结论、不链接证据，按仓库内容规则写 | `deliver/SKILL.md`、`references/plan-format.md` | 起因第 3 条；用户决定 |
+| 只为跑 CI 推送：本地闸门通过后、启动独立验证前推一次，之后只在改代码时再推；plan 随代码推送，最后一次推送之后的事写进 MR 描述；完成条件第 5 条相应改写 | `deliver/SKILL.md`“MR”、完成条件 | 起因第 2 条 |
+| 本地闸门：推送并启动独立验证前，读仓库 CI 配置里与改动路径匹配的 job，在本地跑它们的命令，包括敏感词这类便宜的静态检查 | `deliver/SKILL.md`“独立验证” | 起因第 4 条 |
+| 新脚本 `ci-watch.mjs`：GitLab 上按 MR head 找 pipeline（含 merged result：合并提交的父提交包含 head），忽略别的 head 的 pipeline，首个非 allow_failure 的失败 job 就返回；GitHub 用 `gh pr checks --watch --fail-fast` | `deliver/scripts/ci-watch.mjs`、`ci-watch.test.mjs`、CI | 起因第 5 条。它是等待工具，和 stall-guard 一样不检查过程，不违反“只查结果、不再新增检查脚本” |
+| `check-delivery.mjs --owner <model ID>`；没给时仍读 plan 的 owner 行 | `deliver/scripts/check-delivery.mjs`、测试 | 起因第 3 条 |
+| plan 的 Progress 不写时刻，提交带时间；去掉 owner 行 | `references/plan-format.md` | 第四个需求 plan 里手写的时刻比实际晚 1–2 小时 |
+| 查代码交给只读探索型子 Agent，只带回结论 | `deliver/SKILL.md` 子 Agent 一段 | 起因第 6 条 |
+
+### 接受的代价
+
+- 证据不在仓库里，换机器续跑或别人复核时拿不到原始输出，只能看 MR 描述和 plan 的结论；证据目录在哪由 owner 在汇报里说明。
+- 只推一次：中途没有 CI 兜底，问题集中在推送后暴露；靠本地闸门前移。本地闸门是否对齐 CI 由 owner 读配置判断，仓库没有统一入口时可能漏 job。
+- plan 停在最后一次代码推送时的状态，验证结论和 CI 结果只在 MR 描述里。
+- `ci-watch.mjs` 只支持 GitLab；GitHub 依赖 `gh pr checks` 的行为。
+
+### 验证
+
+- `ci-watch.test.mjs` 7 个用例（假 glab）：merged result 通过；运行中首个失败 job 即返回；忽略更新的别的 head 的 pipeline；allow_failure 不算失败；canceled 算失败；没有 pipeline 时超时退出 3；用法错误退出 2。
+- 真实 GitLab：对 !7812 的 `7122c5cdf6` 返回 PASSED（pipeline 960517，merged result）；对 `52e2cc8bee` 返回 960475 的两个失败 job，而不是之后的 pipeline；对 `26c8247845` 返回 960481。
+- `check-delivery.test.mjs` 新增 4 个用例：`--owner` 代替 owner 行、`--owner` 优先、两者都没有时报错、plan 和报告在仓库外。全部 25 个通过。
+
+- 新会话对照（2026-10-11）：同一组 8 个情境题（M2 后推不推、验证后结果写哪、证据和一次性脚本放哪、独立验证前跑什么、怎么等 CI、owner 怎么传、怎么查代码、Progress 一行怎么写），Claude Code 子代理（`claude-opus-5-5`）和 Codex（`gpt-6-astra`，`-s read-only`）各读改前（`7941eaa`）和改后一次，只许读 Skill 文件。题目与四份回答存在 super-auto `research/deliver-one-push-2026-10-11/probes/`。
+  - 改前：两家对“何时推送”“怎么等 CI”“一次性脚本放哪”“怎么查代码”都答 not specified；验证后会把结果提交并推送进 plan；Progress 带手写时刻。
+  - 改后：两家 8 题的回答都与设计一致，并引用了改后的原句。Claude 指出 SKILL.md 开头仍把 `- owner:` 列为脚本读取的键，与新规则矛盾，已删去。
+  - 这只说明文字能被读成本意，不说明交付变快。
+
+### 未验证
+
+- 真实需求上的效果：pipeline 条数、等待时长、本地闸门的耗时与漏检、证据在仓库外是否影响续跑。下一个需求交付后对照本次 2h15m 的拆分。
