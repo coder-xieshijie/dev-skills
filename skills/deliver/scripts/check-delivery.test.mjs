@@ -218,6 +218,39 @@ test("full: verifier of the owner's family", () => {
   assert.match(out, /same family as the owner/);
 });
 
+test("full: --owner gives the owner when plan.md has no owner line", () => {
+  const r = delivered();
+  r.write(`${REQ}/plan.md`, "- done\n");
+  const { code, out } = full(r, "--owner", "claude-opus-5-5");
+  assert.equal(code, 0, out);
+  assert.match(out, /verifier openai, owner anthropic/);
+});
+
+test("full: --owner wins over plan.md's owner line", () => {
+  const r = delivered();
+  const { code, out } = full(r, "--owner", "gpt-6.1-sol");
+  assert.equal(code, 1);
+  assert.match(out, /same family as the owner/);
+});
+
+test("full: no --owner and no owner line in plan.md", () => {
+  const r = delivered();
+  r.write(`${REQ}/plan.md`, "- done\n");
+  const { code, out } = full(r);
+  assert.equal(code, 1);
+  assert.match(out, /no owner: give --owner/);
+});
+
+test("full: plan and report outside the repository", () => {
+  const r = delivered();
+  const outside = mkdtempSync(path.join(tmpdir(), "check-delivery-out-"));
+  dirs.push(outside);
+  writeFileSync(path.join(outside, "plan.md"), "- done\n");
+  writeFileSync(path.join(outside, "report.md"), report(r.head));
+  const { code, out } = check(r, "--base", "base", "--head", r.head, "--plan", path.join(outside, "plan.md"), "--owner", "claude-opus-5-5", "--report", path.join(outside, "report.md"));
+  assert.equal(code, 0, out);
+});
+
 test("full: verifier line names no model", () => {
   const r = delivered({ model: "the other one" });
   const { code, out } = full(r);

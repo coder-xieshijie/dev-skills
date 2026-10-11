@@ -4,7 +4,7 @@
 //
 //   node check-delivery.mjs --repo <worktree> --base <target ref> --frozen
 //   node check-delivery.mjs --repo <worktree> --base <target ref> --head <MR head>
-//                           --plan <plan.md> --report <report.md> [--report <report.md> ...]
+//                           --plan <plan.md> --owner <model ID> --report <report.md> [--report <report.md> ...]
 //
 // <target ref> is the MR's target branch as fetched locally, e.g. origin/main.
 //
@@ -25,7 +25,8 @@
 //    directory with its own package.json, pyproject.toml, go.mod or Cargo.toml).
 // 3. Each report says `verdict: PASS`.
 // 4. The model on each report's `verifier-model:` line is not of the family of
-//    the model on plan.md's `- owner:` line. Reports written before that key
+//    the owner model given with --owner. Without --owner, plan.md's
+//    `- owner:` line is read instead (plans written before --owner existed). Reports written before that key
 //    have a `验证模型：` or `验证模型:` line instead, read the same way.
 //
 // Several reports are allowed (verification split across sessions); each must
@@ -40,7 +41,7 @@ import path from "node:path";
 const USAGE =
   "usage: check-delivery.mjs --repo <worktree> --base <target ref> --frozen\n" +
   "       check-delivery.mjs --repo <worktree> --base <target ref> --head <MR head>\n" +
-  "                          --plan <plan.md> --report <report.md> [--report ...]\n" +
+  "                          --plan <plan.md> --owner <model ID> --report <report.md> [--report ...]\n" +
   "       (instead of --base: --spec <path>@<sha256> --verify <path>@<sha256>)";
 
 function usage(message) {
@@ -56,7 +57,7 @@ for (let i = 0; i < argv.length; i += 1) {
     args.frozen = true;
     continue;
   }
-  if (!["--repo", "--base", "--head", "--plan", "--report", "--spec", "--verify"].includes(key))
+  if (!["--repo", "--base", "--head", "--plan", "--owner", "--report", "--spec", "--verify"].includes(key))
     usage(`unknown argument ${key}`);
   if (i + 1 >= argv.length) usage(`missing value for ${key}`);
   const value = argv[(i += 1)];
@@ -181,8 +182,14 @@ function familyIn(text) {
 if (!args.frozen) {
   const plan = readFileSync(args.plan, "utf8");
   const ownerLine = plan.match(/^[ \t]*-[ \t]*owner:(.*)$/m)?.[1];
-  const owner = ownerLine === undefined ? { problem: "has no `- owner: <model ID>` line" } : familyIn(ownerLine);
-  if (owner.problem) errors.push(`plan.md ${owner.problem}`);
+  let owner;
+  if (args.owner !== undefined) {
+    owner = familyIn(args.owner);
+    if (owner.problem) errors.push(`--owner ${owner.problem}`);
+  } else {
+    owner = ownerLine === undefined ? { problem: "no owner: give --owner <your model ID>" } : familyIn(ownerLine);
+    if (owner.problem) errors.push(ownerLine === undefined ? owner.problem : `plan.md owner line ${owner.problem}`);
+  }
   const planDir = path.relative(root, realpathSync(path.dirname(args.plan))).split(path.sep).join("/");
   const inPlanDir = (f) => planDir && !planDir.startsWith("..") && f.startsWith(`${planDir}/`);
   const MANIFESTS = ["package.json", "pyproject.toml", "go.mod", "Cargo.toml"];
