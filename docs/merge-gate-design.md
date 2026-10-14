@@ -77,7 +77,9 @@
 
 - 改前改后对照（agent-prompt-rules 4.5）：7 道情境题，覆盖只改文档和测试、目标分支前移并冲突、非 deliver 交付的 MR、deliver 交付 MR 的最终验证、换判定方法的决定、MR 仍是 Draft、单模块小改动的领域数。Claude Code 子 Agent（claude-opus-5-5，general-purpose，新上下文）和 Codex（gpt-6-astra，high，`-s read-only`）各读改前（`5984475`）和改后一次，只许读 Skill 文件。题目和四份回答存在 super-auto `discussions/2026-10-14-merge-gate-skill/probes/`。
   - 改前两家结论一致：第 1 题照跑完整门禁；第 4 题用 runtime-brief，不用 verifier brief，也不跑 `check-delivery`；第 5 题没人审替代判定方法；第 6 题“Skill 没写”；第 7 题 3 个领域、初审 4 个审查者、3 个裁决者。
-  - 改后结果见下一小节。
+  - 改后（`bb40d16`）两家 7 题都与设计一致，并引用了改后的原句：第 1 题沿用那次验证并结束，不写 `gate.md`、不改 MR 描述；第 2 题先经子 MR 合入目标分支，只审 MR 自身变化成了什么；第 4 题由另一家模型按 verifier brief 跑 verify 的全部完成判据，再跑 `check-delivery.mjs --owner`；第 5 题决定进同一份决定清单，由验证者判断是否放宽验收；第 6 题停下；第 7 题 1 个领域、初审 2 个审查者、1 个裁决者。
+  - Claude 子 Agent 在第 2 题指出：只有目标分支前移并冲突、MR 自己的代码没变时，“Delta”的字面条件（验证之后代码有变化）不成立。已把 Delta 改为“有已验证 head，但代码有变化、或与目标分支冲突、或 CI 不通过”。这一处改动没有再跑一轮对照。
+  - Claude 子 Agent 还指出：非 deliver 交付的 MR 上，换判定方法的决定没有验证者审，只有用户在合入前看。保留：这类 MR 通常没有冻结的验收文档。
 - 链接检查、`git diff --check` 和仓库全部脚本测试通过。
 - 情境题只说明文字能被读成本意，不说明门禁变快或质量没降。
 

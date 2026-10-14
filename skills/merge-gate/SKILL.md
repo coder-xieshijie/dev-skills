@@ -29,7 +29,7 @@ The gate covers what changed since the **verified head**: the last head on which
 When the MR was delivered with deliver and is still Draft, delivery has not finished and its owner still writes the branch: report that and stop. Otherwise the scope is one of:
 
 - **Nothing to gate.** The verdict on the verified head was PASS; since then only Markdown and test files changed, or nothing; and the platform shows the MR without conflicts and with CI passing on its current head. With deliver's report on this machine, deliver's `check-delivery.mjs` run on the current head (its done criterion 3) settles which changes count. Report that the gate reuses that verification, naming the head, the model, the verdict and what changed since, and stop.
-- **Delta.** Code changed since the verified head. The review scope is what the MR's own change became: its new commits, the conflict resolutions of any merge from the target, and the places where target changes meet the code the MR changes. Compare the MR's diff against its target at the verified head with its diff now.
+- **Delta.** There is a verified head, but code changed since, or the MR conflicts with its target or fails CI. The review scope is what the MR's own change became: its new commits, the conflict resolutions of any merge from the target, and the places where target changes meet the code the MR changes. Compare the MR's diff against its target at the verified head with its diff now.
 - **Whole MR.** There is no verified head. The review scope is the MR's diff from the merge-base.
 
 Done when the scope is chosen, with the heads and evidence that decide it.
