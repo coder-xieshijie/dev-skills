@@ -6,6 +6,14 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-14
+
+### Changed
+
+- **core-spec** step 5 also works the other way: it finds the existing feature map criteria, scenario scripts and tests that depend on behavior the spec changes while their purpose stays the same: those that assert a value the change alters, and those that set a budget, limit, quota or timeout only as headroom, which it searches for in scenario scripts and test setup. It settles in the spec how each is adjusted, and lists them in verify's regression scope. The gap check reports one that is left unadjusted as a missing item.
+- **core-spec** step 5 extends a missing or incomplete map of a touched feature the way repo-readiness builds maps, limited to the features the spec touches; the map changes go into the requirement's MR with the handoff, and the scenario scripts they need are tooling gaps delivery fills in the same MR.
+- **deliver** updates the map and scenario scripts of every feature whose user-visible behavior or entry points the change alters, whether or not the spec lists them; verify's done criteria carry this as an item when the project has feature maps, so the independent verifier judges it.
+
 ## [0.6.0] - 2026-10-14
 
 ### Added

@@ -26,7 +26,7 @@ flowchart LR
 | 阶段 | Skill | agent 做什么 | 你做什么 |
 |---|---|---|---|
 | A 仓库准备 | [repo-readiness](skills/repo-readiness/SKILL.md) 搭建项目自己的验证 Skill（[指南](docs/repository-readiness.md)，英文） | 让 agent 能在 worktree 里启动、操作、观察应用：每个入口隔离的控制命令、带判据编号的功能地图、场景脚本、冒烟集、CI 里的结构检查 | 回答仓库里查不到的（下一个需求、用户实际用的入口、哪些不能碰）；每个仓库建一次，之后按需补 |
-| B 定义 | [core-grill](skills/core-grill/SKILL.md) → [core-spec](skills/core-spec/SKILL.md) | 逐轮追问，整理决定汇总；相关功能地图先与产品对齐；写 spec.md 和 verify.md（含验证档位：轻档或完整档），请另一家模型逐条款查漏；冻结后提交到需求分支，开 Draft PR（GitLab 上叫 MR） | 回答问题；确认一次决定汇总；确认一次 spec 和 verify，连同验证档位 |
+| B 定义 | [core-grill](skills/core-grill/SKILL.md) → [core-spec](skills/core-spec/SKILL.md) | 逐轮追问，整理决定汇总；相关功能地图先与产品对齐，找出会被改动带坏的现有场景；写 spec.md 和 verify.md（含验证档位：轻档或完整档），请另一家模型逐条款查漏；冻结后提交到需求分支，开 Draft PR（GitLab 上叫 MR） | 回答问题；确认一次决定汇总；确认一次 spec 和 verify，连同验证档位 |
 | C 交付 | [deliver](skills/deliver/SKILL.md) | 一个 owner 全程不停：逐个里程碑实现并在应用里跑场景；完整档另外请另一家模型开工预判最终验证怎样判这份 plan、在后续里程碑依赖它时做里程碑检查、验证前请另一家模型只读审代码并修一轮；最后另一家模型对最终 head 独立验证，owner 同时只跑质量命令和脚本判定的场景；推送前先在本地跑 CI 会跑的检查，最终 head 通常只需一条 pipeline；PR 只带代码、spec、verify 和 plan.md，证据留在仓库外；处理 CI 和评审，做到可合入；要定的事先问另一家模型，决定列在 plan.md 和 PR 描述最前面 | 合入前看决定清单，合入 |
 | D 回流 | — | 在 PR 和 plan.md 里列出这次暴露的仓库缺口 | 决定哪些补回 A 阶段或 Skill |
 
