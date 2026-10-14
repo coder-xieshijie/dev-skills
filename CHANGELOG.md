@@ -6,6 +6,13 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-14
+
+### Added
+
+- **merge-gate**: gates a large MR/PR before it merges. On the latest head of the source branch, a reviewer from another family and fresh subagents split by area review it while a runner verifies it in the app; the two sides cross-examine, and fresh checkers that see only the initial reports give the verdicts. Confirmed P0–P2 findings are fixed through sub-MRs into the source branch, merged once CI passes and the diff holds; the head is then rerun and the fix delta reviewed, for at most two recheck rounds. It writes a gate input every brief reads (gate head, the head that will merge, CI on it, areas, shared-state isolation, verification level and the explicit scenario list), uses the strongest verification the repository has and falls back to derived key scenarios or UNVERIFIED, and keeps its evidence outside the repository. Merging the MR itself stays with the user.
+- **merge-gate** `scripts/findings.mjs`: checks the findings ledger (`findings.tsv`) and counts it by severity and status; `check --final` fails while a confirmed P0–P2 is neither merged nor blocked. Its tests run in CI.
+
 ## [0.5.0] - 2026-10-11
 
 ### Changed

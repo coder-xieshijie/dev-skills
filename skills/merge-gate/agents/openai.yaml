@@ -1,0 +1,5 @@
+interface:
+  display_name: "Merge Gate"
+  short_description: "Review, verify and fix a large MR/PR on its latest head before it merges"
+policy:
+  allow_implicit_invocation: false

@@ -30,6 +30,11 @@ The Skills in this repository use these terms with one meaning each. The Chinese
 | verification depth | 验证档位 | `light` or `full`, set in verify.md's key points and confirmed with the freeze. It decides how many intermediate checks delivery runs (up-front review, milestone checks, code review before verification); both end with the same independent verification |
 | evidence directory | 证据目录 | Where delivery keeps evidence, verification inputs and reports, other families' replies and one-scenario scripts, outside the repository; the MR does not carry it |
 | local gate | 本地闸门 | The checks CI runs for the paths a change touches, run locally before the push that starts CI and independent verification |
+| merge gate | 合入前门禁 | The last check of a large MR before it merges, run by [merge-gate](../skills/merge-gate/SKILL.md): review and runtime verification on its latest head, fixes through sub-MRs, rechecks until the head is clean |
+| gate head, gate input | 门禁 head、门禁输入 | The source branch head the merge gate starts from; `gate.md`, the file every brief reads for that run's facts: heads, CI, areas, shared-state isolation, verification level and scenario list |
+| sub-MR | 子 MR | An MR whose target is another MR's source branch; the merge gate fixes findings through them |
+| findings ledger | 问题台账 | `findings.tsv`, one row per review or runtime finding with its verdict, final severity, fixing sub-MR and status; counts in reports come from its script |
+| fix delta | 修复增量 | The changes between the gate head and the head after the fixes merged; the recheck reviews it |
 | check results, not process | 只查结果，不查过程 | The only script check is on results: frozen files unchanged, a passing verification of the final code by another family |
 
 ## Verify
