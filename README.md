@@ -91,6 +91,7 @@ Once per repository, before the first requirement: `/dev-skills:repo-readiness T
 1. In the target repository: `/dev-skills:core-grill The requirement is <link or text>; put the requirement documents in <requirement directory>/`. Answer the questions and confirm the decision summary.
 2. In the same session: `/dev-skills:core-spec Write spec.md and verify.md from the decision summary`. Read the gap check result and confirm spec and verify. It commits them to the feature branch and opens a Draft PR.
 3. In a new session: `/dev-skills:deliver Take over <Draft PR link>`. When it says the PR can be merged, read the decision list at the top of the PR, then merge.
+4. Before you merge a large PR, or one whose code changed after its independent verification (the target branch merged in, conflicts resolved, fixes added): in a new session, `/dev-skills:merge-gate Gate <PR link>`. When only docs and tests changed since the verification, it checks that and stops; otherwise it covers only what changed since. Read the entries marked as the gate's in the decision list and the gate section right after it.
 
 The commands above work as written in MCode and Claude Code; in Codex, write `$dev-skills:` instead of `/dev-skills:`. By default, questions, the decision summary and spec follow the language of your request, and verify, plan.md, the decision list and the PR description follow spec.md; you or the repository's documentation rules can ask for another language.
 
@@ -102,6 +103,7 @@ The commands above work as written in MCode and Claude Code; in Codex, write `$d
 | [core-grill](skills/core-grill/SKILL.md) | At the start of a requirement, asks in rounds about the decisions that change user-visible results (for refactoring or slimming, about scope and the expected gain), records terms, and hands a decision summary you confirmed to core-spec |
 | [core-spec](skills/core-spec/SKILL.md) | Turns the discussion into spec.md (decisions and constraints) and verify.md (acceptance requirements for automated delivery), has another family gap-check them, and freezes them after one confirmation. Can also produce only a spec |
 | [deliver](skills/deliver/SKILL.md) | From the frozen spec and verify, one owner implements, verifies each milestone in the app, gets independent verification by another family, and takes the PR through CI to mergeable, listing its decisions at the top |
+| [merge-gate](skills/merge-gate/SKILL.md) | Gates a large PR before it merges: covering what changed since its last independent verification, another family and fresh subagents review it while it runs in the app, independent checkers confirm the findings, P0–P2 are fixed through sub-PRs merged after CI, and the loop repeats until the head is clean; a PR delivered with deliver ends on deliver's independent verification |
 | [review-rules](skills/review-rules/SKILL.md) | Criteria for code and design review, for re-checking findings and for judging fixes: reuse, necessary change, complexity, extensibility, ownership |
 | [mr-for-human](skills/mr-for-human/SKILL.md) | Turns a PR into a reading guide for people: core conclusions, design, execution logic in pseudocode, runtime constraints, where to find the code |
 | [explain-as-fool](skills/explain-as-fool/SKILL.md) | Explains a topic to someone who knows nothing about it; other Skills reuse its writing rules |
@@ -110,20 +112,20 @@ The commands above work as written in MCode and Claude Code; in Codex, write `$d
 | [agent-prompt-rules](skills/agent-prompt-rules/SKILL.md) | Rules, each linked to Anthropic and OpenAI sources, for writing and reviewing prompts for agents, multi-agent pipelines and SKILL.md files |
 | [recon-to-contract](skills/recon-to-contract/SKILL.md) | Converges a comparison of two or more external references into one executable contract with evidence, decisions and acceptance criteria |
 
-The development workflow uses repo-readiness, core-grill, core-spec, deliver, review-rules, mr-for-human and explain-as-fool; the others can be used on their own.
+The development workflow uses repo-readiness, core-grill, core-spec, deliver, merge-gate, review-rules, mr-for-human and explain-as-fool; the others can be used on their own.
 
 ## Documentation
 
 - [Why the workflow looks the way it does](docs/basis.md): the three sources, where they agree and disagree, what this workflow adds, and a rule-by-rule basis for core-grill, core-spec and deliver.
 - [Repository readiness](docs/repository-readiness.md): what stage A needs and why, from our first setup, with its [templates](docs/templates/) and [example](docs/examples/feature-map-example.md). The [repo-readiness](skills/repo-readiness/SKILL.md) Skill states the end state and carries the current map format, a runnable kit and example adapters; the guide lists where the two differ.
 - [Glossary](docs/glossary.md): the terms the Skills use, with their Chinese equivalents.
-- Design records, in Chinese: [core-grill](docs/core-grill-design.md), [core-spec](docs/core-spec-design.md), [deliver](docs/deliver-design.md), [mr-for-human](docs/mr-for-human-design.md) and its [validation](docs/mr-for-human-validation.md).
+- Design records, in Chinese: [core-grill](docs/core-grill-design.md), [core-spec](docs/core-spec-design.md), [deliver](docs/deliver-design.md), [merge-gate](docs/merge-gate-design.md), [mr-for-human](docs/mr-for-human-design.md) and its [validation](docs/mr-for-human-validation.md).
 
 ## Working on the Skills
 
 - Each Skill lives in `skills/<skill-name>/` with `SKILL.md` as its entry point, plus `scripts/`, `references/` or `assets/` when it needs them. `name` matches the directory name; the directory names are stable because other tools refer to them by path.
 - Skill text is English, using the terms in the [glossary](docs/glossary.md); see [AGENTS.md](AGENTS.md). Changes to rules follow [agent-prompt-rules](skills/agent-prompt-rules/SKILL.md): one component at a time, with the basis recorded, compared in a new session.
-- CI runs the link and anchor checks and the script tests: `node scripts/check-links.mjs`, `node skills/agent-prompt-rules/scripts/check-links.mjs`, `node --test skills/agent-prompt-rules/scripts/check-links.test.mjs`, `node --test skills/deliver/scripts/check-delivery.test.mjs`, `node --test skills/deliver/scripts/stall-guard.test.mjs`, `node --test skills/deliver/scripts/ci-watch.test.mjs`, `node --test skills/core-spec/scripts/clauses.test.mjs` and `node --test skills/repo-readiness/assets/verify-skill/scripts/test/*.test.mjs`.
+- CI runs the link and anchor checks and the script tests: `node scripts/check-links.mjs`, `node skills/agent-prompt-rules/scripts/check-links.mjs`, `node --test skills/agent-prompt-rules/scripts/check-links.test.mjs`, `node --test skills/deliver/scripts/check-delivery.test.mjs`, `node --test skills/deliver/scripts/stall-guard.test.mjs`, `node --test skills/deliver/scripts/ci-watch.test.mjs`, `node --test skills/core-spec/scripts/clauses.test.mjs`, `node --test skills/merge-gate/scripts/findings.test.mjs` and `node --test skills/repo-readiness/assets/verify-skill/scripts/test/*.test.mjs`.
 - `skills/agent-prompt-rules/references/sources/` keeps verbatim excerpts of the vendor documents the rules cite; [its README](skills/agent-prompt-rules/references/sources/README.md) says how to update them.
 
 ## Feedback

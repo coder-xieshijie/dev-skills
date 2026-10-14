@@ -91,6 +91,7 @@ done
 1. 在目标仓库里：`/dev-skills:core-grill 需求是 <链接或原文>，需求文档放 <需求目录>/`。回答问题，确认决定汇总。
 2. 同一个 session 里：`/dev-skills:core-spec 依据决定汇总写 spec.md 和 verify.md`。看查漏结果，确认 spec 和 verify；它会提交到需求分支并开 Draft PR。
 3. 新开一个 session：`/dev-skills:deliver 接手 <Draft PR 链接>`。等它说可以合入，看 PR 最前面的决定清单，再合入。
+4. 合入前，PR 很大，或独立验证之后又有代码改动（合了目标分支、解了冲突、追加了修复）时：新开一个 session，`/dev-skills:merge-gate 给 <PR 链接> 做合入前门禁`。验证之后只改了文档和测试时，它核对后直接结束；否则只审验证之后的变化。看决定清单里标为门禁的条目，以及紧跟在后面的门禁一节。
 
 上面的命令在 MCode 和 Claude Code 里照写即可；Codex 里把 `/dev-skills:` 换成 `$dev-skills:`。默认情况下，问题、决定汇总和 spec 用你提需求时的语言，verify、plan.md、决定清单和 PR 描述跟随 spec.md 的语言；你或仓库的文档规则可以另行指定。
 
@@ -102,6 +103,7 @@ done
 | [core-grill](skills/core-grill/SKILL.md) | 需求起步时逐轮追问会改变用户可见结果的决定（重构、瘦身类需求改问范围和预期收益），写好术语，把你确认的决定汇总交给 core-spec |
 | [core-spec](skills/core-spec/SKILL.md) | 把讨论收敛成 spec.md（决定与约束）和 verify.md（自动交付的验收要求），请另一家模型查漏，一次确认后冻结。也可以只产出 spec |
 | [deliver](skills/deliver/SKILL.md) | 依据冻结的 spec 和 verify，由一个 owner 实现、逐里程碑在应用里验证、请另一家模型独立验证，并把 PR 做到 CI 通过、可合入；自己做的决定列在最前面 |
+| [merge-gate](skills/merge-gate/SKILL.md) | 大 PR 合入前的最后一道关：只看上次独立验证之后的变化，由另一家模型和新开的子 Agent 交叉 review、同时在应用里实跑，独立裁决确认问题，P0–P2 通过子 PR 修复、CI 通过后合入，循环到没有问题；deliver 交付的 PR 以 deliver 的独立验证收尾 |
 | [review-rules](skills/review-rules/SKILL.md) | 代码与设计评审、复核问题、判断修复方案时用的准则：复用、必要改造、复杂度、扩展性、责任边界 |
 | [mr-for-human](skills/mr-for-human/SKILL.md) | 把 PR 整理成给人看的阅读指南：核心结论、设计、伪代码表示的执行逻辑、运行约束、代码定位 |
 | [explain-as-fool](skills/explain-as-fool/SKILL.md) | 面向对话题一无所知的人做解释；其他 Skill 复用它的写作要求 |
@@ -110,20 +112,20 @@ done
 | [agent-prompt-rules](skills/agent-prompt-rules/SKILL.md) | 写和审查给 agent 的 prompt、多 agent pipeline 与 SKILL.md 的规则，每条都链接到 Anthropic、OpenAI 原文 |
 | [recon-to-contract](skills/recon-to-contract/SKILL.md) | 把两个以上外部参照物的对标调研收敛成一份有证据、有决定、有验收标准的可执行契约 |
 
-开发流程用到 repo-readiness、core-grill、core-spec、deliver、review-rules、mr-for-human 和 explain-as-fool；其余可以单独使用。
+开发流程用到 repo-readiness、core-grill、core-spec、deliver、merge-gate、review-rules、mr-for-human 和 explain-as-fool；其余可以单独使用。
 
 ## 文档
 
 - [流程为什么是这个样子](docs/basis.md)（英文）：三家来源、它们的共识与分歧、本流程自己加的东西，以及 core-grill、core-spec、deliver 逐条规则的依据。
 - [仓库准备](docs/repository-readiness.md)（英文）：A 阶段需要什么、为什么，来自我们第一次搭建，附当时的[模板](docs/templates/)和[示例](docs/examples/feature-map-example.md)。[repo-readiness](skills/repo-readiness/SKILL.md) Skill 写明要达到的终态，带有当前的地图格式、可运行的 kit 和适配器示例；两者的差异列在指南里。
 - [术语表](docs/glossary.md)：Skill 用到的术语，附中文对照。
-- 设计记录（中文）：[core-grill](docs/core-grill-design.md)、[core-spec](docs/core-spec-design.md)、[deliver](docs/deliver-design.md)、[mr-for-human](docs/mr-for-human-design.md) 及其[验证记录](docs/mr-for-human-validation.md)。
+- 设计记录（中文）：[core-grill](docs/core-grill-design.md)、[core-spec](docs/core-spec-design.md)、[deliver](docs/deliver-design.md)、[merge-gate](docs/merge-gate-design.md)、[mr-for-human](docs/mr-for-human-design.md) 及其[验证记录](docs/mr-for-human-validation.md)。
 
 ## 修改 Skill
 
 - 每个 Skill 放在 `skills/<skill-name>/`，入口是 `SKILL.md`，需要时再加 `scripts/`、`references/` 或 `assets/`。`name` 与目录名一致；其他工具按路径引用这些目录，目录名不改。
 - Skill 正文用英文写，术语按[术语表](docs/glossary.md)；见 [AGENTS.md](AGENTS.md)。改规则按 [agent-prompt-rules](skills/agent-prompt-rules/SKILL.md)：一次改一个组件，记下依据，在新 session 里对照。
-- CI 运行链接与锚点检查和脚本测试：`node scripts/check-links.mjs`、`node skills/agent-prompt-rules/scripts/check-links.mjs`、`node --test skills/agent-prompt-rules/scripts/check-links.test.mjs`、`node --test skills/deliver/scripts/check-delivery.test.mjs`、`node --test skills/deliver/scripts/stall-guard.test.mjs`、`node --test skills/deliver/scripts/ci-watch.test.mjs`、`node --test skills/core-spec/scripts/clauses.test.mjs`、`node --test skills/repo-readiness/assets/verify-skill/scripts/test/*.test.mjs`。
+- CI 运行链接与锚点检查和脚本测试：`node scripts/check-links.mjs`、`node skills/agent-prompt-rules/scripts/check-links.mjs`、`node --test skills/agent-prompt-rules/scripts/check-links.test.mjs`、`node --test skills/deliver/scripts/check-delivery.test.mjs`、`node --test skills/deliver/scripts/stall-guard.test.mjs`、`node --test skills/deliver/scripts/ci-watch.test.mjs`、`node --test skills/core-spec/scripts/clauses.test.mjs`、`node --test skills/merge-gate/scripts/findings.test.mjs`、`node --test skills/repo-readiness/assets/verify-skill/scripts/test/*.test.mjs`。
 - `skills/agent-prompt-rules/references/sources/` 保存规则引用的厂商文档的逐字摘录；怎样更新见[它的 README](skills/agent-prompt-rules/references/sources/README.md)。
 
 ## 反馈

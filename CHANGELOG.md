@@ -6,6 +6,18 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-14
+
+### Added
+
+- **merge-gate**: gates a large MR/PR before it merges. It first finds the verified head, the last head an independent verification or a previous gate passed: when only Markdown and test files changed since, it reuses that verification and stops; otherwise it covers what changed since, or the whole MR when there is none. A reviewer from another family and fresh subagents, one per area the scope needs, review it while it is verified in the app; the two sides cross-examine, and fresh checkers that see only the initial reports give the verdicts. Confirmed P0–P2 findings are fixed through sub-MRs into the source branch, merged once CI passes and the diff holds; the head is then rerun and the fix delta reviewed, for at most two recheck rounds. On an MR delivered with deliver, every runtime run is deliver's independent verification, and the gate passes only when deliver's `check-delivery.mjs` passes on the final head. It writes a gate input every brief reads (heads and scope, the head that will merge, CI on it, areas, shared-state isolation, runtime verification), adds its decisions to the MR's decision list, and keeps its evidence outside the repository. Merging the MR itself stays with the user.
+- **merge-gate** `scripts/findings.mjs`: checks the findings ledger (`findings.tsv`) and counts it by severity and status; `check --final` fails while a confirmed P0–P2 is neither merged nor blocked. Its tests run in CI.
+
+### Changed
+
+- **deliver** verifier brief: when a merge gate changed the code after delivery, the verification input also gives the gate's decision list, judged like plan.md's.
+- **core-spec** cross-model calls list merge-gate's reviews and its independent verification.
+
 ## [0.5.0] - 2026-10-11
 
 ### Changed
