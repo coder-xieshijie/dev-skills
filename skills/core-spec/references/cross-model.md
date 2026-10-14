@@ -1,6 +1,6 @@
 # Cross-model calls
 
-These tasks are done by a model from another family in a new session: the gap check in core-spec step 7; in deliver, the up-front review at the start, consultation on decisions during delivery, the code review before independent verification, and independent verification. Models from the same family with similar context tend to make the same mistakes; a new session gets only the files the caller gives it and cannot see the caller's conversation.
+These tasks are done by a model from another family in a new session: the gap check in core-spec step 7; in deliver, the up-front review at the start, consultation on decisions during delivery, the code review before independent verification, and independent verification; in merge-gate, the initial and fix-delta reviews and, on an MR delivered with deliver, independent verification. Models from the same family with similar context tend to make the same mistakes; a new session gets only the files the caller gives it and cannot see the caller's conversation.
 
 ## Which family to call
 

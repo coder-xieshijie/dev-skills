@@ -91,7 +91,7 @@ Once per repository, before the first requirement: `/dev-skills:repo-readiness T
 1. In the target repository: `/dev-skills:core-grill The requirement is <link or text>; put the requirement documents in <requirement directory>/`. Answer the questions and confirm the decision summary.
 2. In the same session: `/dev-skills:core-spec Write spec.md and verify.md from the decision summary`. Read the gap check result and confirm spec and verify. It commits them to the feature branch and opens a Draft PR.
 3. In a new session: `/dev-skills:deliver Take over <Draft PR link>`. When it says the PR can be merged, read the decision list at the top of the PR, then merge.
-4. Optional, for a large PR or one whose target branch moved after delivery, before you merge: in a new session, `/dev-skills:merge-gate Gate <PR link>`. Read the gate section it adds to the top of the PR.
+4. Before you merge a large PR, or one whose code changed after its independent verification (the target branch merged in, conflicts resolved, fixes added): in a new session, `/dev-skills:merge-gate Gate <PR link>`. When only docs and tests changed since the verification, it checks that and stops; otherwise it covers only what changed since. Read the entries marked as the gate's in the decision list and the gate section right after it.
 
 The commands above work as written in MCode and Claude Code; in Codex, write `$dev-skills:` instead of `/dev-skills:`. By default, questions, the decision summary and spec follow the language of your request, and verify, plan.md, the decision list and the PR description follow spec.md; you or the repository's documentation rules can ask for another language.
 
@@ -103,7 +103,7 @@ The commands above work as written in MCode and Claude Code; in Codex, write `$d
 | [core-grill](skills/core-grill/SKILL.md) | At the start of a requirement, asks in rounds about the decisions that change user-visible results (for refactoring or slimming, about scope and the expected gain), records terms, and hands a decision summary you confirmed to core-spec |
 | [core-spec](skills/core-spec/SKILL.md) | Turns the discussion into spec.md (decisions and constraints) and verify.md (acceptance requirements for automated delivery), has another family gap-check them, and freezes them after one confirmation. Can also produce only a spec |
 | [deliver](skills/deliver/SKILL.md) | From the frozen spec and verify, one owner implements, verifies each milestone in the app, gets independent verification by another family, and takes the PR through CI to mergeable, listing its decisions at the top |
-| [merge-gate](skills/merge-gate/SKILL.md) | Gates a large PR before it merges: another family and fresh subagents review it on its latest head while it runs in the app, independent checkers confirm the findings, P0–P2 are fixed through sub-PRs merged after CI, and the loop repeats until the head is clean |
+| [merge-gate](skills/merge-gate/SKILL.md) | Gates a large PR before it merges: covering what changed since its last independent verification, another family and fresh subagents review it while it runs in the app, independent checkers confirm the findings, P0–P2 are fixed through sub-PRs merged after CI, and the loop repeats until the head is clean; a PR delivered with deliver ends on deliver's independent verification |
 | [review-rules](skills/review-rules/SKILL.md) | Criteria for code and design review, for re-checking findings and for judging fixes: reuse, necessary change, complexity, extensibility, ownership |
 | [mr-for-human](skills/mr-for-human/SKILL.md) | Turns a PR into a reading guide for people: core conclusions, design, execution logic in pseudocode, runtime constraints, where to find the code |
 | [explain-as-fool](skills/explain-as-fool/SKILL.md) | Explains a topic to someone who knows nothing about it; other Skills reuse its writing rules |
@@ -119,7 +119,7 @@ The development workflow uses repo-readiness, core-grill, core-spec, deliver, me
 - [Why the workflow looks the way it does](docs/basis.md): the three sources, where they agree and disagree, what this workflow adds, and a rule-by-rule basis for core-grill, core-spec and deliver.
 - [Repository readiness](docs/repository-readiness.md): what stage A needs and why, from our first setup, with its [templates](docs/templates/) and [example](docs/examples/feature-map-example.md). The [repo-readiness](skills/repo-readiness/SKILL.md) Skill states the end state and carries the current map format, a runnable kit and example adapters; the guide lists where the two differ.
 - [Glossary](docs/glossary.md): the terms the Skills use, with their Chinese equivalents.
-- Design records, in Chinese: [core-grill](docs/core-grill-design.md), [core-spec](docs/core-spec-design.md), [deliver](docs/deliver-design.md), [mr-for-human](docs/mr-for-human-design.md) and its [validation](docs/mr-for-human-validation.md).
+- Design records, in Chinese: [core-grill](docs/core-grill-design.md), [core-spec](docs/core-spec-design.md), [deliver](docs/deliver-design.md), [merge-gate](docs/merge-gate-design.md), [mr-for-human](docs/mr-for-human-design.md) and its [validation](docs/mr-for-human-validation.md).
 
 ## Working on the Skills
 

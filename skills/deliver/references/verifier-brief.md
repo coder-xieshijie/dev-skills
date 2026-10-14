@@ -9,6 +9,7 @@ For the independent verifier. The caller gives the following in the verification
 - the evidence directory;
 - the environment you may use: the instance, profile, port and data directory given to you, the test data available, and what to clean up when you finish;
 - the path of plan.md: its "Validation and Acceptance" section holds the actual commands for the scenarios and is only for running them; its "Decision list" is the owner's claim, which you judge;
+- when a [merge gate](../../merge-gate/SKILL.md) changed the code after delivery, the path of its decision list, judged the same way;
 - when only some scenarios are to be verified, the scenarios to verify this time.
 
 ## Purpose
