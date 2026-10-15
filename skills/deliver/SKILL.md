@@ -14,7 +14,7 @@ Write plan.md (at full depth), the decision list, the MR description and your re
 
 Keep working until every done criterion is met; do not stop midway to wait for the user. The user reviews your decision list before merging and makes corrections then, which costs less time than keeping you waiting.
 
-Stop only before irreversible operations: merging, force-pushing a shared branch, deleting shared data, sending messages outside, changing a shared environment. Leave these to the user.
+Stop only before irreversible operations: merging, force-pushing a shared branch, deleting shared data, sending messages outside, changing a shared environment. Leave these to the user. Before anything else, do not use a tool that waits for the user's answer: a question you would ask goes into the decision list with the choice you made.
 
 For any part you cannot do (missing permissions, credentials or environment, or no progress on the same problem after several different approaches), write down why and what you tried, finish the rest first, and put it in the decision list.
 
