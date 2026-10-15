@@ -34,7 +34,6 @@ Finding facts is your job; do not ask the user for them. When you need code, doc
 ## Terms and ADRs
 
 - When a term is resolved, write it into the repository's `CONTEXT.md` right away; the format is in [Glossary format](references/context-format.md). It holds only terms, not implementation details or decisions.
-- `CONTEXT.md` and ADRs are files in the repository: write them within its content rules, such as a sensitive-word check that CI runs (name the protocol or role instead of a vendor or model name the rule rejects).
 - Write an ADR only when all three are true: changing your mind later is costly, it would be surprising without context, and it is the result of a real trade-off between several options. The format is in [ADR format](references/adr-format.md).
 
 ## Choosing the path
