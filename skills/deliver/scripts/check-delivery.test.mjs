@@ -172,6 +172,21 @@ test("full: only plan, evidence, docs and tests changed after the report", () =>
   assert.match(out, /only docs, tests, plan or evidence changed/);
 });
 
+test("light: no plan.md, owner from --owner", () => {
+  const r = delivered();
+  const { code, out } = check(r, "--base", "base", "--head", r.head, "--owner", "claude-opus-5-5", "--report", r.report);
+  assert.equal(code, 0, out);
+  assert.match(out, /verifier openai, owner anthropic/);
+});
+
+test("light: without plan.md, a change in its directory after the report is code", () => {
+  const r = delivered();
+  r.commit("after", { [`${REQ}/evidence/run.mjs`]: "run\n" });
+  const { code, out } = check(r, "--base", "base", "--head", r.git("rev-parse", "HEAD"), "--owner", "claude-opus-5-5", "--report", r.report);
+  assert.equal(code, 1);
+  assert.match(out, /code changed since/);
+});
+
 test("full: code changed after the report", () => {
   const r = delivered();
   r.commit("fix", { "src/app.ts": "export const a = 3;\n" });
@@ -287,8 +302,9 @@ test("full: several reports, each must pass", () => {
   assert.match(out, /verification-b.md: verdict is UNVERIFIED/);
 });
 
-test("usage: full check needs --head, --plan and --report", () => {
+test("usage: full check needs --head, --plan or --owner, and --report", () => {
   const r = repo();
   assert.equal(check(r, "--base", "base").code, 2);
   assert.equal(check(r, "--base", "base", "--head", "HEAD", "--plan", "x.md").code, 2);
+  assert.equal(check(r, "--base", "base", "--head", "HEAD", "--report", "x.md").code, 2);
 });

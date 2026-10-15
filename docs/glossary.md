@@ -13,21 +13,22 @@ The Skills in this repository use these terms with one meaning each. The Chinese
 | stage C: delivery | C 交付 | deliver: from the frozen spec and verify to a mergeable MR |
 | stage D: feedback | D 回流 | Gaps found during delivery go back into stage A or the Skills |
 | four inputs: goal, done criteria, authorization, scope | 四项输入：目标、完成条件、授权、范围 | What core-grill collects before asking questions |
-| decision summary | 决定汇总 | The file core-grill writes and the user confirms once: the four inputs, decisions the user answered, default decisions |
+| decision summary | 决定汇总 | The file core-grill writes and the user confirms once: the four inputs, decisions the user answered, default decisions, the path |
+| quick path | 快速档 | A small requirement core-grill implements right after the summary is confirmed, against acceptance checks in the summary, without spec, verify or plan.md |
 | default decision | 默认决定 | A decision the agent made on its own, with its reason and how to overturn it |
 | source agreements | 原始约定 | The materials a spec must be faithful to: request text, ADRs, the user's final decisions in their own words, the decision summary |
 | spec | spec | `spec.md`, the core decisions and constraints |
 | verify | verify | `verify.md`, the acceptance requirements: how to prove an implementation meets the spec |
 | gap check | 查漏 | A model from another family reads spec, verify, source agreements and the repository in a new session and reports gaps |
-| freeze | 冻结 | After the user confirms, spec and verify are fixed by their sha256 and no longer change during delivery. In recon-to-contract, "freeze" means fixing the dimension vocabulary, the reference set and the criteria before the parallel research starts |
+| freeze, refreeze | 冻结、重新冻结 | After the user confirms, spec and verify are fixed by their sha256 and no longer change during delivery, except by a refreeze: a commit with new `Frozen-*` trailers, made after the user confirms a change again, or by deliver on its own for the two changes it is authorized to make in advance. In recon-to-contract, "freeze" means fixing the dimension vocabulary, the reference set and the criteria before the parallel research starts |
 | handoff, handoff commit | 交接、交接提交 | Passing the frozen spec and verify from core-spec to deliver. Normally through the handoff commit, which adds them to the feature branch with `Frozen-Spec` and `Frozen-Verify` trailers; when pushing or committing them is not allowed, through their local paths and sha256 values instead. In agent-prompt-rules, "handoff" has its general sense: passing work between roles or sessions |
 | feature branch | 需求分支 | The branch the handoff commit and the delivery go to |
-| decision list | 决定清单 | The list at the top of plan.md and the MR description: product choices, changed judging methods, fact corrections, and parts that could not be done |
+| decision list | 决定清单 | The list at the top of the MR description, and of plan.md at full depth: refreezes, product choices, changed judging methods, fact corrections, and parts that could not be done |
 | irreversible operation | 不可逆操作 | Merging, force-pushing a shared branch, deleting shared data, sending messages outside, changing a shared environment. Always left to the user |
 | a model from another family | 另一家模型 | A model from a different vendor than the one that wrote the work, e.g. GPT checking Claude's work |
 | independent verification | 独立验证 | A model from another family runs the scenarios on the final code in its own session and gives a verdict. In agent-prompt-rules the phrase has its general sense: verification by an agent other than the author |
 | milestone, milestone check | 里程碑、里程碑检查 | A piece of behavior that can be verified on its own; at full verification depth, a fresh-context subagent checks a milestone against the spec before later milestones that build on it start |
-| verification depth | 验证档位 | `light` or `full`, set in verify.md's key points and confirmed with the freeze. It decides how many intermediate checks delivery runs (up-front review, milestone checks, code review before verification); both end with the same independent verification |
+| verification depth | 验证档位 | `light` or `full`, set in verify.md's key points and confirmed with the freeze. It decides how many intermediate checks delivery runs (up-front review, milestone checks, code review before verification) and whether it writes plan.md (only at `full`); both end with the same independent verification |
 | evidence directory | 证据目录 | Where delivery keeps evidence, verification inputs and reports, other families' replies and one-scenario scripts, outside the repository; the MR does not carry it |
 | local gate | 本地闸门 | The checks CI runs for the paths a change touches, run locally before the push that starts CI and independent verification |
 | merge gate | 合入前门禁 | The last check of a large MR before it merges, run by [merge-gate](../skills/merge-gate/SKILL.md): review and runtime verification of what changed since the verified head, fixes through sub-MRs, rechecks until the head is clean |

@@ -6,6 +6,20 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-15
+
+### Added
+
+- **core-grill** chooses the path with the decision summary: the quick path, core-spec at light depth, or core-spec at full depth. A requirement that stays inside one feature, has every user-visible decision answered, touches none of persistence or migration, concurrency, metering, permissions or security, or a contract shared with another repository, and is cheap to revert, can take the quick path: the summary carries 3–8 acceptance checks, and after confirmation the same session implements it, runs the checks in the app, has another family review the diff read-only, and pushes once after deliver's local gate. Meeting an unanswered decision or a risky area moves it back to core-spec.
+
+### Changed
+
+- **deliver** may change spec and verify on its own in two cases, as refreezes listed first in the decision list for review before merging: wording a repository check that CI also runs rejects (such as a sensitive-word check), replaced with neutral wording; and a scenario step whose precondition no entry point of the product can construct, on the baseline too, moved with its dependent checkpoints into coverage blind spots with substitute checks, after asking another family; the spec must not ask to change the code that blocks it. Both used to stop the delivery at a question for the user. The verifier brief judges each refreeze against the handoff version and records one beyond these two kinds as relaxing acceptance.
+- **deliver** looks at the start for what could stop it at the end (repository checks on spec and verify, preconditions that cannot be reached, checkpoints the up-front review says cannot pass) and handles it then; anything it cannot handle is raised together, early, in a message that does not end the turn, instead of after hours of unattended work. It writes everything in the repository within its content rules from the first commit, and on GitLab puts what CI reads from the MR description within its first 2700 characters.
+- **deliver** at light verification depth writes no plan.md: the decision list and progress go into the MR description, and it may continue in the session that ran core-spec. `check-delivery.mjs` takes `--plan` as optional when `--owner` is given.
+- **core-spec** writes spec, verify and the files that go with them within the target repository's content rules, and runs the repository's content checks before asking the user to freeze. When writing verify, it checks that each scenario's preconditions can be produced in the current product, not only that its entry points exist; the gap check reports a step the product stops. At light depth the gap check runs one round.
+- **core-grill** writes `CONTEXT.md` and ADRs within the repository's content rules.
+
 ## [0.7.0] - 2026-10-14
 
 ### Changed

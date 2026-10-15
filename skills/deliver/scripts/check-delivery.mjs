@@ -4,7 +4,7 @@
 //
 //   node check-delivery.mjs --repo <worktree> --base <target ref> --frozen
 //   node check-delivery.mjs --repo <worktree> --base <target ref> --head <MR head>
-//                           --plan <plan.md> --owner <model ID> --report <report.md> [--report <report.md> ...]
+//                           [--plan <plan.md>] --owner <model ID> --report <report.md> [--report <report.md> ...]
 //
 // <target ref> is the MR's target branch as fetched locally, e.g. origin/main.
 //
@@ -17,7 +17,7 @@
 //    paths instead, pass --spec <path>@<sha256> --verify <path>@<sha256>.
 // 2. Each report's `head:` is the MR head, or an ancestor of it after which
 //    only Markdown files, test files and files under plan.md's directory
-//    (plan, evidence) changed; spec and verify themselves always count as
+//    (plan, evidence; when --plan is given) changed; spec and verify themselves always count as
 //    changes. The report's head must contain the latest handoff, so a report
 //    made before the user re-confirmed spec and verify does not hold. A test
 //    file is *.test.* / *.spec.*, anything under __tests__/, or under a test/,
@@ -41,7 +41,7 @@ import path from "node:path";
 const USAGE =
   "usage: check-delivery.mjs --repo <worktree> --base <target ref> --frozen\n" +
   "       check-delivery.mjs --repo <worktree> --base <target ref> --head <MR head>\n" +
-  "                          --plan <plan.md> --owner <model ID> --report <report.md> [--report ...]\n" +
+  "                          [--plan <plan.md>] --owner <model ID> --report <report.md> [--report ...]\n" +
   "       (instead of --base: --spec <path>@<sha256> --verify <path>@<sha256>)";
 
 function usage(message) {
@@ -70,7 +70,7 @@ if (local && !(args.spec && args.verify)) usage("--spec and --verify go together
 if (!local && !args.base) usage("--base is required (the MR's target branch, e.g. origin/main)");
 if (!args.frozen) {
   if (!args.head) usage("--head is required: the MR's head as the platform reports it");
-  if (!args.plan) usage("--plan is required");
+  if (!args.plan && args.owner === undefined) usage("--owner is required (--plan alone works only for plans with an owner line)");
   if (!args.report.length) usage("give at least one --report");
 }
 for (const file of [args.repo, args.plan, ...args.report])
@@ -180,7 +180,7 @@ function familyIn(text) {
 }
 
 if (!args.frozen) {
-  const plan = readFileSync(args.plan, "utf8");
+  const plan = args.plan ? readFileSync(args.plan, "utf8") : "";
   const ownerLine = plan.match(/^[ \t]*-[ \t]*owner:(.*)$/m)?.[1];
   let owner;
   if (args.owner !== undefined) {
@@ -190,7 +190,7 @@ if (!args.frozen) {
     owner = ownerLine === undefined ? { problem: "no owner: give --owner <your model ID>" } : familyIn(ownerLine);
     if (owner.problem) errors.push(ownerLine === undefined ? owner.problem : `plan.md owner line ${owner.problem}`);
   }
-  const planDir = path.relative(root, realpathSync(path.dirname(args.plan))).split(path.sep).join("/");
+  const planDir = args.plan ? path.relative(root, realpathSync(path.dirname(args.plan))).split(path.sep).join("/") : "";
   const inPlanDir = (f) => planDir && !planDir.startsWith("..") && f.startsWith(`${planDir}/`);
   const MANIFESTS = ["package.json", "pyproject.toml", "go.mod", "Cargo.toml"];
   const isPackageRoot = (dir) =>

@@ -27,12 +27,12 @@ flowchart LR
 |---|---|---|---|
 | A 仓库准备 | [repo-readiness](skills/repo-readiness/SKILL.md) 搭建项目自己的验证 Skill（[指南](docs/repository-readiness.md)，英文） | 让 agent 能在 worktree 里启动、操作、观察应用：每个入口隔离的控制命令、带判据编号的功能地图、场景脚本、冒烟集、CI 里的结构检查 | 回答仓库里查不到的（下一个需求、用户实际用的入口、哪些不能碰）；每个仓库建一次，之后按需补 |
 | B 定义 | [core-grill](skills/core-grill/SKILL.md) → [core-spec](skills/core-spec/SKILL.md) | 逐轮追问，整理决定汇总；相关功能地图先与产品对齐，找出会被改动带坏的现有场景；写 spec.md 和 verify.md（含验证档位：轻档或完整档），请另一家模型逐条款查漏；冻结后提交到需求分支，开 Draft PR（GitLab 上叫 MR） | 回答问题；确认一次决定汇总；确认一次 spec 和 verify，连同验证档位 |
-| C 交付 | [deliver](skills/deliver/SKILL.md) | 一个 owner 全程不停：逐个里程碑实现并在应用里跑场景；完整档另外请另一家模型开工预判最终验证怎样判这份 plan、在后续里程碑依赖它时做里程碑检查、验证前请另一家模型只读审代码并修一轮；最后另一家模型对最终 head 独立验证，owner 同时只跑质量命令和脚本判定的场景；推送前先在本地跑 CI 会跑的检查，最终 head 通常只需一条 pipeline；PR 只带代码、spec、verify 和 plan.md，证据留在仓库外；处理 CI 和评审，做到可合入；要定的事先问另一家模型，决定列在 plan.md 和 PR 描述最前面 | 合入前看决定清单，合入 |
+| C 交付 | [deliver](skills/deliver/SKILL.md) | 一个 owner 全程不停：逐个里程碑实现并在应用里跑场景；完整档另外请另一家模型开工预判最终验证怎样判这份 plan、在后续里程碑依赖它时做里程碑检查、验证前请另一家模型只读审代码并修一轮；最后另一家模型对最终 head 独立验证，owner 同时只跑质量命令和脚本判定的场景；推送前先在本地跑 CI 会跑的检查，最终 head 通常只需一条 pipeline；PR 只带代码、spec、verify 和 plan.md（完整档才写），证据留在仓库外；处理 CI 和评审，做到可合入；要定的事先问另一家模型，决定列在 PR 描述最前面（完整档还列在 plan.md 最前面） | 合入前看决定清单，合入 |
 | D 回流 | — | 在 PR 和 plan.md 里列出这次暴露的仓库缺口 | 决定哪些补回 A 阶段或 Skill |
 
 几条贯穿全程的约定：
 
-- **约束放在两端。** 定义阶段把要人决定的事和验收要求定全；结尾由另一家模型按 verify 的完成条件验证。中间交给 owner 自己完成，有分歧记进决定清单、不停下，合入前交给你看。
+- **约束放在两端。** 定义阶段把要人决定的事和验收要求定全；结尾由另一家模型按 verify 的完成条件验证。中间交给 owner 自己完成，有分歧记进决定清单、不停下，合入前交给你看。冻结文件有两种改动事先授权，因为答案可以预见：仓库检查（如敏感词检查）拦下的措辞，以及产品构造不出来的步骤移进覆盖盲区并给出代替检查。owner 以重新冻结的方式改，列在决定清单最前。
 - **不可逆操作留给你。** 合入、强推共享分支、删除共享数据、对外发消息、改共享环境。其余工作 agent 自己做完，做不了的写明原因。
 - **检查交给另一家模型。** spec 和 verify 的查漏、交付中的决定、最终验证，以及完整档的开工预判和最终验证前的代码审查，都请另一家模型在新 session 里做（[跨模型调用](skills/core-spec/references/cross-model.md)）。
 - **查结果，不查过程。** 脚本只核对两件事：spec、verify 是你确认的版本；最终代码由另一家模型验证通过。其余由说明文字约定，交给模型判断。
@@ -100,7 +100,7 @@ done
 | Skill | 用途 |
 |---|---|
 | [repo-readiness](skills/repo-readiness/SKILL.md) | 在一个仓库里搭好 agent 验证：项目内的验证 Skill（每个入口隔离的控制命令）、带判据编号的功能地图、场景脚本与 runner、反例对照，以及 CI 里的结构检查 |
-| [core-grill](skills/core-grill/SKILL.md) | 需求起步时逐轮追问会改变用户可见结果的决定（重构、瘦身类需求改问范围和预期收益），写好术语，把你确认的决定汇总交给 core-spec |
+| [core-grill](skills/core-grill/SKILL.md) | 需求起步时逐轮追问会改变用户可见结果的决定（重构、瘦身类需求改问范围和预期收益），写好术语，把你确认的决定汇总交给 core-spec；不涉及高风险领域的小需求可以走快速档，在同一会话里按汇总中的验收检查直接实现 |
 | [core-spec](skills/core-spec/SKILL.md) | 把讨论收敛成 spec.md（决定与约束）和 verify.md（自动交付的验收要求），请另一家模型查漏，一次确认后冻结。也可以只产出 spec |
 | [deliver](skills/deliver/SKILL.md) | 依据冻结的 spec 和 verify，由一个 owner 实现、逐里程碑在应用里验证、请另一家模型独立验证，并把 PR 做到 CI 通过、可合入；自己做的决定列在最前面 |
 | [merge-gate](skills/merge-gate/SKILL.md) | 大 PR 合入前的最后一道关：只看上次独立验证之后的变化，由另一家模型和新开的子 Agent 交叉 review、同时在应用里实跑，独立裁决确认问题，P0–P2 通过子 PR 修复、CI 通过后合入，循环到没有问题；deliver 交付的 PR 以 deliver 的独立验证收尾 |
