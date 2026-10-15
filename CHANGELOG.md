@@ -6,6 +6,14 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-10-15
+
+### Changed
+
+- **core-grill** words each question so a plain yes accepts its recommendation, and tells the user they may answer only where they choose otherwise (from upstream grilling `95249b0`).
+- **core-grill** explains in one plain sentence any term a question uses that the user has not used yet, including one the agent coined.
+- **core-grill** uses `GLOSSARY.md` and `GLOSSARY-MAP.md` when a repository already keeps its glossary under the names upstream adopted in `d80fa0f`; it still creates `CONTEXT.md` otherwise and renames nothing.
+
 ## [0.8.0] - 2026-10-15
 
 ### Added

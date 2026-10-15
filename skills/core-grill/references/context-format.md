@@ -32,4 +32,5 @@ _Avoid_: Bill, payment request
 - Most repositories have a single context: one `CONTEXT.md` at the repository root.
 - With multiple contexts, a `CONTEXT-MAP.md` at the repository root lists the contexts, where they live, and how they relate to each other, and each context directory has its own `CONTEXT.md`.
 - If `CONTEXT-MAP.md` exists, read it to find contexts; if only a root `CONTEXT.md` exists, there is a single context; if neither exists, create the root `CONTEXT.md` lazily, when the first term is resolved.
+- Upstream renamed the convention to `GLOSSARY.md` and `GLOSSARY-MAP.md` in `d80fa0f`. When a repository already uses those names, and no `CONTEXT.md` or `CONTEXT-MAP.md`, use them the same way; do not rename files the repository already has.
 - When there are multiple contexts and you cannot tell which one the current topic belongs to, ask the user.

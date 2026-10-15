@@ -23,7 +23,7 @@ Collect these four first. Look up yourself anything you can find in the reposito
 
 ## Asking questions
 
-Ask in rounds. In each round, ask every question you can ask now: a question goes into this round only when its prerequisites are all settled; a question whose answer depends on another question in this round belongs to the next round. Number each question, state the options and the consequences of each, and give your recommended answer. When the user has answered, work out the next round.
+Ask in rounds. In each round, ask every question you can ask now: a question goes into this round only when its prerequisites are all settled; a question whose answer depends on another question in this round belongs to the next round. Number each question, state the options and the consequences of each, and give your recommended answer. Word each question so that a plain yes accepts your recommendation, and say that the user may answer only the questions where they choose otherwise. When a question uses a term the user has not used yet, including one you coined, explain it in one plain sentence in that question. When the user has answered, work out the next round.
 
 Ask only about decisions that change user-visible results, for example UI and interaction, user-facing text, default values, entry points, whether data can be lost, and how the change coexists with existing features. Decide the rest yourself (interface naming, file layout, implementation approach) and record each as a default decision, with its reason and how to overturn it. A decision the questions are about is never recorded as a default decision.
 
@@ -33,7 +33,7 @@ Finding facts is your job; do not ask the user for them. When you need code, doc
 
 ## Terms and ADRs
 
-- When a term is resolved, write it into the repository's `CONTEXT.md` right away; the format is in [Glossary format](references/context-format.md). It holds only terms, not implementation details or decisions.
+- When a term is resolved, write it into the repository's `CONTEXT.md` right away (or `GLOSSARY.md`, when the repository already keeps its glossary under that name); the format is in [Glossary format](references/context-format.md). It holds only terms, not implementation details or decisions.
 - Write an ADR only when all three are true: changing your mind later is costly, it would be surprising without context, and it is the result of a real trade-off between several options. The format is in [ADR format](references/adr-format.md).
 
 ## Choosing the path
