@@ -85,7 +85,9 @@ What cannot be observed or driven now goes under "Verification tooling gaps": wh
 
 Parts that existing tools cannot see or operate, and that this change does not fill (for example, the driving tool cannot see browser-native dialogs), go under "Coverage blind spots": write each blind spot as one list item or table row, stating the affected scenario IDs and checkpoints and which test or check is used to judge them instead; when the test does not exist yet, write what it must assert and in what environment it runs (for example, a real process or an in-process simulation). During delivery, the test is written as this item says, and independent verification judges by this item. The independent verifier recognizes only the blind spots in these items; IDs mentioned in passing in a paragraph do not count. Checkpoints inside a blind spot cannot be marked verified.
 
-Done criteria: each scenario's execution status is marked truthfully, and each gap and blind spot maps to scenarios.
+Check also that each scenario's preconditions can be produced in the current product through the entry points it names, not only that the entry points exist: read the code on the path. When the product stops a step (a guard, a disabled path, a state it never enters, such as a subagent that cannot start a subagent of its own), rewrite the scenario to reach the same result another way, or list the step as a coverage blind spot with its substitute check, citing the code. Found only in delivery, such a step costs a refreeze and a verification against the old verify that cannot pass.
+
+Done criteria: each scenario's execution status is marked truthfully, each scenario's preconditions can be produced or are listed as blind spots, and each gap and blind spot maps to scenarios.
 
 ## 5. Write the document
 
@@ -93,7 +95,7 @@ The document contains, in order:
 
 1. **Purpose and authority**, adjustable to the topic:
 
-   > Based on the spec, this document defines what counts as doing this requirement right and how to prove it. It is the shared basis for implementation, independent verification and final acceptance. During implementation, the implementing agent runs these scenarios itself, and a scenario passes only when it actually runs through; after freezing, scenarios and checkpoints do not change. This document only describes acceptance requirements; it does not mean verification has been run or has passed.
+   > Based on the spec, this document defines what counts as doing this requirement right and how to prove it. It is the shared basis for implementation, independent verification and final acceptance. During implementation, the implementing agent runs these scenarios itself, and a scenario passes only when it actually runs through; after freezing, scenarios and checkpoints do not change, except through the refreezes deliver is authorized to make. This document only describes acceptance requirements; it does not mean verification has been run or has passed.
 
    Then write the sources: the spec path and sha256, the related repositories and commits, and the verification Skill or feature map referenced.
 2. **Key points**: the number of requirements and scenarios, and the 3–5 scenarios most likely to go wrong, usually real cross-module paths, default wiring and key exceptions; then the verification depth, as the line `Verification depth: light` or `Verification depth: full` followed by its reason in one sentence (see below); readable within one screen.
@@ -110,7 +112,7 @@ The document contains, in order:
 - `full`: behavior across several entry points or modules; default startup wiring; persistence, concurrency, metering, recovery or security; a migration; or a kind of change that has gone wrong in this repository before.
 - `light`: a small, local change, or a behavior-preserving change whose touched code existing scenarios and tests already cover.
 
-When in doubt, choose `full`. Write the line in English as shown, whatever the language of verify; deliver reads it.
+When the user or the confirmed decision summary names the depth, use it; if the change has a trait above that calls for the other depth, say so in the reason. Otherwise, when in doubt, choose `full`. Write the line in English as shown, whatever the language of verify; deliver reads it.
 
 When deciding split granularity, how tight checkpoints should be, the proof method, or how to write a decoy implementation, read [the example and check cases](verify-example.md).
 

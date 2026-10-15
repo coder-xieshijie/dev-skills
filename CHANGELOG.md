@@ -6,6 +6,20 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-15
+
+### Added
+
+- **core-grill** chooses the path with the decision summary: the quick path, core-spec at light depth, or core-spec at full depth. A requirement that stays inside one feature, has every user-visible decision answered, touches none of persistence or migration, concurrency, metering, permissions or security, or a contract shared with another repository, and is cheap to revert, can take the quick path: the summary carries 3–8 acceptance checks, and after confirmation the same session implements it, runs the checks in the app, has another family review the diff read-only, and pushes once after deliver's local gate. Meeting an unanswered decision or a risky area moves it back to core-spec.
+
+### Changed
+
+- **deliver** may refreeze spec and verify on its own, listing each refreeze in the decision list for review before merging, in two cases: a scenario step whose precondition no entry point can construct, on the baseline or once the spec is implemented, while the spec does not ask to change the code that blocks it, moved with its dependent checkpoints into coverage blind spots with substitute checks, after asking another family; and changes the user's agent instructions (AGENTS.md, CLAUDE.md) authorize in advance, within their conditions. Such a case used to stop the delivery at a question for the user. The verifier brief judges each refreeze against the handoff version and records one beyond these as relaxing acceptance.
+- **deliver** looks at the start for what could stop it at the end (spec and verify failing the repository's checks, preconditions that cannot be reached, checkpoints the up-front review says cannot pass) and handles it then; everything else goes into the decision list, not into a question.
+- **deliver** at light verification depth writes no plan.md: the decision list and progress go into the MR description, and it may continue in the session that ran core-spec. `check-delivery.mjs` takes `--plan` as optional when `--owner` is given.
+- **deliver** no longer names a sensitive-word check as its example of repository content rules or static checks; such repository-specific rules belong in the user's agent instructions.
+- **core-spec**, when writing verify, checks that each scenario's preconditions can be produced in the current product, not only that its entry points exist; the gap check reports a step the product stops. At light depth the gap check runs one round.
+
 ## [0.7.0] - 2026-10-14
 
 ### Changed
