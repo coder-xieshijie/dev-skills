@@ -90,7 +90,9 @@ Once per repository, before the first requirement: `/dev-skills:repo-readiness T
 
 1. In the target repository: `/dev-skills:core-grill The requirement is <link or text>; put the requirement documents in <requirement directory>/`. Answer the questions and confirm the decision summary.
 2. In the same session: `/dev-skills:core-spec Write spec.md and verify.md from the decision summary`. Read the gap check result and confirm spec and verify. It commits them to the feature branch and opens a Draft PR.
-3. In a new session: `/dev-skills:deliver Take over <Draft PR link>`. When it says the PR can be merged, read the decision list at the top of the PR, then merge.
+3. In a new session (at light depth, the same session works too): `/dev-skills:deliver Take over <Draft PR link>`. When it says the PR can be merged, read the decision list at the top of the PR, then merge.
+
+To choose the path yourself, name it when you start: `/dev-skills:core-grill <requirement>; quick path`, `…; light`, or `…; full`. Without it, core-grill proposes one in the decision summary. On the quick path, step 1 ends with an MR and steps 2 and 3 are skipped; at light, core-spec writes `Verification depth: light` into verify, and deliver reads it from there.
 4. Before you merge a large PR, or one whose code changed after its independent verification (the target branch merged in, conflicts resolved, fixes added): in a new session, `/dev-skills:merge-gate Gate <PR link>`. When only docs and tests changed since the verification, it checks that and stops; otherwise it covers only what changed since. Read the entries marked as the gate's in the decision list and the gate section right after it.
 
 The commands above work as written in MCode and Claude Code; in Codex, write `$dev-skills:` instead of `/dev-skills:`. By default, questions, the decision summary and spec follow the language of your request, and verify, plan.md, the decision list and the PR description follow spec.md; you or the repository's documentation rules can ask for another language.

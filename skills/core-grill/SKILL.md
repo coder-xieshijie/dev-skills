@@ -38,7 +38,7 @@ Finding facts is your job; do not ask the user for them. When you need code, doc
 
 ## Choosing the path
 
-When every question is answered, choose how the requirement continues, and put the choice with its reason in the decision summary; the user confirms it with the summary.
+When every question is answered, choose how the requirement continues, and put the choice with its reason in the decision summary; the user confirms it with the summary. When the user named a path when starting (quick, light or full), take it; if the requirement does not meet that path's conditions below, say which condition and the risk in the summary, and still take the user's path unless the user changes it.
 
 - **Quick**: implement in this session right after confirmation, without spec, verify or plan.md. Only when all of these hold: the change stays inside one feature; every decision that changes user-visible results is answered; it touches none of persistence or data migration, concurrency, metering, permissions or security, or a contract shared with another repository or service; a mistake is cheap to find and to revert.
 - **core-spec at verification depth light**: a small, local change that does not fit the quick path, or should be verified independently against frozen acceptance requirements, and touches none of the areas that call for `full` in [how to write verify](../core-spec/references/verify.md).

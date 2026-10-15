@@ -93,6 +93,8 @@ done
 3. 新开一个 session：`/dev-skills:deliver 接手 <Draft PR 链接>`。等它说可以合入，看 PR 最前面的决定清单，再合入。
 4. 合入前，PR 很大，或独立验证之后又有代码改动（合了目标分支、解了冲突、追加了修复）时：新开一个 session，`/dev-skills:merge-gate 给 <PR 链接> 做合入前门禁`。验证之后只改了文档和测试时，它核对后直接结束；否则只审验证之后的变化。看决定清单里标为门禁的条目，以及紧跟在后面的门禁一节。
 
+想自己指定档位，就在开始时写明：`/dev-skills:core-grill <需求>，走快速档`、`…，走轻档` 或 `…，走完整档`。不写时，core-grill 在决定汇总里提出建议。快速档在第 1 步就开出 MR，跳过第 2、3 步；轻档由 core-spec 在 verify 里写 `Verification depth: light`，deliver 从那里读出，可以在同一会话里接着做。
+
 上面的命令在 MCode 和 Claude Code 里照写即可；Codex 里把 `/dev-skills:` 换成 `$dev-skills:`。默认情况下，问题、决定汇总和 spec 用你提需求时的语言，verify、plan.md、决定清单和 PR 描述跟随 spec.md 的语言；你或仓库的文档规则可以另行指定。
 
 ## Skill 列表

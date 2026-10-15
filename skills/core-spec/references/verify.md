@@ -112,7 +112,7 @@ The document contains, in order:
 - `full`: behavior across several entry points or modules; default startup wiring; persistence, concurrency, metering, recovery or security; a migration; or a kind of change that has gone wrong in this repository before.
 - `light`: a small, local change, or a behavior-preserving change whose touched code existing scenarios and tests already cover.
 
-When in doubt, choose `full`. Write the line in English as shown, whatever the language of verify; deliver reads it.
+When the user or the confirmed decision summary names the depth, use it; if the change has a trait above that calls for the other depth, say so in the reason. Otherwise, when in doubt, choose `full`. Write the line in English as shown, whatever the language of verify; deliver reads it.
 
 When deciding split granularity, how tight checkpoints should be, the proof method, or how to write a decoy implementation, read [the example and check cases](verify-example.md).
 
