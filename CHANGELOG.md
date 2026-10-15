@@ -6,6 +6,13 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ## [Unreleased]
 
+## [0.8.3] - 2026-10-15
+
+### Changed
+
+- **agent-prompt-rules** 1.7: besides not asking for reasoning in the response, it says what to ask for instead (a short explanation, the evidence behind a result, or a summary of the actions taken) and lists the forms that count as reproducing reasoning, including a `reasoning` or `trace` field in JSON output or a tool input. The evidence 1.2 asks for is of the allowed kind. Cites the Refusals and fallback page, newly archived.
+- **agent-prompt-rules** 4.5: a before-and-after comparison runs each request at least three times on each version and compares each case, not only the overall result. Cites OpenAI's Harness-aware evaluation of plugins, newly archived, where 21% of cases flipped across three runs of one configuration.
+
 ## [0.8.2] - 2026-10-15
 
 ### Changed
