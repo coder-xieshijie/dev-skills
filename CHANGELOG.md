@@ -6,6 +6,12 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-10-15
+
+### Changed
+
+- **explain-as-fool** can now be selected by the agent as well as invoked by name, in Claude Code and Codex.
+
 ## [0.8.1] - 2026-10-15
 
 ### Changed
