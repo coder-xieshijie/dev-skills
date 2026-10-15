@@ -1,7 +1,6 @@
 ---
 name: explain-as-fool
 description: Explains a topic in plain, literal language for someone who knows nothing about it. Use when someone new to a topic asks for an explanation from the basics.
-disable-model-invocation: true
 ---
 
 Explain like I'm someone who knows nothing about this topic.
