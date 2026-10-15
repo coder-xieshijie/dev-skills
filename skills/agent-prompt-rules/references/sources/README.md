@@ -15,7 +15,7 @@ Each excerpt file has:
 
 The full text of every document, as fetched and normalized, is kept in the private repository `coder-xieshijie/dev-skills-sources` at commit `07e03e5`: the documents are under `sources/` with the same paths as here, and `SHA256SUMS` lists the sha256 of each one. The sha256 in each excerpt's note and in the tables below identifies that version. For public reading, use the official URL in each file.
 
-Most documents were fetched on 2026-09-28. On 2026-10-01, five were added and four that had changed were fetched again; the Fetched column gives the date of each. The Codex Prompting, Long-running work and Subagents pages have moved to `learn.chatgpt.com`, and the files and tables use the new address; the first two were checked on 2026-10-01, had not changed, and keep the version fetched on 2026-09-28.
+Most documents were fetched on 2026-09-28. On 2026-10-01, five were added and four that had changed were fetched again; on 2026-10-14, two more were added; the Fetched column gives the date of each. The Codex Prompting, Long-running work and Subagents pages have moved to `learn.chatgpt.com`, and the files and tables use the new address; the first two were checked on 2026-10-01, had not changed, and keep the version fetched on 2026-09-28.
 
 ## Anthropic
 
@@ -40,6 +40,7 @@ Most documents were fetched on 2026-09-28. On 2026-10-01, five were added and fo
 | [scaling-managed-agents.md](anthropic/scaling-managed-agents.md)                                           | Scaling Managed Agents: Decoupling the brain from the hands     | 2026-04-08  | 2026-09-28 | C      | `6a003211e040a7ea1f0a6d20bb6ad8532d70d5b462deb96b04a6649855ed4530` |
 | [multiagent-systems-patterns-and-problems.md](anthropic/multiagent-systems-patterns-and-problems.md)       | Patterns and problems in multiagent systems                     | 2026-08-13  | 2026-09-28 | C      | `2d713f6c44200ace06a78e43109d7d6c181524122935ac21c415d97aab0858e6` |
 | [reducing-cost-and-improving-performance.md](anthropic/reducing-cost-and-improving-performance.md)         | Reducing cost and improving performance with Claude Platform    | 2026-09-08  | 2026-10-01 | C      | `752d38f2dcca13a8940c976a38778e58bcd42d239bc58c4b98ac67b138352257` |
+| [refusals-and-fallback.md](anthropic/refusals-and-fallback.md) | Refusals and fallback | living page | 2026-10-14 | A | `ecaea950f953b2fdb6535ce2e808b20d1f9e52a2a7916fa16a5b8e3e25bd0184` |
 
 ## OpenAI
 
@@ -54,6 +55,7 @@ Most documents were fetched on 2026-09-28. On 2026-10-01, five were added and fo
 | [codex-skill-creator.md](openai/codex-skill-creator.md)                                                     | Skill Creator (built-in Codex Skill)                          | living page | 2026-10-01 | D      | `197f5ccb054d498d539aa75299b97ed0ceb8136663ff13deb712655c2fbec8f5` |
 | [harness-engineering.md](openai/harness-engineering.md)                                                     | Harness engineering: leveraging Codex in an agent-first world | 2026-02-11  | 2026-09-28 | C      | `45e3ae701d362fc215a517ba1829b49c52a17164de18b52c6aa3f8ef31a32bec` |
 | [run-long-horizon-tasks-with-codex.md](openai/run-long-horizon-tasks-with-codex.md)                         | Run long horizon tasks with Codex                             | 2026-02-23  | 2026-09-28 | B      | `e4c3cc6f38ce156a57b97009cc739a04171e3bc7e203fe8d124ca8ade197d19e` |
+| [harness-aware-plugin-evals.md](openai/harness-aware-plugin-evals.md) | Harness-aware evaluation of plugins (OpenAI Cookbook, by deepsense.ai) | 2026-10-09 | 2026-10-14 | B | `9f054f414585524d227d950028a1766dc16212726853e1d0d1a15ac0b26052fb` |
 
 "Living page" means that the page has no publication date and is updated in place.
 
