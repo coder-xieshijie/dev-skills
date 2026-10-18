@@ -27,8 +27,9 @@ Both are existing features that this change touches, and both should pass before
 | R02 | A request blocked before sending is not counted | Count logical requests | Scenario S01 |
 | R03 | A request that fails after being sent is still counted | Count logical requests | Scenario S01 |
 | R04 | After old data is upgraded, 5 remain, and the historical 7 are labeled with the old counting basis | Keep historical quota | Scenario S04 |
-| R05 | After the quota is exhausted, the next ordinary request is not sent | Last permitted request | Scenarios S02, S03 |
-| R06 | The result of the last permitted request is still processed | Last permitted request | Scenarios S02, S03 |
+| R05 | After the quota is exhausted, the next ordinary request is not sent | Last permitted request | Scenario S02 |
+| R06 | The result of the last permitted request is still processed | Last permitted request | Scenario S02 |
+| R08 | The command line shows the same quota-exhausted state as the UI | Last permitted request | Test: a component test of the command-line result view, given a task result stopped for an exhausted quota, asserts the same state text the UI shows |
 | R07 | When there is no current execution that can continue, no new execution is created, and the existing results and stopped state are kept | Wrap up only when the current execution can continue | Scenario S05 |
 
 ### Scenarios
@@ -61,13 +62,13 @@ Evidence: the execution record, the outbound request log
 Execution status: bind command after implementation
 ```
 
-S03 has the same preconditions and checkpoints as S02; its entry point is starting a task from the command line. S04 and S05 are written with the same fields and are omitted here.
+The command line starts tasks through the same call as the UI and has no logic of its own for an exhausted quota, and S01 already drives it through this change, so exhaustion has no command-line scenario; R08 covers what it shows. S04 and S05 are written with the same fields and are omitted here.
 
 ### Verification tooling gaps
 
 | Gap | Scenarios served |
 |---|---|
-| G1 The number of logical requests an execution actually sent cannot be read from outside; add a read-only query or metric | S01, S02, S03 |
+| G1 The number of logical requests an execution actually sent cannot be read from outside; add a read-only query or metric | S01, S02 |
 
 ### Coverage blind spots
 
@@ -84,7 +85,8 @@ The following are standalone check situations; each row gives a candidate wordin
 | S02's positive checkpoint is removed, leaving only "must not appear: a second request" | Too loose. An implementation that does nothing also sends no second request; keep "the first result enters the execution record" as the positive checkpoint |
 | S01's checkpoint is written as "the remaining quota equals the return value of `quota.remaining()`" | Self-referential. The expected value comes from the code under test, so a wrong implementation also passes; use the literal value 3 derived from the spec |
 | S01's baseline expectation is written as "passes" | Contradiction. The counting basis changes in this change; if the scenario passes on the old code, it does not test the change; recheck the checkpoints |
-| Only S02 is written, with no scenario for the command-line entry point | Incomplete. The same behavior can also be triggered from the command line, and the result at one entry point does not stand for the other; add S03 or state why it is not needed |
+| Only S02 is written, with no exhaustion scenario for the command-line entry point | Complete here. The command line has no logic of its own for an exhausted quota, S01 already drives it through this change, and R08 proves it shows the same state. If the command line had its own handling, such as its own exit code for an exhausted quota, it would need a full scenario of its own |
+| S01–S02 are also written as full scenarios for a third entry point that only displays the task result | Over-specified. That entry point has no logic of its own here; give it one wiring scenario that starts a task and sees the result, and prove that it shows the same state with a test |
 | S02 covers both the UI and the command-line entry points | Split it. Different entry points go into different scenarios; the preconditions and checkpoints may be the same |
 | R01–R03 are written as three scenarios, each preparing the quota and the test double again | Too fine. Same entry point, same preconditions, and they can be triggered one after another in one flow: merge them into one scenario with three checkpoints |
 | A unit test of `countRequests()` is written as the acceptance for R01 | Wrong level. Unit tests belong to the implementation; acceptance starts a task from the entry point and reads back the count through a read-only query; if the query does not exist, list it as a tooling gap |

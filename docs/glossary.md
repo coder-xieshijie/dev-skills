@@ -44,8 +44,9 @@ The Skills in this repository use these terms with one meaning each. The Chinese
 | Term | 中文 | Meaning |
 |---|---|---|
 | smoke set | 冒烟集 | A few quick checks that the app starts and its main path works |
-| requirements table | 要求表 | Each requirement in the spec and how it is proven: scenario, mechanical check, or existing check |
+| requirements table | 要求表 | Each requirement in the spec and how it is proven: scenario, mechanical check, existing check, or test |
 | scenario | 场景 | One complete operation a user performs at one entry point, with its result |
+| main entry point, full scenario, wiring scenario | 主入口、完整场景、接通场景 | A behavior's full scenario, with every checkpoint, runs at its main entry point; another entry point the change touches gets a full scenario only for logic of its own, otherwise a wiring scenario that checks the new behavior is wired up there and its key result shows |
 | entry point | 入口 | Where the user performs the operation, e.g. a desktop app, a TUI, an API |
 | literal checkpoint | 字面检查点 | What must be observed, written so that it can be checked as written |
 | baseline expectation | 基线预期 | What the scenario shows on the code before the change |

@@ -23,6 +23,7 @@ Choose a proof method for each requirement:
 | Scenario | Behavior, state, output, side effects; run from the real entry point |
 | Mechanical check | Structural constraints, e.g. layering direction, reusing a specified capability, no new dependencies, interfaces staying compatible; write them as lint rules or structural tests, one rule per constraint. Where a constraint truly cannot be mechanized, state what review checks and what counts as a failure |
 | Existing check | What the repository's existing end-to-end tests, structural tests or lint can already prove; name the specific file or command |
+| Test | That an entry point without logic of its own shows what the main entry point shows (see "One full scenario per behavior" below): a component or integration test written in delivery; state what it asserts, in terms the user can observe, and where it runs |
 
 Done criteria: every requirement has a proof method, and the reader does not need to guess how it is judged.
 
@@ -44,7 +45,7 @@ Evidence:
 Execution status: entry point exists / needs verification capability (see tooling gaps) / bind command after implementation
 ```
 
-**Splitting and merging.** Split when results differ: every provision of the spec, every exception, every entry point, and every state that leads to a different result must be covered by a scenario. What has the same entry point and the same preconditions and can be checked one after another in one operation flow goes into one scenario, with one checkpoint per result; what needs a different entry point or different preconditions goes into separate scenarios. Split by results the user can observe; implementation steps and internal functions are not grounds for splitting.
+**Splitting and merging.** Split when results differ: every provision of the spec, every exception, and every state that leads to a different result must be covered by a scenario, and every entry point the change touches is covered as the next paragraph but one says. What has the same entry point and the same preconditions and can be checked one after another in one operation flow goes into one scenario, with one checkpoint per result; what needs a different entry point or different preconditions goes into separate scenarios. Split by results the user can observe; implementation steps and internal functions are not grounds for splitting.
 
 **Choose the form of proof by type of change.**
 
@@ -57,7 +58,7 @@ Execution status: entry point exists / needs verification capability (see toolin
 | Platform support | Run on the target platform the spec names |
 | Performance (when the spec requires it) | In the same environment, measure the baseline first, then the change; state the metric and the value that counts as failure |
 
-**Make internal rules observable first.** For internal rules that cannot be seen from the entry point, such as counts, the parameters actually sent, or the data written, first add observability (logs, metrics, traces or a read-only query) and list it as a verification tooling gap; the scenario still starts from the entry point. Trigger conditions such as failures or rate limiting of external dependencies with a test double placed in the layer that connects to the external system; a test double proves only the behavior inside its boundary. When the spec requires a real provider, a real device or the target platform, the scenario runs in the real environment. Unit tests belong to the implementation and do not go into verify.md.
+**Make internal rules observable first.** For internal rules that cannot be seen from the entry point, such as counts, the parameters actually sent, or the data written, first add observability (logs, metrics, traces or a read-only query) and list it as a verification tooling gap; the scenario still starts from the entry point. Trigger conditions such as failures or rate limiting of external dependencies with a test double placed in the layer that connects to the external system; a test double proves only the behavior inside its boundary. When the spec requires a real provider, a real device or the target platform, the scenario runs in the real environment. Unit tests of how the code works inside belong to the implementation and do not go into verify.md.
 
 **Take the real user path.** Preconditions may be arranged with test data, configuration, permissions or supported test flags; the behavior under verification must come from real operations at the entry point. Internal setters, test-only interfaces and direct writes to storage are used only to arrange preconditions.
 
@@ -67,13 +68,13 @@ Execution status: entry point exists / needs verification capability (see toolin
 
 **Compare against the baseline.** For new or changed behavior, the scenario should fail on the code before the change; for behavior that must be preserved, it should pass both before and after the change. When the baseline lacks the feature, say so, and judge the added behavior and the end state the user waits for instead. The baseline is the first ready-made decoy implementation. For a key risk it does not cover, write one more plausible decoy implementation and confirm that the checkpoints make it fail.
 
-**Cover every entry point.** When the same behavior can be triggered from several user entry points, each entry point either has a scenario or has a stated reason why it does not need one; the result at one entry point does not stand for the others.
+**One full scenario per behavior, at its main entry point.** When the same behavior can be triggered from several user entry points, write its full scenario, with every checkpoint, at the main entry point: the one most users use, or whose path covers the most of the change. Another entry point gets a full scenario of its own only when it has logic of its own for this behavior beyond showing what it receives: its own state, timing or input handling, or its own path into the code that implements the behavior. Every other entry point the change touches gets a wiring scenario that walks the new behavior there once and checks that it is wired up and that its key result shows; one wiring scenario may cover several behaviors at its entry point, and an entry point a full scenario of this change already drives needs none. That the other entry points show the same results as the main one is a requirement proven by component or integration tests, named in the requirements table. Each scenario becomes a script that runs at its milestone and again in every verification round, so spend scenarios on what tests cannot see at an entry point: whether it is wired up, logic of its own, and what shows only in its real interface.
 
 **Constrain only what the spec specifies.** Checkpoints check the results the spec requires. Internal structure, naming and implementation paths that the spec does not specify are left to the implementation; other correct implementations should be able to pass.
 
 **Results that code cannot assert**, such as model output quality or visual effects: state the fixed samples, the reference and the judging criteria, and note that independent judgment is needed.
 
-Done criteria: every provision, exception, relevant entry point and result-changing state in the spec is covered by a scenario; every scenario has literal checkpoints and a baseline expectation, and where the baseline does not cover a key risk, it also has a decoy implementation; no two scenarios have exactly the same entry point, preconditions and operation flow.
+Done criteria: every provision, exception and result-changing state in the spec is covered by a scenario, and every entry point the change touches has a full or a wiring scenario as above; every scenario has literal checkpoints and a baseline expectation, and where the baseline does not cover a key risk, it also has a decoy implementation; no two scenarios have exactly the same entry point, preconditions and operation flow.
 
 ## 4. Locate verification capabilities; list tooling gaps and coverage blind spots
 
@@ -98,7 +99,7 @@ The document contains, in order:
    > Based on the spec, this document defines what counts as doing this requirement right and how to prove it. It is the shared basis for implementation, independent verification and final acceptance. During implementation, the implementing agent runs these scenarios itself, and a scenario passes only when it actually runs through; after freezing, scenarios and checkpoints do not change, except through the refreezes deliver is authorized to make. This document only describes acceptance requirements; it does not mean verification has been run or has passed.
 
    Then write the sources: the spec path and sha256, the related repositories and commits, and the verification Skill or feature map referenced.
-2. **Key points**: the number of requirements and scenarios, and the 3–5 scenarios most likely to go wrong, usually real cross-module paths, default wiring and key exceptions; then the verification depth, as the line `Verification depth: light` or `Verification depth: full` followed by its reason in one sentence (see below); readable within one screen.
+2. **Key points**: the number of requirements, full scenarios and wiring scenarios, and the 3–5 scenarios most likely to go wrong, usually real cross-module paths, default wiring and key exceptions; then the verification depth, as the line `Verification depth: light` or `Verification depth: full` followed by its reason in one sentence (see below); readable within one screen.
 3. **Smoke set**: a few core user journeys chosen by the risk of this change, preferring existing features this change touches, to confirm that the environment and existing features are not broken.
 4. **Requirements table**: ID, requirement, spec location, proof method.
 5. **Scenarios**.
