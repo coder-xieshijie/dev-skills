@@ -6,6 +6,16 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-18
+
+### Changed
+
+- **core-spec** verify writes one full scenario per behavior, at its main entry point. Another entry point the change touches gets a full scenario only when it has logic of its own for the behavior (its own state, timing, input handling or path into the code); otherwise it gets a wiring scenario that checks the new behavior is wired up there and its key result shows, and a component or integration test, a new "Test" proof method in the requirements table, proves it shows the same results. The gap check asks for this coverage and reports a full scenario at an entry point without logic of its own as over-specification. The example and the glossary follow.
+- **deliver** counts a milestone done when its scenarios, the quality commands and the repository's static checks for the touched paths pass (the cheap CI jobs whose path rules match), instead of leaving those checks to the local gate at the end.
+- **deliver** pushes first when every milestone is done, so CI and any automated review the repository runs on the MR work during the code review and the local gate. Independent verification starts on a head once the review comments so far are handled.
+- **deliver** runs independent verification for at most three rounds; when the third does not pass, the MR stays in Draft and the failing items, their evidence and what was tried go into the decision list and the report.
+- **deliver** `ci-watch.mjs` lists, when it returns, the non-system comments posted on the MR since the watched pipeline was created, with author, time, resolved state and first line.
+
 ## [0.8.3] - 2026-10-15
 
 ### Changed
