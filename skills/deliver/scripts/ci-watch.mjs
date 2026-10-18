@@ -13,6 +13,10 @@
 // such as one started by a later push, are ignored. A failed job that is not
 // allow_failure ends the wait while the rest of the pipeline is still running.
 //
+// When it returns after finding the pipeline, it also lists the comments posted
+// on the MR since that pipeline was created (system notes left out), so that an
+// automated review that reports on the MR is read together with CI.
+//
 // Exit 0 when the pipeline passed, 1 when a job failed or the pipeline was
 // canceled or skipped, 3 on timeout or when the pipeline stops for a person
 // (manual or scheduled jobs), 2 on usage errors. Zero dependencies.
@@ -83,6 +87,38 @@ function jobsOf(id) {
   }
 }
 
+function listComments(since) {
+  try {
+    const notes = [];
+    for (let page = 1; ; page += 1) {
+      const batch = api(`projects/:id/merge_requests/${args.mr}/notes?sort=asc&order_by=created_at&per_page=100&page=${page}`);
+      notes.push(...batch);
+      if (batch.length < 100) break;
+    }
+    const from = Date.parse(since);
+    const recent = notes.filter((n) => !n.system && !(Date.parse(n.created_at) < from));
+    if (!recent.length) {
+      console.log(`ci-watch: no comments on the MR since ${since}`);
+      return;
+    }
+    console.log(`ci-watch: ${recent.length} comment(s) on the MR since ${since}:`);
+    for (const n of recent) {
+      const first = String(n.body ?? "").split("\n").find((line) => line.trim() && !line.trim().startsWith("<!--")) ?? "";
+      const state = n.resolvable ? (n.resolved ? " (resolved)" : " (unresolved)") : "";
+      console.log(`  note ${n.id} by ${n.author?.username ?? "unknown"} at ${n.created_at}${state}: ${first.trim().slice(0, 160)}`);
+    }
+  } catch (error) {
+    const detail = String(error.stderr || error.message).trim().split("\n")[0];
+    console.error(`ci-watch: could not read the MR comments: ${detail}`);
+  }
+}
+
+let seenPipeline;
+function finish(code) {
+  if (seenPipeline?.created_at) listComments(seenPipeline.created_at);
+  process.exit(code);
+}
+
 const ENDED_FOR_A_PERSON = ["manual", "scheduled"];
 const FAILED = ["failed", "canceled", "skipped"];
 const deadline = Date.now() + timeoutMs;
@@ -100,24 +136,25 @@ while (true) {
     if (!match) say(`ci-watch: no pipeline yet for ${short(head)}`);
     else {
       const pipeline = api(`projects/:id/pipelines/${match.id}`);
+      seenPipeline = pipeline;
       const jobs = jobsOf(match.id);
       const failed = jobs.filter((j) => j.status === "failed" && !j.allow_failure);
       if (failed.length) {
         console.log(`ci-watch: FAILED pipeline ${pipeline.id} (${pipeline.status}) for ${short(head)} ${pipeline.web_url ?? ""}`.trimEnd());
         for (const j of failed) console.log(`  job ${j.id} ${j.name} failed ${j.web_url ?? ""}`.trimEnd());
-        process.exit(1);
+        finish(1);
       }
       if (pipeline.status === "success") {
         console.log(`ci-watch: PASSED pipeline ${pipeline.id} for ${short(head)} ${pipeline.web_url ?? ""}`.trimEnd());
-        process.exit(0);
+        finish(0);
       }
       if (FAILED.includes(pipeline.status)) {
         console.log(`ci-watch: pipeline ${pipeline.id} ${pipeline.status} for ${short(head)} ${pipeline.web_url ?? ""}`.trimEnd());
-        process.exit(1);
+        finish(1);
       }
       if (ENDED_FOR_A_PERSON.includes(pipeline.status)) {
         console.log(`ci-watch: pipeline ${pipeline.id} is ${pipeline.status}: it waits for a person ${pipeline.web_url ?? ""}`.trimEnd());
-        process.exit(3);
+        finish(3);
       }
       const done = jobs.filter((j) => ["success", "failed", "canceled", "skipped", "manual"].includes(j.status)).length;
       say(`ci-watch: pipeline ${pipeline.id} ${pipeline.status}, ${done}/${jobs.length} jobs done`);
@@ -130,7 +167,7 @@ while (true) {
   }
   if (Date.now() + intervalMs > deadline) {
     console.log(`ci-watch: timed out after ${args.timeout ?? "90m"} waiting for ${short(head)}`);
-    process.exit(3);
+    finish(3);
   }
   await sleep(intervalMs);
 }
