@@ -6,6 +6,12 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-18
+
+### Changed
+
+- **deliver** splits work along context rather than by kind of work: the agent that implemented a milestone also writes its scenario scripts and fixes what scenarios, checks and reviews find in that code, and is continued instead of being replaced by a new agent with a brief. New contexts go to checks that look only at results, to code search, and to parts with clean interfaces that genuinely run in parallel. Choosing the agent type by role stays as it was.
+
 ## [0.9.0] - 2026-10-18
 
 ### Changed
