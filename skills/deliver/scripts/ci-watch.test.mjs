@@ -1,7 +1,8 @@
 // Cases for ci-watch.mjs. Run: node --test skills/deliver/scripts/ci-watch.test.mjs
 // Each case puts a fake `glab` first on PATH. It answers `glab api` from a
 // fixture of rounds; every MR-pipelines call moves to the next round, so a
-// case can script a pipeline that runs, then fails or passes.
+// case can script a pipeline that runs, then fails or passes. MR notes come from
+// the fixture's notes.
 import { execFileSync, spawnSync } from "node:child_process";
 import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -24,6 +25,7 @@ const state = fixture.rounds[Math.min(Math.max(round, 0), fixture.rounds.length 
 let m;
 let out;
 if (/merge_requests\\/\\d+\\/pipelines/.test(endpoint)) out = state.mrPipelines;
+else if (/merge_requests\\/\\d+\\/notes/.test(endpoint)) out = fixture.notes ?? [];
 else if ((m = /repository\\/commits\\/(\\w+)/.exec(endpoint))) out = { parent_ids: fixture.parents[m[1]] ?? [] };
 else if ((m = /pipelines\\/(\\d+)\\/jobs/.exec(endpoint))) out = state.jobs[m[1]] ?? [];
 else if ((m = /pipelines\\/(\\d+)$/.exec(endpoint))) out = { id: Number(m[1]), web_url: "https://ci/p/" + m[1], ...state.pipelines[m[1]] };
@@ -141,4 +143,33 @@ test("usage error when the head is not a commit", () => {
   assert.equal(r.status, 2);
   assert.match(r.stderr, /is not a commit/);
   assert.equal(watch("--interval", "fast").code, 2);
+});
+
+test("lists the comments posted on the MR since the pipeline started", () => {
+  const { watch } = setup((head) => ({
+    parents: {},
+    notes: [
+      { id: 10, system: false, created_at: "2026-10-17T13:00:00.000Z", author: { username: "alice" }, body: "before the push" },
+      { id: 11, system: true, created_at: "2026-10-17T13:40:00.000Z", author: { username: "bot" }, body: "added 1 commit" },
+      { id: 12, system: false, created_at: "2026-10-17T13:44:00.000Z", author: { username: "review-bot" }, resolvable: true, resolved: false, body: "<!-- marker -->\n# Review: findings\nP1 replay is not deduplicated" },
+    ],
+    rounds: [
+      { mrPipelines: [{ id: 8, sha: head }], pipelines: { 8: { status: "success", created_at: "2026-10-17T13:35:00.000Z" } }, jobs: { 8: [job("unit", "success")] } },
+    ],
+  }));
+  const { code, out } = watch();
+  assert.equal(code, 0, out);
+  assert.match(out, /1 comment\(s\) on the MR since 2026-10-17T13:35:00.000Z/);
+  assert.match(out, /note 12 by review-bot at 2026-10-17T13:44:00.000Z \(unresolved\): # Review: findings/);
+  assert.doesNotMatch(out, /note 10|note 11/);
+});
+
+test("says so when no comment was posted since the pipeline started", () => {
+  const { watch } = setup((head) => ({
+    parents: {},
+    rounds: [{ mrPipelines: [{ id: 9, sha: head }], pipelines: { 9: { status: "failed", created_at: "2026-10-17T13:35:00.000Z" } }, jobs: { 9: [job("unit", "failed")] } }],
+  }));
+  const { code, out } = watch();
+  assert.equal(code, 1, out);
+  assert.match(out, /no comments on the MR since 2026-10-17T13:35:00.000Z/);
 });
