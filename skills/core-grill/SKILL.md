@@ -51,14 +51,16 @@ When every question that changes user-visible results has an answer, write a dec
 - the four inputs;
 - the decisions the user answered: the question, the options, the user's own words;
 - default decisions: the decision, the reason, how to overturn it;
-- the path and its reason; for the quick path, also 3–8 acceptance checks, each an entry point, what to do there and the result to observe, together covering every decision the user answered.
+- the path and its reason; for the quick path, also 3–8 acceptance checks, each an entry point, what to do there, the result to observe and its baseline expectation (what the code before the change shows), together covering every decision the user answered. For a bug fix, at least one check fails on the code before the change.
+
+Take each check's entry point from the project's verification capability, its feature map entry when there is one, and first read what that capability records it cannot do (entry limits, the map's gotchas). When the entry point cannot produce a check's preconditions or show its result, give the check another entry point that observes the same result, such as the component rendered alone in a browser, or mark it unverified with the reason; the user then confirms that gap with the summary.
 
 When the user confirms the summary, they also confirm the default decisions in it; where the user changes an item, follow the user's change. On a core-spec path, after confirmation, continue with core-spec: it takes this summary as the source agreements, writes spec and verify from it, and has a model from another family run a gap check against it.
 
 On the quick path, after confirmation, implement it yourself:
 
 1. Work on a feature branch in your own worktree, following the repository's rules.
-2. Run every acceptance check on the running app from its entry point, and the quality commands. Keep the evidence outside the repository, as deliver keeps its evidence directory.
+2. Run every acceptance check on the running app from its entry point, and the quality commands; run the check that should fail on the code before the change before you change the code, or on a checkout of the base. Keep the evidence outside the repository, as deliver keeps its evidence directory: for each check, its result and what proves it. A check over many values (widths, languages, states) runs coarse steps plus the values next to each threshold; while fixing, rerun only the combinations that failed, and run the full set once on the final head.
 3. Ask a model from another family to review the diff read-only against the summary and its acceptance checks ("read-only" in [Cross-model calls](../core-spec/references/cross-model.md)). Fix what holds, once, and rerun the acceptance checks the fixes touch.
 4. Run the local gate as [deliver](../deliver/SKILL.md) describes in its "Local gate" paragraph.
 5. When the authorization allows pushing, push the branch once and open an MR. Its description starts with the decision list (default decisions, and choices you made while implementing), followed by each acceptance check and its result. Wait for CI with deliver's CI watch, in the background, and fix the failures this change introduced; for each review comment, change the code or reply with the reason, and leave a comment that asks to change a decision the user made for the user. Then tell the user the MR can be merged. When the authorization does not allow pushing, stop at the local commits and report.
