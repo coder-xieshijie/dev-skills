@@ -6,6 +6,12 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-19
+
+### Changed
+
+- **core-grill** quick-path acceptance checks each carry a baseline expectation, and a bug fix has at least one check that fails on the code before the change, run before the code changes or on a checkout of the base. Each check takes its entry point from the project's verification capability after reading what that capability records it cannot do; a check the entry point cannot reach gets another entry point that observes the same result, or is marked unverified with the reason, for the user to confirm with the summary. The evidence is each check's result and what proves it, and a check over many values runs coarse steps plus the values next to each threshold, reruns only the failing combinations while fixing, and runs the full set once on the final head. In the case behind this change, a desktop entry point that could not reach the minimum width ran for 43 minutes, and a 1-pixel width sweep was rerun in full seven times.
+
 ## [0.10.0] - 2026-10-18
 
 ### Changed
