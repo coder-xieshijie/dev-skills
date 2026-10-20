@@ -6,6 +6,12 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-10-20
+
+### Changed
+
+- **deliver**: when the same requirement fails in a second round of independent verification, the owner lists every place in the code the requirement applies to, following the calls inside each component it names rather than stopping at their entry points, and checks each one before the next round, with the verifier's probes from the evidence directory or the same method, instead of fixing only the places the report names. When the list has no end because the requirement does not say how far down the calls it applies, the owner stops changing code for it as at the round limit and puts the requirement, what each round found and a proposed boundary into the decision list for the user. In the case behind this change, one requirement about calls after close failed four rounds in a row, each verifier going one layer deeper into the call chain, and each round cost about 45 to 60 minutes.
+
 ## [0.11.0] - 2026-10-19
 
 ### Changed
