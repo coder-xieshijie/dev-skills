@@ -6,6 +6,13 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-10-21
+
+### Changed
+
+- **deliver**: before each round of independent verification, when the branch no longer merges cleanly into the target branch or is more than about 20 commits behind, the owner merges the target branch first, so the local gate and the round run on the merged head and the verifier's baseline is the new merge base.
+- **deliver** verifier brief and **core-spec** verify: a smoke-set or regression-scope check that fails is run again on the baseline; when it fails there at the same checkpoint with the same actual value or error, the verifier records it as BASELINE with a note starting "Baseline failure", and it does not affect the verdict. Scenarios for new or changed behavior still count. In the case behind both changes, three rounds failed on problems the change did not cause: regressions the target branch had already fixed, and one introduced by the target branch after a late merge. Each took a user decision and a refreeze, and the two decisions held the work for about 14 hours.
+
 ## [0.12.0] - 2026-10-20
 
 ### Changed

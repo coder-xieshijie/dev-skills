@@ -53,6 +53,7 @@ The Skills in this repository use these terms with one meaning each. The Chinese
 | decoy implementation | 会被拒绝的错误实现 | A plausible wrong implementation that the checks must reject |
 | mechanical check | 机械检查 | A check a script or command can decide without judgment |
 | regression scope | 回归范围 | Existing behavior that must still work |
+| baseline failure | 基线已有的失败 | A smoke-set or regression-scope check that fails the same way on the baseline; recorded, but not counted in the verdict |
 | coverage blind spot, substitute test | 覆盖盲区、替代测试 | A requirement scenarios cannot reach, and the test that covers it instead |
 | verification tooling gap | 验证工具缺口 | A capability the scenarios need that the project does not have yet |
 | feature map | 功能地图 | For each feature: entry, actions, what to observe, what evidence to keep |
