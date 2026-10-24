@@ -6,6 +6,16 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-10-24
+
+### Added
+
+- **cross-review**: a cross review of an existing change (PR/MR, branch or commit range) that the agent can start on its own when asked for one. A fresh subagent and a model from another family, each in its own worktree pinned to the head, review it independently with merge-gate's review brief, then cross-examine each other's findings in the same sessions; the caller settles every disagreement by reading the code at the head and keeps one ledger with merge-gate's `findings.mjs`. When asked, it fixes the confirmed findings with a test per behavior fix and one commit per finding. It replaces the cross-review pipeline of an external orchestrator that started a third session as checker: in the case behind it, that orchestrator's defaults failed to start one reviewer, and only starting a CLI session, continuing it and waiting for it in the background were used.
+
+### Changed
+
+- **merge-gate** review brief: names its input as the review input (merge-gate's `gate.md` or cross-review's `input.md`) and covers a branch or commit range as well as an MR, so both Skills share it.
+
 ## [0.13.0] - 2026-10-21
 
 ### Changed

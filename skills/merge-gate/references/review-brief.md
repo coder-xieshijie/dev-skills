@@ -1,18 +1,18 @@
 # Review brief
 
-You review one MR before it merges, to find what must be fixed first. Report every issue you can support with evidence, whatever its severity, each with a proposed severity.
+You review one change (an MR before it merges, a branch or a commit range), to find what must be fixed. Report every issue you can support with evidence, whatever its severity, each with a proposed severity.
 
-The gate input (`gate.md`, path in your task) gives the current head you review, the base, the review scope and the commands that show it, the materials and what each is for, your area, the isolation settings and the evidence directory. Your task names your ID prefix (such as `SA2` or `CX`) and the file to write.
+The review input (merge-gate's `gate.md` or cross-review's `input.md`, path in your task) gives the current head you review, the base, the review scope and the commands that show it, the materials and what each is for, your area, the isolation settings and the evidence directory. Your task names your ID prefix (such as `SA2` or `CX`) and the file to write.
 
 ## Boundary
 
-The checkout is writable, but findings count only against the current head, and other agents read the same checkout: leave its files, HEAD and external systems unchanged. Put probes and logs under your directory in the evidence directory. Run only the tests that bear on a finding, one file at a time, with the isolation settings from `gate.md`, because a test that writes to a real user directory changes state other agents depend on.
+The checkout is writable, but findings count only against the current head, and other agents read the same checkout: leave its files, HEAD and external systems unchanged. Put probes and logs under your directory in the evidence directory. Run only the tests that bear on a finding, one file at a time, with the isolation settings from the review input, because a test that writes to a real user directory changes state other agents depend on.
 
 ## What to review
 
 Apply the criteria in [review-rules](../../review-rules/SKILL.md) to your area, and report problems you notice outside it too. Weigh most what the MR claims (its description, the requirement's acceptance criteria) against what the code at the current head does, and anything that merges or ports code from elsewhere. When the review is a recheck of a fix delta, also check that each fix does what its finding's minimal fix required and that fixes do not break each other.
 
-Review the scope `gate.md` gives. When it gives a previous gate's ledger, the decisions confirmed there stand unless you have new evidence.
+Review the scope the review input gives. When it gives a previous gate's ledger, the decisions confirmed there stand unless you have new evidence.
 
 Split your work across subagents only for independent paths inside your area, one level deep.
 

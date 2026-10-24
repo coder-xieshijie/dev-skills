@@ -106,6 +106,7 @@ done
 | [core-spec](skills/core-spec/SKILL.md) | 把讨论收敛成 spec.md（决定与约束）和 verify.md（自动交付的验收要求），请另一家模型查漏，一次确认后冻结。也可以只产出 spec |
 | [deliver](skills/deliver/SKILL.md) | 依据冻结的 spec 和 verify，由一个 owner 实现、逐里程碑在应用里验证、请另一家模型独立验证，并把 PR 做到 CI 通过、可合入；自己做的决定列在最前面 |
 | [merge-gate](skills/merge-gate/SKILL.md) | 大 PR 合入前的最后一道关：只看上次独立验证之后的变化，由另一家模型和新开的子 Agent 交叉 review、同时在应用里实跑，独立裁决确认问题，P0–P2 通过子 PR 修复、CI 通过后合入，循环到没有问题；deliver 交付的 PR 以 deliver 的独立验证收尾 |
+| [cross-review](skills/cross-review/SKILL.md) | 交叉 review 一个 PR、分支或提交区间：新开的子 Agent 和另一家模型各自独立评审，再互相质证对方的问题；由你裁定一份问题台账，要求修复时按问题逐个 commit 修掉已确认的问题 |
 | [review-rules](skills/review-rules/SKILL.md) | 代码与设计评审、复核问题、判断修复方案时用的准则：复用、必要改造、复杂度、扩展性、责任边界 |
 | [mr-for-human](skills/mr-for-human/SKILL.md) | 把 PR 整理成给人看的阅读指南：核心结论、设计、伪代码表示的执行逻辑、运行约束、代码定位 |
 | [explain-as-fool](skills/explain-as-fool/SKILL.md) | 面向对话题一无所知的人做解释；其他 Skill 复用它的写作要求 |
