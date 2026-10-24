@@ -1,0 +1,5 @@
+interface:
+  display_name: "Cross Review"
+  short_description: "Two independent reviewers from two model families review a change and cross-examine each other"
+policy:
+  allow_implicit_invocation: true

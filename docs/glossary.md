@@ -32,6 +32,7 @@ The Skills in this repository use these terms with one meaning each. The Chinese
 | evidence directory | 证据目录 | Where delivery keeps evidence, verification inputs and reports, other families' replies and one-scenario scripts, outside the repository; the MR does not carry it |
 | local gate | 本地闸门 | The checks CI runs for the paths a change touches, run locally before the push that starts CI and independent verification |
 | merge gate | 合入前门禁 | The last check of a large MR before it merges, run by [merge-gate](../skills/merge-gate/SKILL.md): review and runtime verification of what changed since the verified head, fixes through sub-MRs, rechecks until the head is clean |
+| cross review | 交叉 review | Two independent reviewers, a fresh subagent and a model from another family, review the same pinned change and then cross-examine each other's findings, run by [cross-review](../skills/cross-review/SKILL.md); the caller settles the disagreements |
 | verified head | 已验证 head | The last head on which an independent verification or a previous merge gate passed the MR; the merge gate covers what changed since it, and ends without a gate when only Markdown and test files did |
 | gate head, gate input | 门禁 head、门禁输入 | The source branch head the merge gate starts from; `gate.md`, the file every brief reads for that run's facts: heads and scope, CI, areas, shared-state isolation, runtime verification |
 | sub-MR | 子 MR | An MR whose target is another MR's source branch; the merge gate fixes findings through them |
