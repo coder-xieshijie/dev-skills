@@ -6,6 +6,12 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-10-26
+
+### Changed
+
+- **review-rules**: for local or low-probability cases, the reviewer also states how likely they are, and a fix that would add complexity for such a case is listed as a trade-off for the user to decide rather than as a defect, so a review that goes on to fix its findings does not widen the change for theoretical robustness.
+
 ## [0.14.0] - 2026-10-24
 
 ### Added
