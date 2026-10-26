@@ -20,7 +20,8 @@ The review scope, how the review is carried out, and whether to fix follow the u
 
 3. **Complexity proportionate to the benefit**
    What concrete problem do the new abstractions, state and coordination mechanisms solve?
-   For local or low-probability cases, state the trigger conditions, the consequences and the cost of handling them.
+   For local or low-probability cases, state the trigger conditions, how likely they are, the consequences and the cost of handling them.
+   When a fix would add complexity for such a case, list it as a trade-off for the user to decide, not as a defect to fix.
    Do not add complex design for imagined risks, and do not reject a necessary safeguard just because the case is a race condition.
 
 4. **Enough extensibility**
