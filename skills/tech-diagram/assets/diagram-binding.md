@@ -17,6 +17,12 @@
 
 Not drawn as figures: <content> (§<n>) stays a table.
 
+## Text issues
+
+<!-- Gaps and contradictions in the document found while planning or drawing, with section numbers; reported at delivery. Delete this section if there are none. -->
+
+- §<n>: <what the text leaves open or contradicts>
+
 ## Concept → color → shape
 
 | Concept category | Components | Color slot | Shape |

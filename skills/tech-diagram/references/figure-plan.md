@@ -9,19 +9,19 @@ A design-document Skill that hands its figures over (such as design-for-review) 
 - **Conclusion**: the document's one-sentence conclusion.
 - **Pillars or reader questions**: the few claims the conclusion rests on, or the questions the document answers.
 - **Mechanisms**: each with its triggers and its failure handling. Every row of a trigger table or a failure table is an entry of its own.
-- **Questions already asked**: what the user or reviewers asked about the design.
+- **Questions already asked**: what the user or reviewers asked about the design. When none are known, the document's open questions stand in for them.
 - **Placement**: the section each figure goes into.
 
 ## Steps
 
 1. **Find the existing set.** Look next to the document for figures and a `diagram-binding.md` (`diagrams/`, `figures/`, or the document's own directory). When a set exists, extend it: its binding, names, colors and numbering stand, and new figures append rows. Start a set only where none exists, in `<document directory>/diagrams/`.
 2. **List candidates.** Every mechanism with a trigger, a flow or a state change is a candidate. Lists of numbers, comparisons, option lists and plans stay tables.
-3. **Rank by where readers get stuck.** Questions already asked come first, then mechanisms whose order or ownership the text spreads over several sections, then the rest. Take candidates from the top until every pillar has a figure; the others go to the "Not drawn" line with the table or section that covers them.
+3. **Rank by where readers get stuck.** Questions already asked come first, then mechanisms whose order or ownership the text spreads over several sections, then the rest. The set takes a figure for each question asked and the top-ranked candidate of each pillar not yet covered; another candidate joins only when an abnormal path from step 5 has no other place. The others go to the "Not drawn" line with the table or section that covers them.
 4. **Give the set a shape.** One overview that answers the conclusion (see "Overview of a design document" in [diagram-kinds.md](diagram-kinds.md)), then one figure per pillar or question, numbered in reading order.
 5. **List parts and paths per figure.**
    - Each container the figure opens (a turn, a context window, a request, a queue) with all of its parts: the parts the system already had as well as the ones the design adds.
    - For each mechanism the figure covers, the normal path and every abnormal path the text names: failure, timeout, retry, fallback, hard limit, a concurrent or discarded run. Each is drawn in this figure, or the row names the figure or table that has it.
-   - An abnormal path that no figure or table covers gets a figure or a place in one. When the text names it without saying what happens, it is a text issue: report it at delivery.
+   - An abnormal path that no figure or table covers gets a figure or a place in one. When the text names it without saying what happens, it is a text issue: list it under `## Text issues` in the binding, and report the list at delivery.
 6. **Write the table** before drawing the first figure. When the user asked which figures to draw, show the table and stop there.
 
 ## The Figures table
