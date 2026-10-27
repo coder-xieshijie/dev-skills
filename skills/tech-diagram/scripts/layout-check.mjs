@@ -1,13 +1,16 @@
 // Layout checks for a rendered diagram. Pure functions over the geometry that render.mjs collects
 // from the page, so they can be tested without a browser.
 //
-// Input: { stage: { w, h }, boxes, frames, lines, texts }
+// Input: { stage: { w, h }, boxes, frames, lines, texts, tags }
 //   boxes:  [{ x, y, w, h }]                       closed shapes drawn by the helpers
 //   frames: [{ x, y, w, h }]                       dashed zone boundaries
 //   lines:  [{ x1, y1, x2, y2, kind, route }]      kind: arrow | frame | lifeline | timeline;
 //                                                  segments of one arrow or route share `route`
 //   texts:  [{ x, y, w, h, text, bg, frame, fonts }] painted text extent; bg = has an ivory background,
 //                                                  frame = the label of a frame, sitting on its top edge
+//   tags:   [{ tag, text, x, y }]                  elements in a label other than b, br, span, div, i, sub,
+//                                                  sup: label text like <task-report> that the browser parsed
+//                                                  as a tag and did not draw
 // Output: [{ type, message }]
 
 const TOL = 2;        // px a text may touch a border without counting as crossing it
@@ -52,7 +55,7 @@ export function segmentHitsRect(s, r) {
 const EMOJI = /\p{Emoji_Presentation}|\p{Extended_Pictographic}️/u;
 const NON_SERIF = /sans|PingFang|Hei|Hiragino|Helvetica|Arial|YaHei|Emoji|Kai|Caveat|Comic|Hand|Script|Cursive/i;
 
-export function checkLayout({ stage, boxes = [], frames = [], lines = [], texts = [] }) {
+export function checkLayout({ stage, boxes = [], frames = [], lines = [], texts = [], tags = [] }) {
   const issues = [];
   const add = (type, message) => issues.push({ type, message });
   const canvas = { x: 0, y: 0, w: stage.w, h: stage.h };
@@ -116,6 +119,12 @@ export function checkLayout({ stage, boxes = [], frames = [], lines = [], texts 
     if (EMOJI.test(t.text)) add('emoji', `"${short(t.text)}" contains an emoji`);
     const bad = (t.fonts || []).filter((f) => NON_SERIF.test(f));
     if (bad.length) add('font', `"${short(t.text)}" renders in ${bad.join(', ')}, not a serif font`);
+  }
+
+  // Text the browser took for an HTML tag: it is not drawn, and a label holding only it has no extent at all
+  for (const t of tags) {
+    add('html-tag', `${t.text ? `"${short(t.text)}"` : 'an empty label'} at (${Math.round(t.x)},${Math.round(t.y)}) ` +
+      `contains <${t.tag}>, which the browser parsed as a tag and did not draw; write it as &lt;${t.tag}&gt;`);
   }
 
   return issues;

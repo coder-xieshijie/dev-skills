@@ -6,6 +6,12 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ## [Unreleased]
 
+## [0.15.2] - 2026-10-27
+
+### Fixed
+
+- **tech-diagram**: three problems from drawing a set of five figures. `scripts/render.mjs` reported only that `window.__renderDone` was not set within 20 s when `main()` threw or rough.js did not load; it now exits 2 with the exception the page threw (message, file and line) and the requests that failed, and stops as soon as the page has loaded with an uncaught exception instead of waiting out the timeout. rough.js from jsDelivr failed to load twice in a row and then did not fail again in ten tries; the Skill now bundles rough.js 4.6.6 in `assets/vendor/`, matching the template's integrity hash, and `render.mjs` serves it in place of the CDN URL, so rendering works without network access while the HTML still loads it from the CDN when opened in a browser; a load with a failed request is retried once. A label with `<task-report>` in it drew nothing because the browser parsed it as a tag; the layout check now reports any element in a label other than `b`, `i`, `br`, `sub`, `sup`, `span` and `div` (`html-tag`).
+
 ## [0.15.1] - 2026-10-27
 
 ### Fixed

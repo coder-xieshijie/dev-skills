@@ -82,3 +82,10 @@ test('text running to the side of its box', () => {
   assert.deepEqual(types({ boxes, texts: [{ x: 101, y: 120, w: 197, h: 20, text: 'long' }] }), ['text-touches-border']);
   assert.deepEqual(types({ boxes, texts: [{ x: 116, y: 120, w: 168, h: 20, text: 'padded' }] }), []);
 });
+
+test('label text the browser parsed as an HTML tag', () => {
+  const issues = checkLayout({ stage, tags: [{ tag: 'task-report', text: '', x: 100, y: 40 }, { tag: 't', text: 'List', x: 10, y: 10 }] });
+  assert.deepEqual(issues.map((i) => i.type), ['html-tag', 'html-tag']);
+  assert.match(issues[0].message, /an empty label at \(100,40\) contains <task-report>.*&lt;task-report&gt;/);
+  assert.match(issues[1].message, /"List" .* contains <t>/);
+});
