@@ -8,6 +8,8 @@ How each kind of technical diagram is laid out with the helpers. Pick the kind f
 | What happens to one request or one piece of data, step by step, across components | Request or data flow |
 | Who sends what to whom, in what order, including replies and failures | Sequence |
 | Which states something passes through and what moves it between them | Lifecycle or state machine |
+| Which checks run in what order, and where each answer leads | Decision procedure |
+| How big the parts are against a limit (a budget, a window, a quota) | Budget or proportion |
 | Several of the above about one system | A set: an overview plus one detail diagram per topic |
 
 ## Architecture with zones
@@ -36,7 +38,7 @@ The layout of [`examples/sequence.html`](../examples/sequence.html).
 - One `lifeline()` per participant, in the order they first appear; the initiator on the left. The participant's color follows its role in the binding; the main subject gets a wider box with `box: { strokeWidth: 3 }`.
 - Messages top to bottom with `msg()`, about 64px apart, 86px after a self-call. Calls solid, replies `{ reply: true }`, failures `{ error: true }`. Number the steps.
 - Message labels name the call and its key arguments (`POST /token (code, verifier)`), not prose.
-- Alternatives (a failure instead of the success reply) go right after the message they replace, in red. When one message has more than two alternatives, or the failures need steps of their own, draw them as a separate sequence.
+- Alternatives (a failure instead of the success reply) go right after the message they replace, in red. When a branch spans several messages, or depends on a state (`agent is mid-turn`), put each case in a `fragment()`: `alt` with an `else` line for two cases, `opt` for messages that happen only sometimes. When one message has more than two alternatives, or the failures need steps of their own, draw them as a separate sequence.
 - Notes under a sequence may explain outcomes that span several steps (exit codes, cleanup); such a note names the steps in its body instead of carrying a circled number of its own.
 - Width about 440px per participant; height is `top + 140 + 64 × messages + 22 × self-calls`, plus the notes under it. Tighten `H` after looking at the first render.
 
@@ -45,6 +47,20 @@ The layout of [`examples/sequence.html`](../examples/sequence.html).
 - States are boxes in the color of the thing whose state it is; the initial state on the left, end states as hexagons on the right (failure end states in `C.error`).
 - Transitions are arrows labelled `event [guard] / action`, as short as the text allows. Self-transitions use `route()` loops above the box.
 - When time matters (timeouts, idle reclaim), put a `timeline()` under the states with the durations on its ticks.
+
+## Decision procedure
+
+- Checks run left to right (or top to bottom) in the order the system applies them, each a `decision()`; take the order from the code or the step-by-step text, not from the order the text mentions the checks.
+- The answer that continues the procedure leaves to the right; the other leaves downward, each through `branch()` labelled with the answer in the document's language.
+- Outcomes are boxes; a branch that makes the user wait or lose something is red (`{ degraded: true }`) and ends in a red outcome.
+- Put the procedure's trigger (`every turn`, `on each request`) as the first box, so the reader sees when it runs.
+
+## Budget or proportion
+
+- One `scaleBar()` per budget, segments in the order they sit (oldest to newest, first to last), each segment in the color of its concept in the binding; leave the unused part as `rest`.
+- Limits (soft line, hard line, quota) are `marks`; a limit whose crossing degrades the result is `C.error`.
+- Use the returned `sx(value)` for anything that points at the bar: an arrow to the soft line, a note under a segment.
+- Several bars that compare the same budget at different moments (before and after compaction) share `x`, `w` and `max`, stacked with their moment as a label on the left.
 
 ## A set: overview and details
 

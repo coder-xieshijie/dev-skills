@@ -3,6 +3,8 @@
   Technical diagram template (hand-drawn shapes, print typography).
   - rough.js shapes with a solid light fill; serif print text (Times New Roman + Songti family), no emoji.
   - 9-role palette, shape helpers, node()/bnode(), frame(), route(), stack(), lifeline()/msg(), notes(), legend().
+  - Layout helpers: shapes return { x, y, w, h } with anchors; link() joins two of them with a right-angle arrow;
+    grid(), scaleBar(), decision()/branch() and fragment() cover grids, budgets, decision procedures and alt/opt.
   - Every helper records what it draws in window.__diagram, which scripts/render.mjs uses to check the layout.
   - Copy this file, set W and H, and edit only main() at the bottom. Leave the helpers as they are.
 -->
@@ -146,18 +148,29 @@ function route(pts, o = {}) {
 }
 
 // ============================================================
-//  SHAPES
+//  SHAPES — each returns shape(): its box plus the anchors link() connects.
 // ============================================================
+// shape — { x, y, w, h, cx, cy } and top(t) / bottom(t) / left(t) / right(t): the point at fraction t (0–1) of that
+// side. span = the part of each side an arrow may meet: [x1, x2] for top and bottom, [y1, y2] for left and right.
+function shape(x, y, w, h, span = { x: [x, x + w], y: [y, y + h] }) {
+  const cl = (v, [lo, hi]) => Math.max(lo, Math.min(hi, v));
+  return { x, y, w, h, cx: x + w / 2, cy: y + h / 2, span,
+    top: (t = 0.5) => [cl(x + w * t, span.x), y], bottom: (t = 0.5) => [cl(x + w * t, span.x), y + h],
+    left: (t = 0.5) => [x, cl(y + h * t, span.y)], right: (t = 0.5) => [x + w, cl(y + h * t, span.y)] };
+}
+
 // Box — entity: service, component, store, resource
 function box(x, y, w, h, color, override = {}) {
   rc.rectangle(x, y, w, h, opts(color, override));
   G.boxes.push({ x, y, w, h });
+  return shape(x, y, w, h);
 }
 
 // Channel — flat strip: queue, bus, stream, topic
 function channel(x, y, w, h, color) {
   rc.rectangle(x, y, w, h, opts(color, { strokeWidth: 2.2 }));
   G.boxes.push({ x, y, w, h });
+  return shape(x, y, w, h);
 }
 
 // Task card — folded corner: job, task, message, file, work unit
@@ -168,6 +181,7 @@ function taskCard(x, y, w, h, color) {
   rc.path(`M${x + w - fold} ${y} L${x + w - fold} ${y + fold} L${x + w} ${y + fold}`,
     { stroke: color.stroke, strokeWidth: 1.6, roughness: 1.2 });
   G.boxes.push({ x, y, w, h });
+  return shape(x, y, w, h);
 }
 
 // Bubble — status message or notification; the tail points at the sender
@@ -177,6 +191,7 @@ function bubble(x, y, w, h, color, tailSide = 'left') {
   rc.path(`M${tx} ${ty - 10} L${tx + d} ${ty} L${tx} ${ty + 10}`,
     { stroke: color.stroke, fill: color.fill, fillStyle: 'solid', strokeWidth: 2, roughness: 1.2 });
   G.boxes.push({ x, y, w, h });
+  return shape(x, y, w, h);
 }
 
 // Hexagon — decision, check, failure or end state; one short label only
@@ -185,6 +200,8 @@ function hexagon(cx, cy, w, h, color) {
   rc.polygon([[cx - dx + ear, cy - dy], [cx + dx - ear, cy - dy], [cx + dx, cy],
               [cx + dx - ear, cy + dy], [cx - dx + ear, cy + dy], [cx - dx, cy]], opts(color));
   G.boxes.push({ x: cx - dx, y: cy - dy, w, h });
+  // arrows meet the flat top and bottom, or the points at the ends
+  return shape(cx - dx, cy - dy, w, h, { x: [cx - dx + ear, cx + dx - ear], y: [cy, cy] });
 }
 
 // Stack — many isolated instances of the same thing (one per task, per tenant ...); front box at (x, y)
@@ -193,6 +210,7 @@ function stack(x, y, w, h, color, o = {}) {
   rc.rectangle(x + 14, y - 12, w, h, opts(color, Object.assign({ strokeWidth: 2 }, o)));
   rc.rectangle(x, y, w, h, opts(color, o));
   G.boxes.push({ x, y: y - 24, w: w + 28, h: h + 24 });
+  return shape(x, y, w, h);   // the front box
 }
 
 // Timeline — dashed axis with ticks; tick text goes through plain()
@@ -262,9 +280,10 @@ function subtitle(text, x, y, size = 22) {
 //   node(770, 195, 340, 150, C.agent, 'Scheduler', 'leases · retries', { box: { strokeWidth: 3 }, size: 30 })
 function node(x, y, w, h, color, text, sub, o = {}) {
   const size = o.size || 23, subSize = o.subSize || 15, pad = o.pad ?? 12;
-  box(x, y, w, h, color, o.box || {});
+  const s = box(x, y, w, h, color, o.box || {});
   const d = lbl({ text, sub, x: x + pad, y, w: w - 2 * pad, color: color.stroke, size, subSize });
   d.style.top = y + (h - d.offsetHeight) / 2 + 'px';
+  return s;
 }
 
 // bnode — box + title + a list of detail lines (responsibilities, endpoints, properties), measured and centered.
@@ -272,8 +291,9 @@ function node(x, y, w, h, color, text, sub, o = {}) {
 //   items: strings, [primary, secondary] pairs, or 'gap' for extra space
 //   o: { size, secSize, itemSize, itemSecSize, itemGap, pad (side padding, default 16), box }
 function bnode(x, y, w, h, color, t, items = [], o = {}) {
-  box(x, y, w, h, color, o.box || {});
+  const s = box(x, y, w, h, color, o.box || {});
   btext(x, y, w, h, color, t, items, o);
+  return s;
 }
 function btext(x, y, w, h, color, t, items = [], o = {}) {
   const size = o.size || 22, secSize = o.secSize || Math.round(size * 0.68);
@@ -318,9 +338,10 @@ function frame(x, y, w, h, color, label, o = {}) {
 //   lifeline(200, 120, 980, C.user, 'Browser')
 function lifeline(x, top, bottom, color, text, sub, o = {}) {
   const w = o.w || 190, h = o.h || 72;
-  node(x - w / 2, top, w, h, color, text, sub, { size: o.size || 21, subSize: o.subSize || 14, box: o.box });
+  const s = node(x - w / 2, top, w, h, color, text, sub, { size: o.size || 21, subSize: o.subSize || 14, box: o.box });
   rc.line(x, top + h, x, bottom, { stroke: color.stroke, strokeWidth: 1.4, roughness: 0.8, strokeLineDash: [6, 7] });
   addLine(x, top + h, x, bottom, 'lifeline');
+  return s;   // the participant box
 }
 
 // msg — message between two lifelines at height y, label centered above the arrow.
@@ -341,6 +362,158 @@ function msg(x1, x2, y, text, o = {}) {
   // Fitted label on ivory, centered over the arrow: it masks only the lifelines it actually sits on
   const d = plain({ text, cx: (x1 + x2) / 2, y: 0, w: 'fit', color: o.error ? C.error.stroke : C.flow, size, bg: LABEL_BG });
   d.style.top = y - d.offsetHeight - 5 + 'px';
+}
+
+// fragment — an alt or opt box around messages: a dashed gray box, the operator in a tag at its top-left corner,
+// the guard beside it; o.else = { y, guard } adds the dashed line and guard of the alternative.
+// Leave about 40px between the top and the first message inside, and put x1 and x2 outside the lifelines it spans.
+//   fragment(80, 1300, 430, 690, 'alt', 'agent is mid-turn', { else: { y: 560, guard: 'agent idle' } })
+function fragment(x1, x2, y1, y2, operator, guard, o = {}) {
+  const color = C.external;
+  const op = { stroke: color.stroke, strokeWidth: 1.6, roughness: 1, strokeLineDash: [8, 6] };
+  const edge = (a, b, c, d) => { rc.line(a, b, c, d, op); addLine(a, b, c, d, 'frame'); };
+  edge(x1, y1, x2, y1); edge(x2, y1, x2, y2); edge(x2, y2, x1, y2); edge(x1, y2, x1, y1);
+  G.frames.push({ x: x1, y: y1, w: x2 - x1, h: y2 - y1 });
+  const tag = plain({ text: operator, x: x1 + 8, y: y1 + 4, w: 'fit', color: color.stroke, size: 15, weight: 700, align: 'left' });
+  const tw = tag.offsetWidth + 16, th = tag.offsetHeight + 8;
+  rc.path(`M${x1} ${y1} L${x1 + tw} ${y1} L${x1 + tw} ${y1 + th - 7} L${x1 + tw - 7} ${y1 + th} L${x1} ${y1 + th} Z`,
+    { stroke: color.stroke, fill: color.fill, fillStyle: 'solid', strokeWidth: 1.4, roughness: 0.8 });
+  G.boxes.push({ x: x1, y: y1, w: tw, h: th });
+  if (guard) plain({ text: `[${guard}]`, x: x1 + tw + 10, y: y1 + 5, w: 'fit', color: color.stroke, size: 15, align: 'left', bg: LABEL_BG });
+  if (o.else) {
+    edge(x1, o.else.y, x2, o.else.y);
+    if (o.else.guard) plain({ text: `[${o.else.guard}]`, x: x1 + 10, y: o.else.y + 5, w: 'fit', color: color.stroke, size: 15, align: 'left', bg: LABEL_BG });
+  }
+}
+
+// ============================================================
+//  LAYOUT — place shapes on a grid and join them without computing every point
+// ============================================================
+// grid — cells of a regular layout: grid(x, y, cols, rows, cellW, cellH, gapX, gapY) returns
+// cell(col, row, colSpan = 1, rowSpan = 1) → { x, y, w, h }. Sketch the layout as a text grid first, then place it.
+//   const cell = grid(120, 220, 4, 3, 260, 120, 140, 90);
+//   const c = cell(0, 1); const client = node(c.x, c.y, c.w, c.h, C.user, 'Client');
+function grid(x, y, cols, rows, cellW, cellH, gapX = 0, gapY = 0) {
+  return (col, row, colSpan = 1, rowSpan = 1) => ({
+    x: x + col * (cellW + gapX), y: y + row * (cellH + gapY),
+    w: colSpan * cellW + (colSpan - 1) * gapX, h: rowSpan * cellH + (rowSpan - 1) * gapY });
+}
+
+// link — right-angle arrow between two shapes, from the side of a that faces b to the side of b that faces a.
+// Facing sides that overlap get one straight arrow through the middle of the overlap; otherwise a Z through
+// the middle of the gap (o.mid moves that leg), an L when from and to are at right angles, or a C around the
+// outside when both are the same side. The label sits beside the longest leg, on ivory.
+//   link(client, service, { label: '① POST /orders' })
+//   link(service, db, { from: 'bottom', to: 'top', label: 'INSERT', style: RED })
+// o: { from, to: 'top' | 'bottom' | 'left' | 'right'; fromAt, toAt: fraction along that side (0–1);
+//      mid; label, labelSide: 'above' | 'below' (horizontal leg) | 'left' | 'right' (vertical leg), size;
+//      style: arrow options such as RED or { strokeLineDash: [10, 7] } }. Returns the route's points.
+function link(a, b, o = {}) {
+  const opposite = { right: 'left', left: 'right', top: 'bottom', bottom: 'top' };
+  const out = { right: [1, 0], left: [-1, 0], bottom: [0, 1], top: [0, -1] };
+  const horiz = (side) => side === 'left' || side === 'right';
+  let from = o.from, to = o.to, fromAt = o.fromAt, toAt = o.toAt;
+  if (!from) {
+    const gaps = { right: b.x - (a.x + a.w), left: a.x - (b.x + b.w), bottom: b.y - (a.y + a.h), top: a.y - (b.y + b.h) };
+    from = Object.keys(gaps).reduce((m, k) => (gaps[k] > gaps[m] ? k : m), 'right');
+  }
+  if (!to) to = opposite[from];
+  if (to === opposite[from] && fromAt === undefined && toAt === undefined) {
+    const [sa, sb] = horiz(from) ? [a.span.y, b.span.y] : [a.span.x, b.span.x];
+    const lo = Math.max(sa[0], sb[0]), hi = Math.min(sa[1], sb[1]);
+    if (hi - lo > 8 || (hi >= lo && (sa[0] === sa[1] || sb[0] === sb[1]))) {
+      const m = (lo + hi) / 2;
+      [fromAt, toAt] = horiz(from) ? [(m - a.y) / a.h, (m - b.y) / b.h] : [(m - a.x) / a.w, (m - b.x) / b.w];
+    }
+  }
+  const p0 = a[from](fromAt ?? 0.5), q = b[to](toAt ?? 0.5);
+  const p1 = [q[0] + out[to][0] * 3, q[1] + out[to][1] * 3];   // the head stops short of the stroke
+  let pts;
+  if (horiz(from) === horiz(to)) {
+    const i = horiz(from) ? 0 : 1;   // the axis the arrow leaves along
+    let m = o.mid;
+    if (m === undefined) {
+      m = to === opposite[from] ? (p0[i] + p1[i]) / 2
+        : out[from][i] > 0 ? Math.max(p0[i], q[i]) + 40 : Math.min(p0[i], q[i]) - 40;
+    }
+    if (to === opposite[from] && Math.abs(p0[1 - i] - p1[1 - i]) < 1) pts = [p0, p1];
+    else pts = i === 0 ? [p0, [m, p0[1]], [m, p1[1]], p1] : [p0, [p0[0], m], [p1[0], m], p1];
+  } else {
+    pts = horiz(from) ? [p0, [p1[0], p0[1]], p1] : [p0, [p0[0], p1[1]], p1];
+  }
+  route(pts, o.style || {});
+  if (o.label) {
+    let k = 0, best = -1;
+    for (let j = 0; j < pts.length - 1; j++) {
+      const l = Math.abs(pts[j + 1][0] - pts[j][0]) + Math.abs(pts[j + 1][1] - pts[j][1]);
+      if (l > best) { best = l; k = j; }
+    }
+    const [[x1, y1], [x2, y2]] = [pts[k], pts[k + 1]];
+    const color = (o.style && o.style.stroke) || C.flow;
+    if (y1 === y2) {
+      const d = plain({ text: o.label, cx: (x1 + x2) / 2, y: 0, w: 'fit', color, size: o.size || 16, bg: LABEL_BG });
+      d.style.top = (o.labelSide === 'below' ? y1 + 5 : y1 - d.offsetHeight - 5) + 'px';
+    } else {
+      const d = plain({ text: o.label, x: x1 + 10, y: 0, w: 'fit', color, size: o.size || 16, bg: LABEL_BG, align: 'left' });
+      d.style.top = (y1 + y2) / 2 - d.offsetHeight / 2 + 'px';
+      if (o.labelSide === 'left') { d.style.left = x1 - 10 - d.offsetWidth + 'px'; d.style.textAlign = 'right'; }
+    }
+  }
+  return pts;
+}
+
+// scaleBar — a bar split into segments proportional to their values, with marks for limits (soft line, hard line,
+// budget). A segment's label sits inside it when it fits, else under it; a mark's label sits above the bar.
+// When the segments add up to less than o.max, the rest is a dashed empty box, labelled o.rest.
+// Returns sx(value) → the x of that value, for arrows and notes that point at the bar.
+//   const sx = scaleBar(200, 420, 1600, 56,
+//     [{ value: 4, color: C.external, label: 'System' }, { value: 60, color: C.memory, label: 'Segments' }],
+//     { max: 200, unit: 'k', rest: 'free', marks: [{ at: 120, label: 'soft line 120k' }, { at: 180, color: C.error }] });
+function scaleBar(x, y, w, h, segments, o = {}) {
+  const max = o.max ?? segments.reduce((n, sg) => n + sg.value, 0), unit = o.unit ?? '', size = o.size || 15;
+  const sx = (v) => x + (w * v) / max;
+  let v = 0;
+  segments.forEach((sg) => {
+    const x1 = sx(v), x2 = sx(v + sg.value);
+    box(x1, y, x2 - x1, h, sg.color, { strokeWidth: 1.8 });
+    if (sg.label) {
+      const d = plain({ text: sg.label, cx: (x1 + x2) / 2, y: 0, w: 'fit', color: sg.color.stroke, size });
+      d.style.top = (d.offsetWidth <= x2 - x1 - 16 ? y + (h - d.offsetHeight) / 2 : y + h + 8) + 'px';
+    }
+    v += sg.value;
+  });
+  if (v < max) {
+    box(sx(v), y, sx(max) - sx(v), h, { stroke: C.caption, fill: C.bg }, { strokeWidth: 1.6, strokeLineDash: [6, 6] });
+    if (o.rest) {
+      const d = plain({ text: o.rest, cx: (sx(v) + sx(max)) / 2, y: 0, w: 'fit', color: C.caption, size });
+      d.style.top = y + (h - d.offsetHeight) / 2 + 'px';
+    }
+  }
+  (o.marks || []).forEach((mk) => {
+    const mx = sx(mk.at), stroke = (mk.color || { stroke: C.flow }).stroke;
+    rc.line(mx, y - 16, mx, y + h + 4, { stroke, strokeWidth: 2.2, roughness: 0.8, strokeLineDash: [6, 5] });
+    addLine(mx, y - 16, mx, y + h + 4, 'mark');
+    const d = plain({ text: mk.label ?? `${mk.at}${unit}`, cx: mx, y: 0, w: 'fit', color: stroke, size, weight: 700 });
+    d.style.top = y - 20 - d.offsetHeight + 'px';
+  });
+  return sx;
+}
+
+// decision — one check of a decision procedure: a hexagon holding its question. Returns its shape for branch().
+//   const ready = decision(700, 300, 'Ready result?')        o: { w: 240, h: 96, color: C.agent, size: 18 }
+function decision(cx, cy, text, o = {}) {
+  const w = o.w || 240, h = o.h || 96, color = o.color || C.agent;
+  const s = hexagon(cx, cy, w, h, color);
+  const d = plain({ text, x: cx - w * 0.31, y: 0, w: w * 0.62, color: color.stroke, size: o.size || 18, weight: 700 });
+  d.style.top = cy - d.offsetHeight / 2 + 'px';
+  return s;
+}
+
+// branch — one exit of a decision: link() labelled with the answer. o takes link()'s options;
+// o.degraded draws in red the branch that makes the user wait or lose something.
+//   branch(ready, commit, 'yes'); branch(ready, hard, 'no', { from: 'bottom' }); branch(hard, inline, '是', { degraded: true })
+function branch(d, target, answer, o = {}) {
+  return link(d, target, Object.assign({ label: answer }, o, o.degraded ? { style: RED } : {}));
 }
 
 // ============================================================
