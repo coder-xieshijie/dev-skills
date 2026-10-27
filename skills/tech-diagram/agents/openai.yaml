@@ -1,0 +1,5 @@
+interface:
+  display_name: "Tech Diagram"
+  short_description: "Hand-drawn style architecture, flow and sequence diagrams as HTML and a layout-checked PNG"
+policy:
+  allow_implicit_invocation: true

@@ -114,6 +114,7 @@ The commands above work as written in MCode and Claude Code; in Codex, write `$d
 | [plan-for-agents](skills/plan-for-agents/SKILL.md) | Creates, revises or checks a complete plan for agents to execute, from requirements and confirmed decisions to steps, outputs and acceptance evidence |
 | [agent-prompt-rules](skills/agent-prompt-rules/SKILL.md) | Rules, each linked to Anthropic and OpenAI sources, for writing and reviewing prompts for agents, multi-agent pipelines and SKILL.md files |
 | [recon-to-contract](skills/recon-to-contract/SKILL.md) | Converges a comparison of two or more external references into one executable contract with evidence, decisions and acceptance criteria |
+| [tech-diagram](skills/tech-diagram/SKILL.md) | Draws hand-drawn style technical diagrams (architecture with trust zones, flows, sequences, lifecycles) from the sources it is given, as an HTML source and a PNG whose layout a script checks |
 
 The development workflow uses repo-readiness, core-grill, core-spec, deliver, merge-gate, review-rules, mr-for-human and explain-as-fool; the others can be used on their own.
 
@@ -128,7 +129,7 @@ The development workflow uses repo-readiness, core-grill, core-spec, deliver, me
 
 - Each Skill lives in `skills/<skill-name>/` with `SKILL.md` as its entry point, plus `scripts/`, `references/` or `assets/` when it needs them. `name` matches the directory name; the directory names are stable because other tools refer to them by path.
 - Skill text is English, using the terms in the [glossary](docs/glossary.md); see [AGENTS.md](AGENTS.md). Changes to rules follow [agent-prompt-rules](skills/agent-prompt-rules/SKILL.md): one component at a time, with the basis recorded, compared in a new session.
-- CI runs the link and anchor checks and the script tests: `node scripts/check-links.mjs`, `node skills/agent-prompt-rules/scripts/check-links.mjs`, `node --test skills/agent-prompt-rules/scripts/check-links.test.mjs`, `node --test skills/deliver/scripts/check-delivery.test.mjs`, `node --test skills/deliver/scripts/stall-guard.test.mjs`, `node --test skills/deliver/scripts/ci-watch.test.mjs`, `node --test skills/core-spec/scripts/clauses.test.mjs`, `node --test skills/merge-gate/scripts/findings.test.mjs` and `node --test skills/repo-readiness/assets/verify-skill/scripts/test/*.test.mjs`.
+- CI runs the link and anchor checks and the script tests: `node scripts/check-links.mjs`, `node skills/agent-prompt-rules/scripts/check-links.mjs`, `node --test skills/agent-prompt-rules/scripts/check-links.test.mjs`, `node --test skills/deliver/scripts/check-delivery.test.mjs`, `node --test skills/deliver/scripts/stall-guard.test.mjs`, `node --test skills/deliver/scripts/ci-watch.test.mjs`, `node --test skills/core-spec/scripts/clauses.test.mjs`, `node --test skills/merge-gate/scripts/findings.test.mjs`, `node --test skills/repo-readiness/assets/verify-skill/scripts/test/*.test.mjs` and `node --test skills/tech-diagram/scripts/*.test.mjs`.
 - `skills/agent-prompt-rules/references/sources/` keeps verbatim excerpts of the vendor documents the rules cite; [its README](skills/agent-prompt-rules/references/sources/README.md) says how to update them.
 
 ## Feedback

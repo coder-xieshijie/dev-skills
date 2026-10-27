@@ -6,6 +6,12 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-10-27
+
+### Added
+
+- **tech-diagram**: draws technical diagrams (architecture with trust zones, request and data flows, sequences, lifecycles) in one hand-drawn style: rough.js shapes, serif print text, nine fixed role colors, no emoji. Each figure is an HTML file whose `main()` draws on fixed helpers. Every node, arrow and boundary comes from the user's text, a given document, or code read for it; figures that leave the team use role names instead of internal service names. `scripts/render.mjs` renders the PNG with Chrome and reports text overlapping text, lines through text, labels sitting on zone boundaries, text crossing or running to the side of a box, arrows through boxes they do not connect, anything off the canvas, emoji and non-serif fonts. Adapted from handdrawn-diagram (MIT): zones, stacks, routes, numbered notes and bilingual labels come from an architecture one-pager drawn with it, and sequence lifelines are new. On the new examples, the check caught labels squeezed into the narrow gaps between zones; in three trial runs by fresh agents, it caught a fallback to a sans-serif font for ㉑, and after the trials it caught arrow labels masking zone boundaries that the agent looking at the PNG had passed over.
+
 ## [0.14.1] - 2026-10-26
 
 ### Changed
