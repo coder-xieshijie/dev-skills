@@ -406,7 +406,8 @@ function grid(x, y, cols, rows, cellW, cellH, gapX = 0, gapY = 0) {
 //   link(client, service, { label: '① POST /orders' })
 //   link(service, db, { from: 'bottom', to: 'top', label: 'INSERT', style: RED })
 // o: { from, to: 'top' | 'bottom' | 'left' | 'right'; fromAt, toAt: fraction along that side (0–1);
-//      mid; label, labelSide: 'above' | 'below' (horizontal leg) | 'left' | 'right' (vertical leg), size;
+//      mid; label, labelSide: 'above' | 'below' (horizontal leg) | 'left' | 'right' (vertical leg),
+//      labelAt: fraction along that leg (default 0.5), size;
 //      style: arrow options such as RED or { strokeLineDash: [10, 7] } }. Returns the route's points.
 function link(a, b, o = {}) {
   const opposite = { right: 'left', left: 'right', top: 'bottom', bottom: 'top' };
@@ -449,13 +450,13 @@ function link(a, b, o = {}) {
       if (l > best) { best = l; k = j; }
     }
     const [[x1, y1], [x2, y2]] = [pts[k], pts[k + 1]];
-    const color = (o.style && o.style.stroke) || C.flow;
+    const color = (o.style && o.style.stroke) || C.flow, f = o.labelAt ?? 0.5;
     if (y1 === y2) {
-      const d = plain({ text: o.label, cx: (x1 + x2) / 2, y: 0, w: 'fit', color, size: o.size || 16, bg: LABEL_BG });
+      const d = plain({ text: o.label, cx: x1 + (x2 - x1) * f, y: 0, w: 'fit', color, size: o.size || 16, bg: LABEL_BG });
       d.style.top = (o.labelSide === 'below' ? y1 + 5 : y1 - d.offsetHeight - 5) + 'px';
     } else {
       const d = plain({ text: o.label, x: x1 + 10, y: 0, w: 'fit', color, size: o.size || 16, bg: LABEL_BG, align: 'left' });
-      d.style.top = (y1 + y2) / 2 - d.offsetHeight / 2 + 'px';
+      d.style.top = y1 + (y2 - y1) * f - d.offsetHeight / 2 + 'px';
       if (o.labelSide === 'left') { d.style.left = x1 - 10 - d.offsetWidth + 'px'; d.style.textAlign = 'right'; }
     }
   }

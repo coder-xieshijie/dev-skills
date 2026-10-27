@@ -50,3 +50,4 @@ Each is a full copy of the template with its own `main()`; render any of them to
 - [examples/sequence.html](examples/sequence.html): OAuth authorization code with PKCE; lifelines, calls, replies, self-calls and a failure reply.
 - [examples/coding_agent.html](examples/coding_agent.html): one dense flow diagram with a sandbox frame, a verify hexagon and a red retry path, in Chinese.
 - [examples/vertical-search/](examples/vertical-search/diagram-binding.md): a set of three diagrams (overview, offline, online) with the binding file they share.
+- [examples/design-overview/](examples/design-overview/diagram-binding.md): the overview of a design document, a protagonist with its context layers expanded and three loops, drawn with `link()`; its binding holds the Figures table of the planned set.

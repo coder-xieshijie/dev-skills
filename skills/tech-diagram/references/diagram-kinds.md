@@ -10,6 +10,7 @@ How each kind of technical diagram is laid out with the helpers. Pick the kind f
 | Which states something passes through and what moves it between them | Lifecycle or state machine |
 | Which checks run in what order, and where each answer leads | Decision procedure |
 | How big the parts are against a limit (a budget, a window, a quota) | Budget or proportion |
+| How a design carries its document's one-sentence conclusion | Overview of a design document |
 | Several of the above about one system | A set: an overview plus one detail diagram per topic |
 
 ## Architecture with zones
@@ -62,12 +63,24 @@ The layout of [`examples/sequence.html`](../examples/sequence.html).
 - Use the returned `sx(value)` for anything that points at the bar: an arrow to the soft line, a note under a segment.
 - Several bars that compare the same budget at different moments (before and after compaction) share `x`, `w` and `max`, stacked with their moment as a label on the left.
 
+## Overview of a design document
+
+The layout of [`examples/design-overview/`](../examples/design-overview/diagram-binding.md). `kind('overview')`.
+
+- It answers the document's one-sentence conclusion, not "what are the parts"; the subtitle states that conclusion.
+- Expand the protagonist: draw inside its box the inner structure the mechanisms act on (layers, stages, queues), so each arrow lands on the part it changes. Every other component stays one box.
+- Group arrows into loops, one per pillar of the document. Label them A1, A2, B1 … in the order things happen, and keep each loop's arrows together in one region of the canvas.
+- Circled numbers mark one thing per figure, either the parts (layers) or the steps; with loop labels on the arrows, they mark the parts.
+- Place each store directly under the component that writes or reads it most, so its arrows are short and vertical.
+- Draw the normal path of each loop; failures, fallbacks and rare branches go to the detail figures, and the notes name the figure that has each.
+- Write the notes as one group per loop: what it answers, then "Figure N, section X" for the details.
+
 ## A set: overview and details
 
 The layout of [`examples/vertical-search/`](../examples/vertical-search/diagram-binding.md).
 
 - Write the binding file first ([`assets/diagram-binding.md`](../assets/diagram-binding.md)): every concept of the whole set → color → shape, before drawing the first diagram.
-- The overview shows each subsystem as one box; each detail diagram expands one subsystem into its parts inside a frame of the subsystem's color, with the rest of the overview reduced to the few boxes it talks to.
+- The overview shows each subsystem as one box, except the protagonist when the document is about its inside (see the section above); each detail diagram expands one subsystem into its parts inside a frame of the subsystem's color, with the rest of the overview reduced to the few boxes it talks to.
 - Keep names identical across the set: a box called `Egress proxy` in the overview is `Egress proxy` in its detail, not `Outbound gateway`.
 
 ## When Mermaid is enough
