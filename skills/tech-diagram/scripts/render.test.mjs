@@ -1,7 +1,8 @@
 // Renders the template and a deliberately broken diagram with Chrome. Skipped when Chrome is not found.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -38,6 +39,20 @@ test('render: template is clean, broken diagram is reported', { skip: !findChrom
     for (const t of ['text-overlap', 'line-through-text', 'arrow-through-box', 'off-canvas', 'emoji']) {
       assert.ok(types.has(t), `expected a ${t} issue, got ${[...types].join(', ')}`);
     }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('the CLI runs when called through a symlinked Skill directory', { skip: !findChrome() && 'Chrome not found' }, () => {
+  const dir = mkdtempSync(join(tmpdir(), 'tech-diagram-link-'));
+  try {
+    symlinkSync(join(here, '..'), join(dir, 'skill'));
+    writeFileSync(join(dir, 'fig.html'), template);
+    const r = spawnSync(process.execPath, [join(dir, 'skill/scripts/render.mjs'), join(dir, 'fig.html'), '--scale', '1'], { encoding: 'utf8' });
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(r.stdout, /layout check: no issues/);
+    assert.ok(existsSync(join(dir, 'fig.png')));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

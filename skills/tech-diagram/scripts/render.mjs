@@ -10,10 +10,10 @@
 // Chrome: $CHROME, else the usual macOS / Linux locations.
 
 import { spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { checkLayout } from './layout-check.mjs';
 
 const CHROME_PATHS = [
@@ -212,4 +212,6 @@ async function cli() {
   process.exit(result.issues.length ? 1 : 0);
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] || '').href) cli();
+// Run as a CLI also when called through a symlink (the Skill is usually installed as one)
+const invoked = process.argv[1] && existsSync(process.argv[1]) ? realpathSync(process.argv[1]) : '';
+if (fileURLToPath(import.meta.url) === invoked) cli();

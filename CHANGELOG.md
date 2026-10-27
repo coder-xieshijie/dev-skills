@@ -6,6 +6,12 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ## [Unreleased]
 
+## [0.15.1] - 2026-10-27
+
+### Fixed
+
+- **tech-diagram**: `scripts/render.mjs` did nothing and exited 0 when called through a symlink, which is how the Skill is installed from a clone: it compared the symlinked script path with its real path to decide whether it was run directly. It now compares real paths, and a test runs the CLI through a symlinked Skill directory.
+
 ## [0.15.0] - 2026-10-27
 
 ### Added
