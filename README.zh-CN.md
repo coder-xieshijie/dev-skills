@@ -114,7 +114,7 @@ done
 | [plan-for-agents](skills/plan-for-agents/SKILL.md) | 创建、修订或检查供 agent 执行的完整计划，从需求和已确认决定落到步骤、产物和验收证据 |
 | [agent-prompt-rules](skills/agent-prompt-rules/SKILL.md) | 写和审查给 agent 的 prompt、多 agent pipeline 与 SKILL.md 的规则，每条都链接到 Anthropic、OpenAI 原文 |
 | [recon-to-contract](skills/recon-to-contract/SKILL.md) | 把两个以上外部参照物的对标调研收敛成一份有证据、有决定、有验收标准的可执行契约 |
-| [tech-diagram](skills/tech-diagram/SKILL.md) | 按给定的材料画手绘风格的技术图（带信任分区的架构图、流程图、时序图、生命周期图），产出 HTML 源文件和经脚本检查布局的 PNG |
+| [tech-diagram](skills/tech-diagram/SKILL.md) | 先规划一份文档需要哪些图，再按给定的材料画手绘风格的技术图（带信任分区的架构图、流程图、时序图、生命周期图），产出 HTML 源文件和经脚本检查布局的 PNG，并与正文逐项对照 |
 
 开发流程用到 repo-readiness、core-grill、core-spec、deliver、merge-gate、review-rules、mr-for-human 和 explain-as-fool；其余可以单独使用。
 
