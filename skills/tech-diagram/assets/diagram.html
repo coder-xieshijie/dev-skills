@@ -27,6 +27,7 @@
   /* Body text and sub-labels: Songti for CJK, Times regular for Latin */
   .bd { font-family: 'Times New Roman', Times, 'Liberation Serif', 'Songti SC', 'STSong', 'SimSun', '宋体', 'Noto Serif SC', serif; font-weight: 400; }
 </style>
+<!-- scripts/render.mjs serves this URL from assets/vendor/rough.js; a browser opening the file loads it from the CDN -->
 <script src="https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.js"
         integrity="sha384-1NLkwxMO2sOqcq7rQkFBhIAUJtbt8ziLxhVKVgKfFGMEU8pF+GEq5LVogviveup6"
         crossorigin="anonymous"></script>
@@ -199,7 +200,8 @@ function timeline(x1, y, x2, marks /* [{ x }] */) {
 
 // ============================================================
 //  TEXT — every word is an HTML label (not canvas fillText) so the serif fallback chain applies.
-//  Text is injected as HTML: <b> and <br> work; escape a literal '<' and '&' as &lt; and &amp;.
+//  Text is injected as HTML: <b>, <i>, <br>, <sub>, <sup> and <span> work; escape a literal '<' and '&'
+//  as &lt; and &amp;. Unescaped, <task-report> or List<T> is parsed as a tag and not drawn; the check reports it.
 // ============================================================
 const L = document.getElementById('labels');
 const LABEL_BG = 'rgba(253,253,250,.94)';   // ivory behind a label that sits on a line

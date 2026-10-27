@@ -5,16 +5,26 @@
 //
 // Waits for window.__renderDone, sizes the viewport to the .stage element, writes the PNG next to the
 // HTML (or to --out), then runs layout-check.mjs on the geometry the template's helpers recorded and on
-// the fonts Chrome actually used. Prints the issues; exits 1 when there are any, 2 when rendering failed.
+// the fonts Chrome actually used. Prints the issues; exits 1 when there are any, 2 when rendering failed,
+// with the page's uncaught exceptions and failed requests in the message.
+// rough.js is served from assets/vendor/ in place of the CDN URL the HTML names, so rendering does not
+// depend on the CDN; the HTML still loads it from the CDN when opened directly in a browser.
 // No dependencies: Chrome over the DevTools protocol, with Node's built-in WebSocket.
 // Chrome: $CHROME, else the usual macOS / Linux locations.
 
 import { spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { checkLayout } from './layout-check.mjs';
+
+const here = dirname(fileURLToPath(import.meta.url));
+
+// CDN URLs the template names, served from the Skill instead. The bytes match the HTML's integrity hash.
+export const VENDORED = {
+  'https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.js': join(here, '../assets/vendor/rough.js'),
+};
 
 const CHROME_PATHS = [
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -52,17 +62,29 @@ const COLLECT = `(() => {
     }
     if (r.width && r.height) texts.push(Object.assign(rel(r), { text: el.innerText.replace(/\\s+/g, ' ').trim(), bg: !!el.dataset.bg, frame: !!el.dataset.frame, idx: i }));
   });
+  // Elements in label text that the helpers do not produce: a literal like <task-report> parsed as a tag
+  const allowed = new Set(['B', 'BR', 'SPAN', 'DIV', 'I', 'SUB', 'SUP']);
+  const tags = [];
+  document.querySelectorAll('#labels > .label').forEach((el) => {
+    el.querySelectorAll('*').forEach((c) => {
+      if (allowed.has(c.tagName)) return;
+      const r = el.getBoundingClientRect();
+      tags.push({ tag: c.tagName.toLowerCase(), text: el.innerText.replace(/\\s+/g, ' ').trim(), x: r.left - st.left, y: r.top - st.top });
+    });
+  });
   g.boxes.filter((b) => b.text).forEach((b) => texts.push({ x: b.x, y: b.y, w: b.w, h: b.h, text: b.label, bg: false }));
   return JSON.stringify({ stage: { w: st.width, h: st.height }, boxes: g.boxes.filter((b) => !b.text),
-                          frames: g.frames, lines: g.lines, texts });
+                          frames: g.frames, lines: g.lines, texts, tags });
 })()`;
 
 function cdp(wsUrl) {
   const ws = new WebSocket(wsUrl);
   let id = 0;
   const pending = new Map();
+  const listeners = [];
   ws.onmessage = (ev) => {
     const m = JSON.parse(ev.data);
+    if (m.method) listeners.forEach((fn) => fn(m));
     if (m.id && pending.has(m.id)) {
       const { ok, err } = pending.get(m.id);
       pending.delete(m.id);
@@ -82,15 +104,15 @@ function cdp(wsUrl) {
     pending.set(++id, { ok, err });
     ws.send(JSON.stringify({ id, method, params, sessionId }));
   });
-  return { ready, send, close: () => ws.close() };
+  return { ready, send, on: (fn) => listeners.push(fn), close: () => ws.close() };
 }
 
-function launch(chrome) {
+function launch(chrome, extraArgs = []) {
   const profile = mkdtempSync(join(tmpdir(), 'tech-diagram-'));
   const proc = spawn(chrome, ['--headless=new', '--disable-gpu', '--hide-scrollbars', '--no-first-run',
     '--no-default-browser-check', '--remote-debugging-port=0', `--user-data-dir=${profile}`,
     // CI runners often cannot start Chrome's sandbox (restricted user namespaces); local runs keep it.
-    ...(process.env.CI ? ['--no-sandbox'] : []), 'about:blank'],
+    ...(process.env.CI ? ['--no-sandbox'] : []), ...extraArgs, 'about:blank'],
     { stdio: ['ignore', 'ignore', 'pipe'] });
   const wsUrl = new Promise((ok, err) => {
     let buf = '';
@@ -109,13 +131,32 @@ function launch(chrome) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-export async function render(htmlPath, { out, scale = 2, timeoutMs = 20000 } = {}) {
+// One line per uncaught exception: the message and where it was thrown
+function describeException(d) {
+  const msg = (d.exception?.description || d.text || 'unknown exception').split('\n')[0];
+  const at = d.url ? ` (${basename(d.url)}:${d.lineNumber + 1})` : '';
+  return msg + at;
+}
+
+// Why a load did not finish, from what the page reported while loading
+export function loadFailure({ exceptions, failedRequests }, timeoutMs, hasStage) {
+  const parts = [];
+  if (exceptions.length) parts.push(`the page threw: ${exceptions.join(' | ')}`);
+  if (failedRequests.length) parts.push(`requests failed: ${failedRequests.join(' | ')}`);
+  if (!parts.length) {
+    parts.push(`window.__renderDone was not set within ${timeoutMs / 1000} s` +
+      (hasStage ? ' and the page reported no error' : ': no .stage element'));
+  }
+  return parts.join('; ');
+}
+
+export async function render(htmlPath, { out, scale = 2, timeoutMs = 20000, chromeArgs = [] } = {}) {
   const chrome = findChrome();
   if (!chrome) throw new Error(process.env.CHROME ? `CHROME=${process.env.CHROME} does not exist`
                                                    : 'Chrome not found; set CHROME to a Chrome or Chromium binary');
   const file = resolve(htmlPath);
   const png = resolve(out || join(dirname(file), basename(file).replace(/\.html?$/i, '') + '.png'));
-  const browser = launch(chrome);
+  const browser = launch(chrome, chromeArgs);
   let conn = null;
   try {
     conn = cdp(await browser.wsUrl);
@@ -128,20 +169,57 @@ export async function render(htmlPath, { out, scale = 2, timeoutMs = 20000 } = {
       if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description || r.exceptionDetails.text);
       return r.result.value;
     };
-    const load = async () => {
+
+    // What the page reports while loading, reset at each navigation; and vendored files served in place of the CDN
+    let seen = { exceptions: [], failedRequests: [], urls: new Map() };
+    conn.on((m) => {
+      if (m.sessionId !== sessionId) return;
+      if (m.method === 'Runtime.exceptionThrown') seen.exceptions.push(describeException(m.params.exceptionDetails));
+      if (m.method === 'Network.loadingFailed' && !m.params.canceled) {
+        seen.failedRequests.push(`${m.params.errorText}${m.params.blockedReason ? ` (${m.params.blockedReason})` : ''}` +
+          ` ${seen.urls.get(m.params.requestId) || ''}`.trimEnd());
+      }
+      if (m.method === 'Network.requestWillBeSent') seen.urls.set(m.params.requestId, m.params.request.url);
+      if (m.method === 'Fetch.requestPaused') {
+        const { requestId, request } = m.params;
+        const local = VENDORED[request.url];
+        if (!local) { s('Fetch.continueRequest', { requestId }).catch(() => {}); return; }
+        s('Fetch.fulfillRequest', {
+          requestId, responseCode: 200, body: readFileSync(local).toString('base64'),
+          // The template loads it with crossorigin="anonymous" from a file:// page
+          responseHeaders: [{ name: 'Content-Type', value: 'application/javascript; charset=utf-8' },
+                            { name: 'Access-Control-Allow-Origin', value: '*' }],
+        }).catch(() => {});
+      }
+    });
+
+    const loadOnce = async () => {
+      seen = { exceptions: [], failedRequests: [], urls: new Map() };
       await s('Page.navigate', { url: pathToFileURL(file).href });
       const deadline = Date.now() + timeoutMs;
       while (!(await evaluate('window.__renderDone === true').catch(() => false))) {
-        if (Date.now() > deadline) {
-          const err = await evaluate('document.querySelector(".stage") ? "" : "no .stage element"').catch(() => '');
-          throw new Error(`window.__renderDone was not set within ${timeoutMs / 1000} s ${err}` +
-            '(main() threw, or rough.js did not load: check network access to cdn.jsdelivr.net)');
+        // An uncaught exception before __renderDone, with the page loaded, means main() will not finish
+        const complete = seen.exceptions.length &&
+          await evaluate('document.readyState === "complete"').catch(() => false);
+        if (complete || Date.now() > deadline) {
+          const hasStage = await evaluate('!!document.querySelector(".stage")').catch(() => false);
+          const e = new Error(loadFailure(seen, timeoutMs, hasStage));
+          e.network = seen.failedRequests.length > 0;
+          throw e;
         }
         await sleep(100);
       }
       await evaluate('document.fonts.ready.then(() => true)', true);
     };
-    await s('Page.enable'); await s('Runtime.enable'); await s('DOM.enable'); await s('CSS.enable');
+    // A failed request can be a passing network fault: try once more before giving up
+    const load = async () => {
+      try { await loadOnce(); } catch (e) {
+        if (!e.network) throw e;
+        try { await loadOnce(); } catch (e2) { throw new Error(`${e2.message} (also on a retry)`); }
+      }
+    };
+    await s('Page.enable'); await s('Network.enable'); await s('Runtime.enable'); await s('DOM.enable'); await s('CSS.enable');
+    await s('Fetch.enable', { patterns: Object.keys(VENDORED).map((urlPattern) => ({ urlPattern, requestStage: 'Request' })) });
     await load();
     const size = await evaluate('(() => { const r = document.querySelector(".stage").getBoundingClientRect(); return [Math.ceil(r.width), Math.ceil(r.height)]; })()');
     // Reload at the final size and scale so the canvas is drawn at device resolution.
