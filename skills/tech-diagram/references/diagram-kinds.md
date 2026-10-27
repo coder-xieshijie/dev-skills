@@ -79,13 +79,13 @@ The layout of [`examples/design-overview/`](../examples/design-overview/diagram-
 
 The layout of [`examples/vertical-search/`](../examples/vertical-search/diagram-binding.md).
 
-- Write the binding file first ([`assets/diagram-binding.md`](../assets/diagram-binding.md)): every concept of the whole set → color → shape, before drawing the first diagram.
+- Plan the set and write the binding file first ([`figure-plan.md`](figure-plan.md), [`assets/diagram-binding.md`](../assets/diagram-binding.md)): the Figures table, then every concept of the whole set → color → shape, before drawing the first diagram.
 - The overview shows each subsystem as one box, except the protagonist when the document is about its inside (see the section above); each detail diagram expands one subsystem into its parts inside a frame of the subsystem's color, with the rest of the overview reduced to the few boxes it talks to.
 - Keep names identical across the set: a box called `Egress proxy` in the overview is `Egress proxy` in its detail, not `Outbound gateway`.
 
-## When Mermaid is enough
+## When Mermaid is asked for
 
-Write a Mermaid block instead when the figure goes into Markdown that renders Mermaid, has no zones, numbered rules or bilingual labels, and fits in about ten nodes. Give it the hand-drawn look so it matches these figures:
+When the user or the repository asks for Mermaid (for example, diagrams that must stay diffable text), give the block the hand-drawn look so it matches these figures:
 
 ````markdown
 ```mermaid

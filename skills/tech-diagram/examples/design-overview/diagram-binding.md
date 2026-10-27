@@ -1,6 +1,6 @@
 # Long-conversation assistant · context compaction: figures and concept color binding
 
-The fictional design document behind this set is the worked example in `references/figure-plan.md`. Only figure 1 is drawn here; the other rows show what the plan asks of the rest of the set.
+The fictional design document behind this set is the worked example in [references/figure-plan.md](../../references/figure-plan.md#example-context-compaction-for-a-long-conversation-assistant). Only figure 1 is drawn here; the other rows show what the plan asks of the rest of the set.
 
 ## Figures
 
