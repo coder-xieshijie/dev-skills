@@ -35,6 +35,36 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+## TrentChou/handdrawn-diagram
+
+[skills/tech-diagram/](skills/tech-diagram/SKILL.md) is adapted from [TrentChou/handdrawn-diagram](https://github.com/TrentChou/handdrawn-diagram) at commit `209ea068d7e0dede7a1660d32bfbc490e3709afe`: the template and helpers in `assets/diagram.html`, the palette, typography and shape references, the agent-team and vertical-search dictionaries, the binding and dictionary templates, and the `coding_agent` and `vertical-search` examples, translated into English and extended. Diagrams load [rough.js](https://github.com/rough-stuff/rough) (MIT) from jsDelivr and, as a CJK fallback, Noto Serif SC (SIL Open Font License 1.1) from Google Fonts at render time; neither is bundled.
+
+Its license:
+
+```text
+MIT License
+
+Copyright (c) 2026 TrentChou
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
 ## Vendor documents
 
 `skills/agent-prompt-rules/references/sources/` keeps short verbatim excerpts of documents published by Anthropic and OpenAI, each with its official URL, so that the rules that cite them can be checked. Copyright of each document belongs to its publisher; the excerpts are not covered by this repository's license. See [its README](skills/agent-prompt-rules/references/sources/README.md).

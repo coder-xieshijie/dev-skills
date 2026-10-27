@@ -1,7 +1,7 @@
 {
   "name": "dev-skills",
   "displayName": "Dev Skills",
-  "version": "0.14.1",
+  "version": "0.15.0",
   "description": "Production-grade Agent Skills: from requirement to a verified, mergeable pull request.",
   "author": {
     "name": "Xie Shijie",
@@ -20,6 +20,7 @@
     "agent-skills",
     "skills",
     "claude-code",
-    "codex"
+    "codex",
+    "diagrams"
   ]
 }

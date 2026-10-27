@@ -59,3 +59,13 @@ jobs:
       - run: node --test skills/repo-readiness/assets/verify-skill/scripts/test/*.test.mjs
       # The example adapters pass the kit's contract test with the toy products (page tests need Playwright and skip).
       - run: node --test skills/repo-readiness/references/adapters/test/*.test.mjs
+  tech-diagram:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      # The render test drives the runner's preinstalled Chrome and skips itself when there is none.
+      - run: node --test skills/tech-diagram/scripts/*.test.mjs

@@ -114,6 +114,7 @@ done
 | [plan-for-agents](skills/plan-for-agents/SKILL.md) | 创建、修订或检查供 agent 执行的完整计划，从需求和已确认决定落到步骤、产物和验收证据 |
 | [agent-prompt-rules](skills/agent-prompt-rules/SKILL.md) | 写和审查给 agent 的 prompt、多 agent pipeline 与 SKILL.md 的规则，每条都链接到 Anthropic、OpenAI 原文 |
 | [recon-to-contract](skills/recon-to-contract/SKILL.md) | 把两个以上外部参照物的对标调研收敛成一份有证据、有决定、有验收标准的可执行契约 |
+| [tech-diagram](skills/tech-diagram/SKILL.md) | 按给定的材料画手绘风格的技术图（带信任分区的架构图、流程图、时序图、生命周期图），产出 HTML 源文件和经脚本检查布局的 PNG |
 
 开发流程用到 repo-readiness、core-grill、core-spec、deliver、merge-gate、review-rules、mr-for-human 和 explain-as-fool；其余可以单独使用。
 
@@ -128,7 +129,7 @@ done
 
 - 每个 Skill 放在 `skills/<skill-name>/`，入口是 `SKILL.md`，需要时再加 `scripts/`、`references/` 或 `assets/`。`name` 与目录名一致；其他工具按路径引用这些目录，目录名不改。
 - Skill 正文用英文写，术语按[术语表](docs/glossary.md)；见 [AGENTS.md](AGENTS.md)。改规则按 [agent-prompt-rules](skills/agent-prompt-rules/SKILL.md)：一次改一个组件，记下依据，在新 session 里对照。
-- CI 运行链接与锚点检查和脚本测试：`node scripts/check-links.mjs`、`node skills/agent-prompt-rules/scripts/check-links.mjs`、`node --test skills/agent-prompt-rules/scripts/check-links.test.mjs`、`node --test skills/deliver/scripts/check-delivery.test.mjs`、`node --test skills/deliver/scripts/stall-guard.test.mjs`、`node --test skills/deliver/scripts/ci-watch.test.mjs`、`node --test skills/core-spec/scripts/clauses.test.mjs`、`node --test skills/merge-gate/scripts/findings.test.mjs`、`node --test skills/repo-readiness/assets/verify-skill/scripts/test/*.test.mjs`。
+- CI 运行链接与锚点检查和脚本测试：`node scripts/check-links.mjs`、`node skills/agent-prompt-rules/scripts/check-links.mjs`、`node --test skills/agent-prompt-rules/scripts/check-links.test.mjs`、`node --test skills/deliver/scripts/check-delivery.test.mjs`、`node --test skills/deliver/scripts/stall-guard.test.mjs`、`node --test skills/deliver/scripts/ci-watch.test.mjs`、`node --test skills/core-spec/scripts/clauses.test.mjs`、`node --test skills/merge-gate/scripts/findings.test.mjs`、`node --test skills/repo-readiness/assets/verify-skill/scripts/test/*.test.mjs`、`node --test skills/tech-diagram/scripts/*.test.mjs`。
 - `skills/agent-prompt-rules/references/sources/` 保存规则引用的厂商文档的逐字摘录；怎样更新见[它的 README](skills/agent-prompt-rules/references/sources/README.md)。
 
 ## 反馈
