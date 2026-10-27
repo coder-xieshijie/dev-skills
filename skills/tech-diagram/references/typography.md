@@ -184,6 +184,10 @@ The spacing, separator and bracket rules are for Chinese labels; the numbering, 
 - Put a **half-width space** between Chinese and Latin text: `Agent · 编排核心`, not `Agent·编排核心`
 - Same between digits and Chinese: `已派出 3 路`, not `已派出3路`
 
+### Chinese sentences
+
+- In subtitles, notes and captions, commas, colons and semicolons are full-width: `覆盖范围：第 1 轮至第 n 轮；之后压缩`. `scripts/render.mjs` warns about a half-width `; : ,` next to Chinese and about full-width brackets (`cjk-punct`)
+
 ### Inside node labels
 
 - Separate with `·` (middle dot) or `/` (slash): `Tools · MCP` / `章节 / 版本 1`
@@ -233,7 +237,7 @@ The spacing, separator and bracket rules are for Chinese labels; the numbering, 
 - [ ] **Background is warm off-white #fdfdfa, not pure white #ffffff**
 - [ ] **Text in a node = node stroke color, ≥ 4.5:1 against its own fill (WCAG AA)**
 - [ ] Spaces between Chinese and English
-- [ ] No full-width brackets `（）`
+- [ ] No full-width brackets `（）`; full-width `，：；` in Chinese sentences
 - [ ] No italics (no `italic` / `font-style: italic`)
 - [ ] One quote style across the diagram
 - [ ] Numbering uses circled numbers

@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 // Render a diagram HTML to PNG with headless Chrome and check its layout.
 //
-//   node render.mjs <diagram.html> [--out <file.png>] [--scale 2] [--json]
+//   node render.mjs <diagram.html> [--out <file.png>] [--scale 2] [--display-width 1600] [--labels] [--json]
 //
 // Waits for window.__renderDone, sizes the viewport to the .stage element, writes the PNG next to the
 // HTML (or to --out), then runs layout-check.mjs on the geometry the template's helpers recorded and on
-// the fonts Chrome actually used. Prints the issues; exits 1 when there are any, 2 when rendering failed,
-// with the page's uncaught exceptions and failed requests in the message.
+// the fonts Chrome actually used. Prints the issues, then the warnings; exits 1 when there are issues,
+// 2 when rendering failed, with the page's uncaught exceptions and failed requests in the message.
+// Warnings never change the exit code. --display-width is the width the figure is read at, for the
+// small-text warning. --labels also prints every text in the figure, top to bottom, with its position.
 // rough.js is served from assets/vendor/ in place of the CDN URL the HTML names, so rendering does not
 // depend on the CDN; the HTML still loads it from the CDN when opened directly in a browser.
 // No dependencies: Chrome over the DevTools protocol, with Node's built-in WebSocket.
@@ -17,7 +19,7 @@ import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileS
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { checkLayout } from './layout-check.mjs';
+import { checkLayout, checkWarnings } from './layout-check.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -45,7 +47,12 @@ const COLLECT = `(() => {
   const texts = [];
   document.querySelectorAll('#labels > .label').forEach((el, i) => {
     el.dataset.ldx = i;
-    let r;
+    let r, size = Infinity;
+    // Smallest font size among the label's text nodes, for the small-text warning
+    const sizes = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let n = sizes.nextNode(); n; n = sizes.nextNode()) {
+      if (n.textContent.trim()) size = Math.min(size, parseFloat(getComputedStyle(n.parentElement).fontSize));
+    }
     if (el.dataset.bg) r = el.getBoundingClientRect();
     else {
       // Union of the glyph boxes of every text node: block children span the full width, glyphs do not
@@ -60,7 +67,8 @@ const COLLECT = `(() => {
       }
       r = l === Infinity ? { left: 0, top: 0, width: 0, height: 0 } : { left: l, top: t, width: rr - l, height: bb - t };
     }
-    if (r.width && r.height) texts.push(Object.assign(rel(r), { text: el.innerText.replace(/\\s+/g, ' ').trim(), bg: !!el.dataset.bg, frame: !!el.dataset.frame, idx: i }));
+    if (r.width && r.height) texts.push(Object.assign(rel(r), { text: el.innerText.replace(/\\s+/g, ' ').trim(), bg: !!el.dataset.bg,
+      frame: !!el.dataset.frame, idx: i, size: size === Infinity ? null : size }));
   });
   // Elements in label text that the helpers do not produce: a literal like <task-report> parsed as a tag
   const allowed = new Set(['B', 'BR', 'SPAN', 'DIV', 'I', 'SUB', 'SUP']);
@@ -72,8 +80,8 @@ const COLLECT = `(() => {
       tags.push({ tag: c.tagName.toLowerCase(), text: el.innerText.replace(/\\s+/g, ' ').trim(), x: r.left - st.left, y: r.top - st.top });
     });
   });
-  g.boxes.filter((b) => b.text).forEach((b) => texts.push({ x: b.x, y: b.y, w: b.w, h: b.h, text: b.label, bg: false }));
-  return JSON.stringify({ stage: { w: st.width, h: st.height }, boxes: g.boxes.filter((b) => !b.text),
+  g.boxes.filter((b) => b.text).forEach((b) => texts.push({ x: b.x, y: b.y, w: b.w, h: b.h, text: b.label, bg: false, size: b.size || null }));
+  return JSON.stringify({ stage: { w: st.width, h: st.height }, kind: g.kind || null, boxes: g.boxes.filter((b) => !b.text),
                           frames: g.frames, lines: g.lines, texts, tags });
 })()`;
 
@@ -129,6 +137,13 @@ function launch(chrome, extraArgs = []) {
   return { wsUrl, stop };
 }
 
+// Every text in reading order (top to bottom, then left to right), for comparing a figure with its text
+export function labelList(texts) {
+  return texts.filter((t) => t.text)
+    .map(({ x, y, w, h, text }) => ({ x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h), text }))
+    .sort((a, b) => a.y - b.y || a.x - b.x);
+}
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // One line per uncaught exception: the message and where it was thrown
@@ -150,7 +165,7 @@ export function loadFailure({ exceptions, failedRequests }, timeoutMs, hasStage)
   return parts.join('; ');
 }
 
-export async function render(htmlPath, { out, scale = 2, timeoutMs = 20000, chromeArgs = [] } = {}) {
+export async function render(htmlPath, { out, scale = 2, timeoutMs = 20000, chromeArgs = [], displayWidth = 1600 } = {}) {
   const chrome = findChrome();
   if (!chrome) throw new Error(process.env.CHROME ? `CHROME=${process.env.CHROME} does not exist`
                                                    : 'Chrome not found; set CHROME to a Chrome or Chromium binary');
@@ -254,7 +269,8 @@ export async function render(htmlPath, { out, scale = 2, timeoutMs = 20000, chro
       format: 'png', captureBeyondViewport: true, clip: { x: 0, y: 0, width: size[0], height: size[1], scale: 1 },
     });
     writeFileSync(png, Buffer.from(shot.data, 'base64'));
-    return { png, size: { w: size[0], h: size[1], scale }, issues: checkLayout(geom) };
+    return { png, size: { w: size[0], h: size[1], scale }, issues: checkLayout(geom),
+             warnings: checkWarnings(geom, { displayWidth }), labels: labelList(geom.texts) };
   } finally {
     conn?.close();
     browser.stop();
@@ -264,16 +280,18 @@ export async function render(htmlPath, { out, scale = 2, timeoutMs = 20000, chro
 async function cli() {
   const args = process.argv.slice(2);
   const opt = (name) => { const i = args.indexOf(name); return i >= 0 ? args.splice(i, 2)[1] : undefined; };
-  const json = args.includes('--json') ? (args.splice(args.indexOf('--json'), 1), true) : false;
+  const flag = (name) => (args.includes(name) ? (args.splice(args.indexOf(name), 1), true) : false);
+  const json = flag('--json'), labels = flag('--labels');
   const out = opt('--out');
   const scale = Number(opt('--scale') || 2);
+  const displayWidth = Number(opt('--display-width') || 1600);
   if (args.length !== 1) {
-    console.error('usage: node render.mjs <diagram.html> [--out <file.png>] [--scale 2] [--json]');
+    console.error('usage: node render.mjs <diagram.html> [--out <file.png>] [--scale 2] [--display-width 1600] [--labels] [--json]');
     process.exit(2);
   }
   let result;
   try {
-    result = await render(args[0], { out, scale });
+    result = await render(args[0], { out, scale, displayWidth });
   } catch (e) {
     console.error(`render failed: ${e.message}`);
     process.exit(2);
@@ -285,6 +303,14 @@ async function cli() {
     else {
       console.log(`layout check: ${result.issues.length} issue(s)`);
       result.issues.forEach((i) => console.log(`- [${i.type}] ${i.message}`));
+    }
+    if (result.warnings.length) {
+      console.log(`warnings: ${result.warnings.length} (they do not fail the check)`);
+      result.warnings.forEach((w) => console.log(`- [${w.type}] ${w.message}`));
+    }
+    if (labels) {
+      console.log('labels (x, y, w x h, text):');
+      result.labels.forEach((l) => console.log(`${l.x}\t${l.y}\t${l.w}x${l.h}\t${l.text}`));
     }
   }
   process.exit(result.issues.length ? 1 : 0);

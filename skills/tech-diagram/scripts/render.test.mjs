@@ -32,6 +32,16 @@ const MARKUP = `function main() {
   plain({ text: pair('&lt;task-report&gt;', '<b>report</b>'), x: 600, y: 120, w: 'fit', size: 18 });
 }`;
 
+// Warnings the page geometry must produce, and the label list
+const WARNED = `function main() {
+  kind('flow');
+  node(120, 100, 220, 120, C.user, 'Client', 'web');
+  node(700, 300, 220, 120, C.agent, 'Service', 'core');
+  arrow(340, 160, 698, 360);
+  plain({ text: '覆盖范围: 第 1 轮', x: 120, y: 240, w: 'fit', size: 18 });
+  plain({ text: 'tiny', x: 120, y: 420, w: 'fit', size: 7 });
+}`;
+
 // No host resolves: the CDN, Google Fonts and every other server are unreachable
 const OFFLINE = ['--host-resolver-rules=MAP * ~NOTFOUND'];
 
@@ -124,6 +134,24 @@ test('a script that does not load is named in the error, after one retry', { ski
       assert.match(e.message, /\(also on a retry\)$/);
       return true;
     });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('render reports warnings without failing, and lists the labels', { skip: !findChrome() && 'Chrome not found' }, async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'tech-diagram-warn-'));
+  try {
+    writeFileSync(join(dir, 'fig.html'), withMain(WARNED));
+    const r = await render(join(dir, 'fig.html'), { scale: 1 });
+    assert.deepEqual(r.issues.filter((i) => i.type !== 'font'), []);
+    assert.deepEqual(r.warnings.map((w) => w.type).sort(), ['cjk-punct', 'diagonal', 'margin', 'small-text']);
+    assert.match(r.warnings.find((w) => w.type === 'small-text').message, /"tiny" 7px/);
+    assert.deepEqual(r.labels.map((l) => l.text), ['Client web', '覆盖范围: 第 1 轮', 'Service core', 'tiny']);
+    const cli = spawnSync(process.execPath, [join(here, 'render.mjs'), join(dir, 'fig.html'), '--scale', '1', '--labels'], { encoding: 'utf8' });
+    assert.equal(cli.status, 0, cli.stdout);
+    assert.match(cli.stdout, /warnings: 4 \(they do not fail the check\)\n- \[diagonal\]/);
+    assert.match(cli.stdout, /labels \(x, y, w x h, text\):\n\d+\t\d+\t\d+x\d+\tClient web\n/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

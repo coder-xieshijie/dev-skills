@@ -71,6 +71,10 @@ const G = window.__diagram = { boxes: [], frames: [], lines: [] };
 const addLine = (x1, y1, x2, y2, kind, route) => G.lines.push({ x1, y1, x2, y2, kind, route });
 let ROUTE = 0;
 
+// The kind of figure, first line of main(): 'architecture' | 'flow' | 'overview' | 'sequence' | 'lifecycle'.
+// In architecture, flow and overview figures, the check warns about slanted arrows.
+function kind(k) { G.kind = k; }
+
 const FONT_TI = `'Times New Roman', Times, 'Liberation Serif', 'STZhongsong', '华文中宋', 'Songti SC', 'SimSun', '宋体', 'Noto Serif SC', serif`;
 const FONT_BD = `'Times New Roman', Times, 'Liberation Serif', 'Songti SC', 'STSong', 'SimSun', '宋体', 'Noto Serif SC', serif`;
 
@@ -243,12 +247,12 @@ const pairInline = (primary, secondary, size = 14) =>
 // Titles on the canvas. Recorded so the layout check can see them.
 function title(text, x, y, size = 44) {
   ctx.font = `700 ${size}px ${FONT_TI}`; ctx.fillStyle = C.title; ctx.fillText(text, x, y);
-  G.boxes.push({ x, y: y - size, w: ctx.measureText(text).width, h: size * 1.2, text: true, label: text });
+  G.boxes.push({ x, y: y - size, w: ctx.measureText(text).width, h: size * 1.2, text: true, label: text, size });
   return ctx.measureText(text).width;
 }
 function subtitle(text, x, y, size = 22) {
   ctx.font = `400 ${size}px ${FONT_BD}`; ctx.fillStyle = C.subtitle; ctx.fillText(text, x, y);
-  G.boxes.push({ x, y: y - size, w: ctx.measureText(text).width, h: size * 1.2, text: true, label: text });
+  G.boxes.push({ x, y: y - size, w: ctx.measureText(text).width, h: size * 1.2, text: true, label: text, size });
 }
 
 // ============================================================
@@ -385,6 +389,7 @@ function main() {
   //   C.user  = Client
   //   C.agent = Order service (main subject)
   //   C.memory = Orders DB
+  kind('flow');
 
   title('Diagram title', 70, 76);
   subtitle('One sentence: what this figure shows and for whom', 70, 114);
