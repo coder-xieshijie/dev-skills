@@ -6,6 +6,17 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-10-28
+
+### Added
+
+- **feedback**: stage D as a manual Skill. After a delivery, or over a span of time, it gathers what the sessions, the MR and the records show; it and a model from another family mine them for gaps that will recur; a fresh subagent recomputes every number; each gap is routed (product repository, development Skills, the user's agent instructions or hooks, a new requirement, a product defect, upstream) and recorded in the user's ledger, a recurrence reopening its entry; the user confirms the table once and the approved entries land, one Skill change per PR. `scripts/sessions.mjs` extracts the user's side of Claude Code, Codex and MCode sessions read-only and computes the collaboration numbers a time-window run compares.
+
+### Changed
+
+- **deliver**: the report ends by pointing to feedback.
+- **README**, **docs/basis.md**, **docs/glossary.md**: stage D names feedback; the ledger is a glossary term.
+
 ## [0.18.0] - 2026-10-28
 
 ### Changed

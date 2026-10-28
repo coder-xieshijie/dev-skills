@@ -28,7 +28,7 @@ The workflow has four stages:
 | A. Repository readiness | Agents can start, drive and observe the app: control commands, a feature map, a smoke set, quality commands | Per repository |
 | B. Definition | Questions until the decisions are made; then spec and verify, a gap check by another model family, one confirmation, freeze, handoff | core-grill, then core-spec |
 | C. Delivery | One owner has another family preview how the plan will be judged, implements and runs the scenarios at each milestone, has another family review the code and then give an independent verdict, and brings the MR to mergeable | deliver |
-| D. Feedback | Gaps found during delivery go back into stage A or into the Skills | By hand |
+| D. Feedback | Gaps found during delivery go back into stage A or into the Skills | [feedback](../skills/feedback/SKILL.md), run by hand |
 
 The person takes part at three points only:
 

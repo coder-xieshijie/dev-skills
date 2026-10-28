@@ -124,4 +124,4 @@ Once it is mergeable, stop and tell the user it can be merged.
 
 ## Report
 
-Write it following the writing requirements of [explain-as-fool](../explain-as-fool/SKILL.md) in this repository, without describing the process: the MR link and status; the entries in the decision list the user most needs to see; the verification depth; the total number of scenarios, how many passed and how many are unverified; the model used for independent verification and its verdict; repository gaps you found; where the evidence directory is.
+Write it following the writing requirements of [explain-as-fool](../explain-as-fool/SKILL.md) in this repository, without describing the process: the MR link and status; the entries in the decision list the user most needs to see; the verification depth; the total number of scenarios, how many passed and how many are unverified; the model used for independent verification and its verdict; repository gaps you found; where the evidence directory is. End by saying that [feedback](../feedback/SKILL.md) can be run in a new session to route the gaps.

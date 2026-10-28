@@ -33,6 +33,7 @@ node --test skills/merge-gate/scripts/findings.test.mjs
 node --test skills/repo-readiness/assets/verify-skill/scripts/test/*.test.mjs
 node --test skills/repo-readiness/references/adapters/test/*.test.mjs
 node --test skills/tech-diagram/scripts/*.test.mjs
+node --test skills/feedback/scripts/sessions.test.mjs
 ```
 
 If you changed `.claude-plugin/`, also run `claude plugin validate .`.

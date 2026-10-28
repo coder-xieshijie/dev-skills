@@ -69,3 +69,12 @@ jobs:
           node-version: 24
       # The render test drives the runner's preinstalled Chrome and skips itself when there is none.
       - run: node --test skills/tech-diagram/scripts/*.test.mjs
+  feedback-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node --test skills/feedback/scripts/sessions.test.mjs
