@@ -110,7 +110,7 @@ done
 | [review-rules](skills/review-rules/SKILL.md) | 代码与设计评审、复核问题、判断修复方案时用的准则：复用、必要改造、复杂度、扩展性、责任边界 |
 | [mr-for-human](skills/mr-for-human/SKILL.md) | 把 PR 整理成给人看的阅读指南：核心结论、设计、伪代码表示的执行逻辑、运行约束、代码定位 |
 | [explain-as-fool](skills/explain-as-fool/SKILL.md) | 面向对话题一无所知的人做解释；其他 Skill 复用它的写作要求 |
-| [design-for-review](skills/design-for-review/SKILL.md) | 把需求和设计材料整理成可独立阅读的技术评审文档 |
+| [design-for-review](skills/design-for-review/SKILL.md) | 把需求和设计材料整理成可独立阅读的技术评审文档，评审前先让全新读者预演追问 |
 | [plan-for-agents](skills/plan-for-agents/SKILL.md) | 创建、修订或检查供 agent 执行的完整计划，从需求和已确认决定落到步骤、产物和验收证据 |
 | [agent-prompt-rules](skills/agent-prompt-rules/SKILL.md) | 写和审查给 agent 的 prompt、多 agent pipeline 与 SKILL.md 的规则，每条都链接到 Anthropic、OpenAI 原文 |
 | [recon-to-contract](skills/recon-to-contract/SKILL.md) | 把两个以上外部参照物的对标调研收敛成一份有证据、有决定、有验收标准的可执行契约 |
