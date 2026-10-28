@@ -6,6 +6,12 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-10-28
+
+### Changed
+
+- **design-for-review**: the default outline now follows what common design-document templates (Google design docs, the Rust RFC template, arc42) share, minus a cross-cutting chapter and an alternatives chapter: one-page conclusion, background, goals with non-goals listed one by one and quality targets with their measurement, glossary, overall design (neighbors and interfaces, modules and where data lives, one complete flow with failure paths, the neighbor table and the cross-cutting tables), detailed design with one section per requirement question, delivery plan (reuse, batches, and a switch, migration and rollback for each part that ships on its own), how to verify (one row per goal and target, with the evaluation design for each model behavior and whether it runs in this delivery), and open items and dependencies. The reason for a choice sits next to it; rejected approaches go to an appendix only on request. Chapters before the glossary explain any coined term in the sentence. A fresh agent mapping a 110 KB design onto the new outline placed most sections but found no clear home for six pieces (among them a list of risks, neighbor decisions already agreed, and interface requirements), and raised ten ambiguities, which this version settles (where a risk, an agreed neighbor decision and a mechanism that answers several questions live, where the neighbor table goes, metrics only recorded, evaluations not run yet, batches that are only an order of work).
+
 ## [0.16.0] - 2026-10-27
 
 ### Added
