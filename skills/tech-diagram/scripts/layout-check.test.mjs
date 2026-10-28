@@ -116,7 +116,7 @@ test('crossing: arrows that cross, not arrows that meet at an end', () => {
   assert.deepEqual(wtypes({ frames: fill, lines: [seg(100, 100, 300, 300, 1), seg(500, 100, 300, 300, 2)] }), []);
 });
 
-test('diagonal: only in figures declared architecture, flow or overview', () => {
+test('diagonal: only in figures declared architecture, flow, overview or tree', () => {
   const lines = [seg(100, 100, 400, 300, 1)];
   assert.deepEqual(wtypes({ frames: fill, lines }), []);
   assert.deepEqual(wtypes({ frames: fill, lines, kind: 'sequence' }), []);
@@ -124,6 +124,7 @@ test('diagonal: only in figures declared architecture, flow or overview', () => 
   assert.deepEqual(w.map((x) => x.type), ['diagonal']);
   assert.match(w[0].message, /slanted segment \(100,100\) → \(400,300\); in an architecture figure/);
   assert.deepEqual(wtypes({ frames: fill, lines: [seg(100, 100, 400, 101, 1)], kind: 'flow' }), []);   // within 2px is straight
+  assert.deepEqual(wtypes({ frames: fill, lines, kind: 'tree' }), ['diagonal']);
 });
 
 test('detour: a route much longer than the distance between its ends', () => {

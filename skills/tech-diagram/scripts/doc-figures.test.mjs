@@ -64,6 +64,24 @@ test('a moved figure: renames by reading order, captions and references that poi
   });
 });
 
+test('a published set keeps its file names: no renames, captions still checked', () => {
+  const files = {
+    'doc.md': '# Design\n\n![图 1 总览](diagrams/01-overview.png)\n\n![图 2 组成](diagrams/07-tree.png)\n',
+    'diagrams/01-overview.png': '', 'diagrams/07-tree.png': '',
+  };
+  withDoc({ ...files, 'diagrams/diagram-binding.md': '## Figures\n\npublished: <!-- once the set is published -->\n' }, (dir) => {
+    const r = checkDocFigures(join(dir, 'doc.md'));
+    assert.equal(r.published, false);   // the template's placeholder does not count
+    assert.equal(r.renames.length, 1);
+  });
+  withDoc({ ...files, 'diagrams/diagram-binding.md': '## Figures\n\npublished: 2026-10-27 · document platform · review site\n' }, (dir) => {
+    const r = checkDocFigures(join(dir, 'doc.md'));
+    assert.equal(r.published, true);
+    assert.deepEqual(r.renames, []);
+    assert.deepEqual(r.issues, []);
+  });
+});
+
 test('without captions, N means the N-th figure; unnumbered files get a prefix; missing files are reported', () => {
   withDoc({
     'doc.md': '![](overview.png)\n\nSee Figure 2 and Figure 4.\n\n![](figures/3_flow.png)\n\n![](https://example.com/remote.png)\n',

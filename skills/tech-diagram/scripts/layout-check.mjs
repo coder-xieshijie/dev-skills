@@ -2,7 +2,7 @@
 // from the page, so they can be tested without a browser.
 //
 // Input: { stage: { w, h }, kind, boxes, frames, lines, texts, tags }
-//   kind:   what main() declared with kind(): architecture | flow | overview | sequence | lifecycle, or null
+//   kind:   what main() declared with kind(): architecture | flow | overview | tree | sequence | lifecycle, or null
 //   boxes:  [{ x, y, w, h }]                       closed shapes drawn by the helpers
 //   frames: [{ x, y, w, h }]                       dashed zone boundaries
 //   lines:  [{ x1, y1, x2, y2, kind, route }]      kind: arrow | frame | lifeline | timeline;
@@ -141,7 +141,7 @@ const DETOUR_RATIO = 1.8;      // path length over the Manhattan distance betwee
 const DETOUR_MIN = 200;        // px of extra length below which a loop is a local turn, not a detour
 const MIN_DISPLAY_PX = 8;      // smallest readable text once the figure is scaled to the display width
 const MARGIN_MAX = 120;        // px of empty canvas beyond which a side is a margin to trim
-const RIGHT_ANGLE_KINDS = new Set(['architecture', 'flow', 'overview']);
+const RIGHT_ANGLE_KINDS = new Set(['architecture', 'flow', 'overview', 'tree']);
 
 const isDiagonal = (s) => Math.min(Math.abs(s.x2 - s.x1), Math.abs(s.y2 - s.y1)) > 2;
 const len = (s) => Math.hypot(s.x2 - s.x1, s.y2 - s.y1);

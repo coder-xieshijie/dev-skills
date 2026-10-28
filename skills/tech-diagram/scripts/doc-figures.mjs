@@ -7,7 +7,9 @@
 // Lists the local images the document embeds (Markdown ![…](…) and <img src>), in the order they first
 // appear. A figure's number is its place in that order. Reports:
 //   - a file whose numeric prefix (01-overview.png) differs from its number, with the rename to make
-//     (and the same for the .html next to it); renames are only suggested, never made;
+//     (and the same for the .html next to it); renames are only suggested, never made. Once the set is
+//     published (a line "published: <targets>" in the diagram-binding.md next to the figures), file names
+//     stay fixed and no renames are listed; captions alone carry the reading order;
 //   - a caption ("图 N" or "Figure N" in the alt text, or on the line right after or before the image)
 //     that differs from the number;
 //   - every "图 N" / "Figure N" in the text, and in main() of each figure's HTML, that points at a figure
@@ -86,6 +88,9 @@ export function checkDocFigures(docPath) {
   }
   const issues = [], renames = [];
   const count = figures.length;
+  // A published set keeps its file names, so links and anchors in its published copies keep working
+  const bindings = [...new Set(figures.map((f) => join(dirname(f.file), 'diagram-binding.md')))].filter(existsSync);
+  const published = bindings.some((b) => /^published:[ \t]*[^\s<]/m.test(readFileSync(b, 'utf8')));
   const width = Math.max(2, String(count).length);
 
   for (const f of figures) {
@@ -94,7 +99,7 @@ export function checkDocFigures(docPath) {
     f.html = existsSync(html) ? html : null;
     const base = basename(f.file);
     const m = /^(\d+)([-_. ])?(.*)$/.exec(base);
-    if (!m || Number(m[1]) !== f.n) {
+    if (!published && (!m || Number(m[1]) !== f.n)) {
       const want = String(f.n).padStart(m ? Math.max(width, m[1].length) : width, '0') + (m ? (m[2] || '-') + m[3] : '-' + base);
       renames.push({ from: rel(f.file), to: rel(join(dirname(f.file), want)), html: !!f.html });
     }
@@ -138,7 +143,7 @@ export function checkDocFigures(docPath) {
       }
     });
   }
-  return { figures: figures.map(({ n, line, src, caption: c, html }) => ({ n, line, src, caption: c ? c.n : null, html: html ? rel(html) : null })),
+  return { published, figures: figures.map(({ n, line, src, caption: c, html }) => ({ n, line, src, caption: c ? c.n : null, html: html ? rel(html) : null })),
            issues, renames };
 }
 
@@ -154,7 +159,7 @@ function cli() {
   try { r = checkDocFigures(files[0]); } catch (e) { console.error(e.message); process.exit(2); }
   if (json) console.log(JSON.stringify(r, null, 2));
   else {
-    console.log(`figures in reading order: ${r.figures.length}`);
+    console.log(`figures in reading order: ${r.figures.length}${r.published ? ' (published set: file names stay fixed)' : ''}`);
     r.figures.forEach((f) => console.log(`  ${f.n}  line ${f.line}  ${f.src}${f.caption !== null ? `  caption ${f.caption}` : ''}${f.html ? '' : '  (no .html next to it)'}`));
     if (r.renames.length) {
       console.log('renames to number files in reading order (not made; rename through a temporary name when two collide):');

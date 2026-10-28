@@ -11,6 +11,8 @@
 
 ## Figures
 
+published: <!-- once the set is published: date and every target (document platform, pages, sites); file names stay fixed from then on -->
+
 | # | File | Question it answers | Kind | Sections | Parts and paths covered (normal / abnormal) | Not drawn → where |
 |---|---|---|---|---|---|---|
 | 1 | `01-<name>` | <question> (<pillar or reader question>) | <kind> | §<n> | Parts: <container> = <part> · <part>. Normal: <path>. Abnormal: <path>, <path> | <content> → <figure N or table §n> |

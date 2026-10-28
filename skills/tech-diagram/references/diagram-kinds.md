@@ -10,6 +10,7 @@ How each kind of technical diagram is laid out with the helpers. Pick the kind f
 | Which states something passes through and what moves it between them | Lifecycle or state machine |
 | Which checks run in what order, and where each answer leads | Decision procedure |
 | How big the parts are against a limit (a budget, a window, a quota) | Budget or proportion |
+| What one thing is made of, level by level (a request, a context window, a message) | Composition tree |
 | How a design carries its document's one-sentence conclusion | Overview of a design document |
 | Several of the above about one system | A set: an overview plus one detail diagram per topic |
 
@@ -62,6 +63,17 @@ The layout of [`examples/sequence.html`](../examples/sequence.html).
 - Limits (soft line, hard line, quota) are `marks`; a limit whose crossing degrades the result is `C.error`.
 - Use the returned `sx(value)` for anything that points at the bar: an arrow to the soft line, a note under a segment.
 - Several bars that compare the same budget at different moments (before and after compaction) share `x`, `w` and `max`, stacked with their moment as a label on the left.
+
+## Composition tree
+
+`kind('tree')`; join levels with `link()` so arrows stay right-angled.
+
+- Root on the left, parts in the middle column, contents in the right column; every arrow means "contains".
+- Parts follow the order they sit in the thing (first to last in a request), grouped in bands numbered like the layers the text names.
+- Under each part, one line: when it changes and how big it is, for one stated deployment.
+- Leaves take their parent's color at a lighter stroke, each with a short explanation after its name.
+- Three levels at most; a part with more depth gets a tree of its own.
+- The tree mirrors one table in the text (see figure-plan.md, step 5); its labels use that table's names.
 
 ## Overview of a design document
 
