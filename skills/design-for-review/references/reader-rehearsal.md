@@ -25,9 +25,13 @@ Give each reader the document path and its figures, and nothing else: no convers
 - End with three to five overall comments.
 - Ask; do not answer on the author's behalf, and do not propose a redesign.
 
+## Answerability probe
+
+Free annotation finds what a reader does not understand; it misses what the reader cannot find and what two sections say differently. After each revision, start one fresh subagent with the document only and a list of questions: every question the user and reviewers have asked so far, plus questions about each mechanism the revision touched. It answers each in one to four sentences and names the sections it used, or writes "the document cannot answer" and what is missing; then it lists every contradiction between sections it noticed. Every unanswerable question, wrong answer and contradiction is a fix. In the case behind this, the probe took three minutes and found nine contradictions, including a design error that a review fix had introduced.
+
 ## Design check
 
-When the design changes stored state or runs work concurrently, start one more reviewer with the document and read access to the code. Ask it to walk, for every mechanism that writes stored state, one concrete interleaving step by step (start, the user's next message, the result arriving, the commit) and report every validation rule or write time that fails, with the section and the code it read. A model from another family, set up the way [cross-review](../../cross-review/SKILL.md) starts its second reviewer, sees different defects from your own model.
+When the design changes stored state or runs work concurrently, start one more reviewer with the document and read access to the code. Brief it with the document's hash, the code commit the document cites and the current branch head, the distance between them read from git, and these finding kinds: wrong facts about current code, mechanisms that would not work as written, contradictions inside the document, contradictions with the source designs, criteria that would pass a broken implementation, and trade-offs for the user. Ask it to walk, for every mechanism that writes stored state, one concrete interleaving step by step (start, the user's next message, the result arriving, the commit) and report every validation rule or write time that fails, with the section and the code it read. A model from another family, set up the way [cross-review](../../cross-review/SKILL.md) starts its second reviewer, sees different defects from your own model.
 
 ## Sorting the questions
 
