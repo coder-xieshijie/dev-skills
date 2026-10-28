@@ -92,6 +92,24 @@ If you are using Claude in an agent harness that compacts context or allows savi
 
 ### Research and information gathering
 
+Claude's latest models can find and synthesize information from multiple sources effectively. For optimal research results:
+
+1. **Provide clear success criteria:** Define what constitutes a successful answer to your research question.
+2. **Encourage source verification:** Ask Claude to verify information across multiple sources.
+3. **For complex research tasks, use a structured approach:**
+
+_Sample prompt for complex research_
+
+```text
+Search for this information in a structured way. As you gather data, develop several
+competing hypotheses. Track your confidence levels in your progress notes to improve
+calibration. Regularly self-critique your approach and plan. Update a hypothesis tree or
+research notes file to persist information and provide transparency. Break down this
+complex research task systematically.
+```
+
+This structured approach helps Claude work through large corpora methodically and iteratively critique its findings.
+
 ### Subagent orchestration
 
 ### Chain complex prompts
