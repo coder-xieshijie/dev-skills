@@ -1,12 +1,29 @@
-# <series name>: concept color binding
+# <series name>: figures and concept color binding
 
 <!--
-  Copy into the working directory (next to the diagrams' HTML files); fill in and lock it before drawing the first diagram.
+  Copy into the working directory (next to the diagrams' HTML files, one file per document); fill in and lock it before drawing the first diagram.
+  - Figures: written by "Plan the set" (references/figure-plan.md) before the first figure; update a row when its figure changes.
   - Read this file before starting each diagram; the "Concept color binding" comment at the top of main() must match this table.
   - New concept: only append new rows; never change the color or shape of an existing row.
   - Choose color slots by the abstract meaning column of references/palette.md; when the domain has a dictionary (references/domains/), follow it.
-  - Example: examples/vertical-search/diagram-binding.md
+  - Examples: examples/vertical-search/diagram-binding.md, examples/design-overview/diagram-binding.md
 -->
+
+## Figures
+
+published: <!-- once the set is published: date and every target (document platform, pages, sites); file names stay fixed from then on -->
+
+| # | File | Question it answers | Kind | Sections | Parts and paths covered (normal / abnormal) | Not drawn → where |
+|---|---|---|---|---|---|---|
+| 1 | `01-<name>` | <question> (<pillar or reader question>) | <kind> | §<n> | Parts: <container> = <part> · <part>. Normal: <path>. Abnormal: <path>, <path> | <content> → <figure N or table §n> |
+
+Not drawn as figures: <content> (§<n>) stays a table.
+
+## Text issues
+
+<!-- Gaps and contradictions in the document found while planning or drawing, with section numbers; reported at delivery. Delete this section if there are none. -->
+
+- §<n>: <what the text leaves open or contradicts>
 
 ## Concept → color → shape
 

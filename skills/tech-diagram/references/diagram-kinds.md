@@ -8,6 +8,10 @@ How each kind of technical diagram is laid out with the helpers. Pick the kind f
 | What happens to one request or one piece of data, step by step, across components | Request or data flow |
 | Who sends what to whom, in what order, including replies and failures | Sequence |
 | Which states something passes through and what moves it between them | Lifecycle or state machine |
+| Which checks run in what order, and where each answer leads | Decision procedure |
+| How big the parts are against a limit (a budget, a window, a quota) | Budget or proportion |
+| What one thing is made of, level by level (a request, a context window, a message) | Composition tree |
+| How a design carries its document's one-sentence conclusion | Overview of a design document |
 | Several of the above about one system | A set: an overview plus one detail diagram per topic |
 
 ## Architecture with zones
@@ -36,7 +40,7 @@ The layout of [`examples/sequence.html`](../examples/sequence.html).
 - One `lifeline()` per participant, in the order they first appear; the initiator on the left. The participant's color follows its role in the binding; the main subject gets a wider box with `box: { strokeWidth: 3 }`.
 - Messages top to bottom with `msg()`, about 64px apart, 86px after a self-call. Calls solid, replies `{ reply: true }`, failures `{ error: true }`. Number the steps.
 - Message labels name the call and its key arguments (`POST /token (code, verifier)`), not prose.
-- Alternatives (a failure instead of the success reply) go right after the message they replace, in red. When one message has more than two alternatives, or the failures need steps of their own, draw them as a separate sequence.
+- Alternatives (a failure instead of the success reply) go right after the message they replace, in red. When a branch spans several messages, or depends on a state (`agent is mid-turn`), put each case in a `fragment()`: `alt` with an `else` line for two cases, `opt` for messages that happen only sometimes. When one message has more than two alternatives, or the failures need steps of their own, draw them as a separate sequence.
 - Notes under a sequence may explain outcomes that span several steps (exit codes, cleanup); such a note names the steps in its body instead of carrying a circled number of its own.
 - Width about 440px per participant; height is `top + 140 + 64 × messages + 22 × self-calls`, plus the notes under it. Tighten `H` after looking at the first render.
 
@@ -46,17 +50,54 @@ The layout of [`examples/sequence.html`](../examples/sequence.html).
 - Transitions are arrows labelled `event [guard] / action`, as short as the text allows. Self-transitions use `route()` loops above the box.
 - When time matters (timeouts, idle reclaim), put a `timeline()` under the states with the durations on its ticks.
 
+## Decision procedure
+
+- Checks run left to right (or top to bottom) in the order the system applies them, each a `decision()`; take the order from the code or the step-by-step text, not from the order the text mentions the checks.
+- The answer that continues the procedure leaves to the right; the other leaves downward, each through `branch()` labelled with the answer in the document's language.
+- Outcomes are boxes; a branch that makes the user wait or lose something is red (`{ degraded: true }`) and ends in a red outcome.
+- Put the procedure's trigger (`every turn`, `on each request`) as the first box, so the reader sees when it runs.
+
+## Budget or proportion
+
+- One `scaleBar()` per budget, segments in the order they sit (oldest to newest, first to last), each segment in the color of its concept in the binding; leave the unused part as `rest`.
+- Limits (soft line, hard line, quota) are `marks`; a limit whose crossing degrades the result is `C.error`.
+- Use the returned `sx(value)` for anything that points at the bar: an arrow to the soft line, a note under a segment.
+- Several bars that compare the same budget at different moments (before and after compaction) share `x`, `w` and `max`, stacked with their moment as a label on the left.
+
+## Composition tree
+
+`kind('tree')`; join levels with `link()` so arrows stay right-angled.
+
+- Root on the left, parts in the middle column, contents in the right column; every arrow means "contains".
+- Parts follow the order they sit in the thing (first to last in a request), grouped in bands numbered like the layers the text names.
+- Under each part, one line: when it changes and how big it is, for one stated deployment.
+- Leaves take their parent's color at a lighter stroke, each with a short explanation after its name.
+- Three levels at most; a part with more depth gets a tree of its own.
+- The tree mirrors one table in the text (see figure-plan.md, step 5); its labels use that table's names.
+
+## Overview of a design document
+
+The layout of [`examples/design-overview/`](../examples/design-overview/diagram-binding.md). `kind('overview')`.
+
+- It answers the document's one-sentence conclusion, not "what are the parts"; the subtitle states that conclusion.
+- Expand the protagonist: draw inside its box the inner structure the mechanisms act on (layers, stages, queues), so each arrow lands on the part it changes. Every other component stays one box.
+- Group arrows into loops, one per pillar of the document. Label them A1, A2, B1 … in the order things happen, and keep each loop's arrows together in one region of the canvas.
+- Circled numbers mark one thing per figure, either the parts (layers) or the steps; with loop labels on the arrows, they mark the parts.
+- Place each store directly under the component that writes or reads it most, so its arrows are short and vertical.
+- Draw the normal path of each loop; failures, fallbacks and rare branches go to the detail figures, and the notes name the figure that has each.
+- Write the notes as one group per loop: what it answers, then "Figure N, section X" for the details.
+
 ## A set: overview and details
 
 The layout of [`examples/vertical-search/`](../examples/vertical-search/diagram-binding.md).
 
-- Write the binding file first ([`assets/diagram-binding.md`](../assets/diagram-binding.md)): every concept of the whole set → color → shape, before drawing the first diagram.
-- The overview shows each subsystem as one box; each detail diagram expands one subsystem into its parts inside a frame of the subsystem's color, with the rest of the overview reduced to the few boxes it talks to.
+- Plan the set and write the binding file first ([`figure-plan.md`](figure-plan.md), [`assets/diagram-binding.md`](../assets/diagram-binding.md)): the Figures table, then every concept of the whole set → color → shape, before drawing the first diagram.
+- The overview shows each subsystem as one box, except the protagonist when the document is about its inside (see the section above); each detail diagram expands one subsystem into its parts inside a frame of the subsystem's color, with the rest of the overview reduced to the few boxes it talks to.
 - Keep names identical across the set: a box called `Egress proxy` in the overview is `Egress proxy` in its detail, not `Outbound gateway`.
 
-## When Mermaid is enough
+## When Mermaid is asked for
 
-Write a Mermaid block instead when the figure goes into Markdown that renders Mermaid, has no zones, numbered rules or bilingual labels, and fits in about ten nodes. Give it the hand-drawn look so it matches these figures:
+When the user or the repository asks for Mermaid (for example, diagrams that must stay diffable text), give the block the hand-drawn look so it matches these figures:
 
 ````markdown
 ```mermaid

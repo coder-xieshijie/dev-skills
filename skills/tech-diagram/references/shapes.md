@@ -15,6 +15,10 @@ A new concept gets a new shape before it gets a new color. Every diagram in a se
 | **Frame** (dashed boundary) | Zone: trust boundary, network, VPC, process, subsystem, workspace | `frame(x, y, w, h, color, label?, { labelX }?)` |
 | **Lifeline** | Participant in a sequence diagram | `lifeline(x, top, bottom, color, text, sub?, { w, h, box }?)` |
 | **Timeline** | Order of phases, a long-running process | `timeline(x1, y, x2, marks)` |
+| **Scale bar** | Sizes against a limit: a context budget, a quota, a time budget | `scaleBar(x, y, w, h, segments, { max, unit, rest, marks })` |
+| **Fragment** (dashed gray box with a tag) | Alternative or optional messages in a sequence: `alt`, `opt` | `fragment(x1, x2, y1, y2, operator, guard, { else })` |
+
+Every shape helper, `node()`, `bnode()`, `lifeline()` and `decision()` return the shape they drew: `{ x, y, w, h, cx, cy }` plus `top(t)`, `bottom(t)`, `left(t)` and `right(t)`, the point at fraction `t` (default 0.5) of that side. Keep them in constants and connect them with `link()`.
 
 ## Text inside shapes
 
@@ -24,11 +28,18 @@ A new concept gets a new shape before it gets a new color. Every diagram in a se
 - `lbl({ text, sub, x, y, w, color })` and `plain({ text, x, y, w, ... })` — free labels. `w: 'fit'` shrinks the label to its text, and `cx` in place of `x` centers it on cx. A label that sits on an arrow gets `bg: LABEL_BG` so it masks only what it covers; a label never sits on a frame line, because masking it would hide where the zone ends. Put arrow labels that cross zones where the arrow runs through the corridor, and keep them narrower than the corridor (two short lines rather than one long one).
 - `pair(primary, secondary)` and `pairInline(primary, secondary)` — bilingual text: the primary language first and larger, the secondary under it or after an em space.
 
+## Layout
+
+- `grid(x, y, cols, rows, cellW, cellH, gapX, gapY)` returns `cell(col, row, colSpan?, rowSpan?)` → `{ x, y, w, h }`. Sketch the figure as a text grid first (one cell per box, corridors as gaps), then place every box from a cell, so columns and rows line up and arrows can run straight.
+- `link(a, b, o?)` — right-angle arrow between two shapes, from the side of `a` facing `b` to the side of `b` facing `a`. Facing sides that overlap get one straight arrow through the middle of the overlap; otherwise a Z through the middle of the gap (`mid` moves that leg), an L when `from` and `to` are at right angles, or a C around the outside when both are the same side. Options: `from`, `to` (`'top' | 'bottom' | 'left' | 'right'`), `fromAt`, `toAt` (fraction along the side, to fan out several arrows), `mid`, `label`, `labelSide`, `labelAt` (fraction along the longest leg, to move the label into open space), `size`, `style` (`RED`, a dashed style). The label sits on ivory beside the longest leg. Returns the points, so a label or a note can be placed against them.
+- `decision(cx, cy, text, { w, h, color, size }?)` — one check of a decision procedure: a hexagon with its question. `branch(d, target, answer, o?)` is `link()` labelled with the answer; `{ degraded: true }` draws it red.
+
 ## Lines
 
 - `arrow(x1, y1, x2, y2, o?)` — straight arrow. `{ strokeLineDash: [10, 7] }` for a weaker relation (optional call, async, reply); `RED` for a denied or failed path.
-- `route(points, o?)` — polyline with the head on the last segment. Use right angles and run routes through the gaps between zones and nodes; a long route around the outside (over the top of everything) reads better than a diagonal through a zone.
+- `route(points, o?)` — polyline with the head on the last segment; `link()` computes the points for you between two shapes. Use right angles and run routes through the gaps between zones and nodes; a long route around the outside (over the top of everything) reads better than a diagonal through a zone.
 - `msg(x1, x2, y, text, o?)` — a message between lifelines: `{ reply: true }` dashed, `{ error: true }` red dashed, `x1 === x2` a self-call. Labels sit above the arrow on ivory.
+- `fragment(x1, x2, y1, y2, operator, guard, { else: { y, guard } }?)` — `alt` or `opt` around messages. The tag and guard sit inside the top-left corner; leave about 40px above the first message inside and 30px around the `else` line, and put `x1` and `x2` outside the lifelines it spans.
 
 Arrows always mean the same thing within one diagram: either "calls / sends to" (who acts on whom) or "data flows to" (where bytes go). Say which in the subtitle when it is not obvious, and never mix the two. Relations that fit neither, such as a mount, an archive job or a lease, follow the diagram's meaning: in a "calls" diagram, point the arrow from the side that acts (the sandbox mounts its directory, the job archives to storage).
 

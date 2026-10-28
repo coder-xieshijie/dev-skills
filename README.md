@@ -114,7 +114,7 @@ The commands above work as written in MCode and Claude Code; in Codex, write `$d
 | [plan-for-agents](skills/plan-for-agents/SKILL.md) | Creates, revises or checks a complete plan for agents to execute, from requirements and confirmed decisions to steps, outputs and acceptance evidence |
 | [agent-prompt-rules](skills/agent-prompt-rules/SKILL.md) | Rules, each linked to Anthropic and OpenAI sources, for writing and reviewing prompts for agents, multi-agent pipelines and SKILL.md files |
 | [recon-to-contract](skills/recon-to-contract/SKILL.md) | Converges a comparison of two or more external references into one executable contract with evidence, decisions and acceptance criteria |
-| [tech-diagram](skills/tech-diagram/SKILL.md) | Draws hand-drawn style technical diagrams (architecture with trust zones, flows, sequences, lifecycles) from the sources it is given, as an HTML source and a PNG whose layout a script checks |
+| [tech-diagram](skills/tech-diagram/SKILL.md) | Plans the figures a document needs, then draws hand-drawn style technical diagrams (architecture with trust zones, flows, sequences, lifecycles) from the sources it is given, as an HTML source and a PNG whose layout a script checks, checked against the text they illustrate |
 
 The development workflow uses repo-readiness, core-grill, core-spec, deliver, merge-gate, review-rules, mr-for-human and explain-as-fool; the others can be used on their own.
 
