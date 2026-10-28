@@ -1,0 +1,5 @@
+interface:
+  display_name: "Feedback"
+  short_description: "Route the gaps a delivery exposed to where they get fixed"
+policy:
+  allow_implicit_invocation: false

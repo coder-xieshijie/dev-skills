@@ -17,7 +17,7 @@ flowchart LR
         B1["core-grill<br/>逐轮追问，<br/>决定汇总"] --> B2["core-spec<br/>spec.md + verify.md，<br/>另一家模型查漏，<br/>冻结，Draft PR"]
     end
     B2 --> C["C 交付：deliver<br/>一个 owner，逐里程碑在应用里跑场景，<br/>另一家模型审代码和独立验证，<br/>CI，做到可合入"]
-    C --> D["D 回流<br/>缺口补回 A 或 Skill"]
+    C --> D["D 回流：feedback<br/>缺口分流入台账，<br/>落地你批准的"]
     H1(["你：回答问题，<br/>确认决定汇总"]) -.-> B1
     H2(["你：确认一次 spec 和 verify"]) -.-> B2
     H3(["你：看决定清单，合入"]) -.-> C
@@ -28,7 +28,7 @@ flowchart LR
 | A 仓库准备 | [repo-readiness](skills/repo-readiness/SKILL.md) 搭建项目自己的验证 Skill（[指南](docs/repository-readiness.md)，英文） | 让 agent 能在 worktree 里启动、操作、观察应用：每个入口隔离的控制命令、带判据编号的功能地图、场景脚本、冒烟集、CI 里的结构检查 | 回答仓库里查不到的（下一个需求、用户实际用的入口、哪些不能碰）；每个仓库建一次，之后按需补 |
 | B 定义 | [core-grill](skills/core-grill/SKILL.md) → [core-spec](skills/core-spec/SKILL.md) | 逐轮追问，整理决定汇总；相关功能地图先与产品对齐，找出会被改动带坏的现有场景；写 spec.md 和 verify.md（含验证档位：轻档或完整档），请另一家模型逐条款查漏；冻结后提交到需求分支，开 Draft PR（GitLab 上叫 MR） | 回答问题；确认一次决定汇总；确认一次 spec 和 verify，连同验证档位 |
 | C 交付 | [deliver](skills/deliver/SKILL.md) | 一个 owner 全程不停，按上下文分工、续用持有上下文的代理：逐个里程碑实现并在应用里跑场景；完整档另外请另一家模型开工预判最终验证怎样判这份 plan、在后续里程碑依赖它时做里程碑检查、验证前请另一家模型只读审代码并修一轮；每个里程碑都跑仓库的静态检查，里程碑全部完成就推送，让 CI 和仓库的自动评审与代码审查、本地门禁同时跑；已有评审意见处理完后，另一家模型对 head 独立验证，最多三轮（落后目标分支时先合入再验；回归检查在基线上同样失败的不计；同一条要求两轮不过，下一轮前先把它覆盖的路径全查一遍），owner 同时只跑质量命令和脚本判定的场景；PR 只带代码、spec、verify 和 plan.md（完整档才写），证据留在仓库外；处理 CI 和评审，做到可合入；要定的事先问另一家模型，决定列在 PR 描述最前面（完整档还列在 plan.md 最前面） | 合入前看决定清单，合入 |
-| D 回流 | — | 在 PR 和 plan.md 里列出这次暴露的仓库缺口 | 决定哪些补回 A 阶段或 Skill |
+| D 回流 | [feedback](skills/feedback/SKILL.md)，在新会话里手动调用 | 读这个需求的会话、MR 和过程记录，自己和另一家模型各挖一遍会复发的缺口；核对每个数字；逐条分流（仓库、Skill、你的 agent 指令或钩子、新需求、产品缺陷、上游），记进你的台账，复发的重开原条目；落地你批准的。也能按一段时间复盘全部会话 | 确认一次分流表 |
 
 几条贯穿全程的约定：
 
@@ -109,6 +109,7 @@ done
 | [cross-review](skills/cross-review/SKILL.md) | 交叉 review 一个 PR、分支或提交区间：新开的子 Agent 和另一家模型各自独立评审，再互相质证对方的问题；由你裁定一份问题台账，要求修复时按问题逐个 commit 修掉已确认的问题 |
 | [review-rules](skills/review-rules/SKILL.md) | 代码与设计评审、复核问题、判断修复方案时用的准则：复用、必要改造、复杂度、扩展性、责任边界 |
 | [mr-for-human](skills/mr-for-human/SKILL.md) | 把 PR 整理成给人看的阅读指南：核心结论、设计、伪代码表示的执行逻辑、运行约束、代码定位 |
+| [feedback](skills/feedback/SKILL.md) | 交付之后或按一段时间：从会话、MR 和过程记录里找出缺口，逐条分到该修的地方，记进按复发计数的台账，落地你批准的 |
 | [explain-as-fool](skills/explain-as-fool/SKILL.md) | 面向对话题一无所知的人做解释；其他 Skill 复用它的写作要求 |
 | [design-for-review](skills/design-for-review/SKILL.md) | 把需求和设计材料整理成可独立阅读的技术评审文档，评审前先让全新读者预演追问 |
 | [plan-for-agents](skills/plan-for-agents/SKILL.md) | 创建、修订或检查供 agent 执行的完整计划，从需求和已确认决定落到步骤、产物和验收证据 |
@@ -116,7 +117,7 @@ done
 | [recon-to-contract](skills/recon-to-contract/SKILL.md) | 把两个以上外部参照物的对标调研收敛成一份有证据、有决定、有验收标准的可执行契约 |
 | [tech-diagram](skills/tech-diagram/SKILL.md) | 先规划一份文档需要哪些图，再按给定的材料画手绘风格的技术图（带信任分区的架构图、流程图、时序图、生命周期图），产出 HTML 源文件和经脚本检查布局的 PNG，并与正文逐项对照 |
 
-开发流程用到 repo-readiness、core-grill、core-spec、deliver、merge-gate、review-rules、mr-for-human 和 explain-as-fool；其余可以单独使用。
+开发流程用到 repo-readiness、core-grill、core-spec、deliver、merge-gate、feedback、review-rules、mr-for-human 和 explain-as-fool；其余可以单独使用。
 
 ## 文档
 
@@ -129,7 +130,7 @@ done
 
 - 每个 Skill 放在 `skills/<skill-name>/`，入口是 `SKILL.md`，需要时再加 `scripts/`、`references/` 或 `assets/`。`name` 与目录名一致；其他工具按路径引用这些目录，目录名不改。
 - Skill 正文用英文写，术语按[术语表](docs/glossary.md)；见 [AGENTS.md](AGENTS.md)。改规则按 [agent-prompt-rules](skills/agent-prompt-rules/SKILL.md)：一次改一个组件，记下依据，在新 session 里对照。
-- CI 运行链接与锚点检查和脚本测试：`node scripts/check-links.mjs`、`node skills/agent-prompt-rules/scripts/check-links.mjs`、`node --test skills/agent-prompt-rules/scripts/check-links.test.mjs`、`node --test skills/deliver/scripts/check-delivery.test.mjs`、`node --test skills/deliver/scripts/stall-guard.test.mjs`、`node --test skills/deliver/scripts/ci-watch.test.mjs`、`node --test skills/core-spec/scripts/clauses.test.mjs`、`node --test skills/merge-gate/scripts/findings.test.mjs`、`node --test skills/repo-readiness/assets/verify-skill/scripts/test/*.test.mjs`、`node --test skills/tech-diagram/scripts/*.test.mjs`。
+- CI 运行链接与锚点检查和脚本测试：`node scripts/check-links.mjs`、`node skills/agent-prompt-rules/scripts/check-links.mjs`、`node --test skills/agent-prompt-rules/scripts/check-links.test.mjs`、`node --test skills/deliver/scripts/check-delivery.test.mjs`、`node --test skills/deliver/scripts/stall-guard.test.mjs`、`node --test skills/deliver/scripts/ci-watch.test.mjs`、`node --test skills/core-spec/scripts/clauses.test.mjs`、`node --test skills/merge-gate/scripts/findings.test.mjs`、`node --test skills/repo-readiness/assets/verify-skill/scripts/test/*.test.mjs`、`node --test skills/tech-diagram/scripts/*.test.mjs`、`node --test skills/feedback/scripts/sessions.test.mjs`。
 - `skills/agent-prompt-rules/references/sources/` 保存规则引用的厂商文档的逐字摘录；怎样更新见[它的 README](skills/agent-prompt-rules/references/sources/README.md)。
 
 ## 反馈
