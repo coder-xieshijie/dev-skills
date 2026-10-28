@@ -317,6 +317,22 @@ Three lessons stand out (our judgment):
 - **Stopping to ask cost more than it saved.** Most stops were not product questions. Recording a decision and reviewing it at merge time cost less.
 - **Entry points matter more than coverage counts.** The problems that would have reached users were found by driving the product the way users do.
 
+## 8. The principles underneath
+
+The rules above come from many separate decisions, but most of them apply a small set of general principles. The table names them, so that a new rule can be checked against them too. This grouping is our judgment, not a source's.
+
+| Principle | What it means here | Where it shows |
+|---|---|---|
+| First principles | Start from the problem and what the result must do, not from habit or from the previous process | core-grill settles only decisions that change user-visible results; a regression check that fails the same way on the baseline does not count (deliver) |
+| Occam's razor | Add a rule, an abstraction or a step only for a problem that has happened, and delete what no longer carries weight | [review-rules](../skills/review-rules/SKILL.md) criteria 2 and 3; the general principle of [agent-prompt-rules](../skills/agent-prompt-rules/SKILL.md#general-principles); one result check in place of eleven process scripts (section 7) |
+| Separation of concerns | Each part owns one job, so a change needs less context and a failure points to one owner | review-rules criterion 5; one owner per delivery; spec says what, verify says how it is judged |
+| A single source of truth | Each fact lives in one place and everything else refers to it; when they disagree, that place wins | Feature maps checked against the code ([repo-readiness](../skills/repo-readiness/SKILL.md)); one decision list per requirement; one home per statement ([design-for-review](../skills/design-for-review/SKILL.md)) |
+| Most important first | Lead with the conclusion and the few points that decide most of the outcome, then expand | The decision list at the top of the MR; [mr-for-human](../skills/mr-for-human/SKILL.md); [explain-as-fool](../skills/explain-as-fool/SKILL.md) |
+| Reversible and irreversible decisions | Reversible work goes ahead and is reported; an irreversible one waits for a person | Irreversible operations are the user's; deliver stops only before them (section 2) |
+| Feedback control | Set the goal and the bounds, measure the result, correct the difference, and leave the path to the agent | Constraints at both ends: spec and verify at the start, independent verification at the end |
+| Independent verification | The author is not the only judge; the judge works from the criteria, the result and the raw material | Another model family for the gap check, the code review and the final verification; [cross-review](../skills/cross-review/SKILL.md); [merge-gate](../skills/merge-gate/SKILL.md) |
+| Limited attention | A person's attention is the scarcest resource in the loop, so every question and every report has to earn it | core-grill asks in rounds and confirms once; the decision list is read once, at merge time; questions carry a recommendation |
+
 ## Read next
 
 - The Skills: [core-grill](../skills/core-grill/SKILL.md), [core-spec](../skills/core-spec/SKILL.md) and its [verify rules](../skills/core-spec/references/verify.md), [deliver](../skills/deliver/SKILL.md), and the [delivery check](../skills/deliver/scripts/check-delivery.mjs).

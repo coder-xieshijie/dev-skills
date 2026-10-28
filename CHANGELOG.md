@@ -6,6 +6,14 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-10-28
+
+### Changed
+
+- **explain-as-fool**: lead with one sentence and one concrete scenario; a first explanation of a problem or a fix covers what the problem is, when it happens, what it causes and how the fix resolves it; a decision states what is decided, the options, the recommendation and what happens otherwise.
+- **agent-prompt-rules**: rule 1.2 asks the report to keep what was observed apart from what is inferred and to name what is not verified; rule 1.3 passes on where the answer is likely to be and which source to try next, as context only the dispatcher has; rule 1.5 hands over the criterion for a recurring kind of decision and what to assume when no one can be asked. New excerpts in the sources for the passages cited.
+- **docs/basis.md**: a section naming the general principles underneath the rules and where each shows.
+
 ## [0.17.0] - 2026-10-28
 
 ### Changed
