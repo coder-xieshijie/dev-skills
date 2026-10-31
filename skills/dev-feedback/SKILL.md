@@ -1,5 +1,5 @@
 ---
-name: feedback
+name: dev-feedback
 disable-model-invocation: true
 description: Runs stage D after a requirement is delivered, or over a span of time. Gathers what the sessions, the MR and the delivery records show, has a model from another family mine them for lasting gaps too, routes each gap to where it gets fixed, records it in the feedback ledger, and lands what the user approves. Use after an MR is mergeable or merged, or to review collaboration over the last weeks.
 ---
@@ -17,7 +17,7 @@ The user gives one of these; find the rest yourself:
 - **A requirement**: an MR or PR link, a requirement directory, a plan.md, or a few session ids for work that had no MR.
 - **A time window**: for example "the last two weeks". This reviews collaboration across all sessions in the window instead of one requirement; see "Time-window runs".
 
-**The ledger.** Read its location and its own conventions from the user's agent instructions (AGENTS.md, CLAUDE.md). When they name none, ask once, and use [the default format](references/ledger-default.md) for a new ledger. The ledger's conventions decide its file layout; this Skill decides what goes in it. When those conventions give feedback duties of its own, such as archiving the requirement's card, session list and snapshots, do them in step 1; numbers they record are checked in step 3 like the others.
+**The ledger.** Read its location and its own conventions from the user's agent instructions (AGENTS.md, CLAUDE.md). When they name none, ask once, and use [the default format](references/ledger-default.md) for a new ledger. The ledger's conventions decide its file layout; this Skill decides what goes in it. When those conventions give dev-feedback duties of its own, such as archiving the requirement's card, session list and snapshots, do them in step 1; numbers they record are checked in step 3 like the others.
 
 Run in a new session, not in the session of the owner who delivered the work: the author should not be the only judge, and a new session carries none of the delivery's leftover context.
 

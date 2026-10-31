@@ -10,25 +10,18 @@ Production-grade Agent Skills: from requirement to a verified, mergeable pull re
 
 ## The workflow
 
-```mermaid
-flowchart LR
-    A["A. Repository readiness: repo-readiness<br/>verification Skill, feature maps,<br/>scenario scripts, smoke set"] --> B1
-    subgraph B["B. Definition"]
-        B1["core-grill<br/>questions in rounds,<br/>decision summary"] --> B2["core-spec<br/>spec.md + verify.md,<br/>gap check by another family,<br/>freeze, Draft PR"]
-    end
-    B2 --> C["C. Delivery: deliver<br/>one owner, milestones run in the app,<br/>code review and independent verification<br/>by another family, CI, mergeable PR"]
-    C --> D["D. Feedback: feedback<br/>gaps routed and recorded,<br/>approved fixes landed"]
-    H1(["You: answer questions,<br/>confirm the decision summary"]) -.-> B1
-    H2(["You: confirm spec and verify once"]) -.-> B2
-    H3(["You: read the decision list, merge"]) -.-> C
-```
+Each stage is run by one Skill, and the dashed arrows mark where you step in.
+
+![Figure 1 The workflow](diagrams/01-workflow.png)
+
+Figure 1 The workflow
 
 | Stage | Skill | What the agent does | What you do |
 |---|---|---|---|
 | A. Repository readiness | [repo-readiness](skills/repo-readiness/SKILL.md) builds your project's own verification Skill ([guide](docs/repository-readiness.md)) | Makes the app startable, drivable and observable from a worktree: isolated control commands for every entry point, feature maps with numbered criteria, scenario scripts, a smoke set, a structure check in CI | Answer what the repository cannot (next requirement, entry points, what not to touch); build it once per repository, then extend it as needed |
 | B. Definition | [core-grill](skills/core-grill/SKILL.md) → [core-spec](skills/core-spec/SKILL.md) | Asks in rounds and writes a decision summary; brings the related feature map in line with the product and finds the existing scenarios the change would break; writes spec.md and verify.md, including the verification depth (light or full), and has another model family check them clause by clause; after freezing, commits them to the feature branch and opens a Draft PR (MR on GitLab) | Answer the questions; confirm the decision summary once; confirm spec and verify once, with the verification depth |
 | C. Delivery | [deliver](skills/deliver/SKILL.md) | One owner works without stopping and splits work along context, continuing the agent that holds it: implements milestone by milestone and runs the scenarios in the app; at full verification depth, also has another family preview how the final verification will judge the plan, checks milestones that later work builds on, and has another family review the code read-only and fixes one round; runs the repository's static checks at every milestone and pushes once the milestones are done, so CI and any automated review run alongside the code review and the local gate; then another family verifies the head independently, at most three rounds, once the review comments so far are handled (the branch is first synced with the target branch when it has fallen behind; a regression check that fails the same way on the baseline does not count; a requirement that fails twice gets every path it covers checked before the next round), while the owner runs only the quality commands and scripted scenarios; the PR carries the code, spec, verify and, at full depth, plan.md, while evidence stays outside the repository; handles CI and review until the PR is mergeable; asks another family before decisions and lists them at the top of the PR and, at full depth, of plan.md | Read the decision list before merging, then merge |
-| D. Feedback | [feedback](skills/feedback/SKILL.md), run by hand in a new session | Reads the requirement's sessions, MR and records; it and another family mine them for gaps that will recur; checks every number; routes each gap (repository, Skills, your agent instructions or hooks, a new requirement, a defect, upstream) and records it in your ledger, a recurrence reopening its entry; lands what you approve. Can also review all sessions over a span of time | Confirm the routing table once |
+| D. Feedback | [dev-feedback](skills/dev-feedback/SKILL.md), run by hand in a new session | Reads the requirement's sessions, MR and records; it and another family mine them for gaps that will recur; checks every number; routes each gap (repository, Skills, your agent instructions or hooks, a new requirement, a defect, upstream) and records it in your ledger, a recurrence reopening its entry; lands what you approve. Can also review all sessions over a span of time | Confirm the routing table once |
 
 Rules that hold throughout:
 
@@ -109,7 +102,7 @@ The commands above work as written in MCode and Claude Code; in Codex, write `$d
 | [cross-review](skills/cross-review/SKILL.md) | Cross-reviews a PR, branch or commit range: a fresh subagent and a model from another family review it independently, then cross-examine each other's findings; you settle one ledger and, when asked, fix the confirmed findings with one commit each |
 | [review-rules](skills/review-rules/SKILL.md) | Criteria for code and design review, for re-checking findings and for judging fixes: reuse, necessary change, complexity, extensibility, ownership |
 | [mr-for-human](skills/mr-for-human/SKILL.md) | Turns a PR into a reading guide for people: core conclusions, design, execution logic in pseudocode, runtime constraints, where to find the code |
-| [feedback](skills/feedback/SKILL.md) | After a delivery, or over a span of time: finds the gaps the sessions, the MR and the records show, routes each to where it gets fixed, records it in a ledger that counts recurrences, and lands what you approve |
+| [dev-feedback](skills/dev-feedback/SKILL.md) | After a delivery, or over a span of time: finds the gaps the sessions, the MR and the records show, routes each to where it gets fixed, records it in a ledger that counts recurrences, and lands what you approve |
 | [explain-as-fool](skills/explain-as-fool/SKILL.md) | Explains a topic to someone who knows nothing about it; other Skills reuse its writing rules |
 | [design-for-review](skills/design-for-review/SKILL.md) | Turns requirements and design material into a self-contained technical review document, and rehearses it with fresh readers before the review |
 | [plan-for-agents](skills/plan-for-agents/SKILL.md) | Creates, revises or checks a complete plan for agents to execute, from requirements and confirmed decisions to steps, outputs and acceptance evidence |
@@ -117,7 +110,7 @@ The commands above work as written in MCode and Claude Code; in Codex, write `$d
 | [recon-to-contract](skills/recon-to-contract/SKILL.md) | Converges a comparison of two or more external references into one executable contract with evidence, decisions and acceptance criteria |
 | [tech-diagram](skills/tech-diagram/SKILL.md) | Plans the figures a document needs, then draws hand-drawn style technical diagrams (architecture with trust zones, flows, sequences, lifecycles) from the sources it is given, as an HTML source and a PNG whose layout a script checks, checked against the text they illustrate |
 
-The development workflow uses repo-readiness, core-grill, core-spec, deliver, merge-gate, feedback, review-rules, mr-for-human and explain-as-fool; the others can be used on their own.
+The development workflow uses repo-readiness, core-grill, core-spec, deliver, merge-gate, dev-feedback, review-rules, mr-for-human and explain-as-fool; the others can be used on their own.
 
 ## Documentation
 
@@ -130,7 +123,7 @@ The development workflow uses repo-readiness, core-grill, core-spec, deliver, me
 
 - Each Skill lives in `skills/<skill-name>/` with `SKILL.md` as its entry point, plus `scripts/`, `references/` or `assets/` when it needs them. `name` matches the directory name; the directory names are stable because other tools refer to them by path.
 - Skill text is English, using the terms in the [glossary](docs/glossary.md); see [AGENTS.md](AGENTS.md). Changes to rules follow [agent-prompt-rules](skills/agent-prompt-rules/SKILL.md): one component at a time, with the basis recorded, compared in a new session.
-- CI runs the link and anchor checks and the script tests: `node scripts/check-links.mjs`, `node skills/agent-prompt-rules/scripts/check-links.mjs`, `node --test skills/agent-prompt-rules/scripts/check-links.test.mjs`, `node --test skills/deliver/scripts/check-delivery.test.mjs`, `node --test skills/deliver/scripts/stall-guard.test.mjs`, `node --test skills/deliver/scripts/ci-watch.test.mjs`, `node --test skills/core-spec/scripts/clauses.test.mjs`, `node --test skills/merge-gate/scripts/findings.test.mjs`, `node --test skills/repo-readiness/assets/verify-skill/scripts/test/*.test.mjs` and `node --test skills/tech-diagram/scripts/*.test.mjs` and `node --test skills/feedback/scripts/sessions.test.mjs`.
+- CI runs the link and anchor checks and the script tests: `node scripts/check-links.mjs`, `node skills/agent-prompt-rules/scripts/check-links.mjs`, `node --test skills/agent-prompt-rules/scripts/check-links.test.mjs`, `node --test skills/deliver/scripts/check-delivery.test.mjs`, `node --test skills/deliver/scripts/stall-guard.test.mjs`, `node --test skills/deliver/scripts/ci-watch.test.mjs`, `node --test skills/core-spec/scripts/clauses.test.mjs`, `node --test skills/merge-gate/scripts/findings.test.mjs`, `node --test skills/repo-readiness/assets/verify-skill/scripts/test/*.test.mjs` and `node --test skills/tech-diagram/scripts/*.test.mjs` and `node --test skills/dev-feedback/scripts/sessions.test.mjs`.
 - `skills/agent-prompt-rules/references/sources/` keeps verbatim excerpts of the vendor documents the rules cite; [its README](skills/agent-prompt-rules/references/sources/README.md) says how to update them.
 
 ## Feedback

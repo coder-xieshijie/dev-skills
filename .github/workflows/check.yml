@@ -77,4 +77,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - run: node --test skills/feedback/scripts/sessions.test.mjs
+      - run: node --test skills/dev-feedback/scripts/sessions.test.mjs
