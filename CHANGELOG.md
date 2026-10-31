@@ -6,6 +6,16 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ## [Unreleased]
 
+## [0.19.1] - 2026-10-31
+
+### Fixed
+
+- **dev-feedback**: renamed from feedback, whose name collided with the client's built-in `/feedback` command and kept the Skill out of the slash-command menu. Links in deliver, the README, docs/basis.md, docs/glossary.md, CONTRIBUTING.md and CI follow the new path.
+
+### Changed
+
+- **README**: the workflow figure is a hand-drawn PNG with its HTML source in `diagrams/`, in place of the Mermaid block.
+
 ## [0.19.0] - 2026-10-28
 
 ### Added

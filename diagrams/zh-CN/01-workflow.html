@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<!--
+  Technical diagram template (hand-drawn shapes, print typography).
+  - rough.js shapes with a solid light fill; serif print text (Times New Roman + Songti family), no emoji.
+  - 9-role palette, shape helpers, node()/bnode(), frame(), route(), stack(), lifeline()/msg(), notes(), legend().
+  - Layout helpers: shapes return { x, y, w, h } with anchors; link() joins two of them with a right-angle arrow;
+    grid(), scaleBar(), decision()/branch() and fragment() cover grids, budgets, decision procedures and alt/opt.
+  - Every helper records what it draws in window.__diagram, which scripts/render.mjs uses to check the layout.
+  - Copy this file, set W and H, and edit only main() at the bottom. Leave the helpers as they are.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<!-- CJK fallback for systems without a Songti font (most Linux and containers). Latin uses system Times. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  /* Latin font first, then the Songti family, then `serif`. The browser matches per character:
+     Latin hits Times, CJK skips Times and hits Songti. Never fall back to cursive or sans-serif. */
+  body { margin: 0; background: #fdfdfa;
+    font-family: 'Times New Roman', Times, 'Liberation Serif', 'Songti SC', 'STSong', 'SimSun', '宋体', 'Noto Serif SC', serif; }
+  .stage { position: relative; background: #fdfdfa; }
+  canvas { display: block; }
+  .label { position: absolute; pointer-events: none; line-height: 1.22; }
+  /* Titles and node names: Zhongsong for CJK, Times bold for Latin */
+  .ti { font-family: 'Times New Roman', Times, 'Liberation Serif', 'STZhongsong', '华文中宋', 'Songti SC', 'SimSun', '宋体', 'Noto Serif SC', serif; font-weight: 700; }
+  /* Body text and sub-labels: Songti for CJK, Times regular for Latin */
+  .bd { font-family: 'Times New Roman', Times, 'Liberation Serif', 'Songti SC', 'STSong', 'SimSun', '宋体', 'Noto Serif SC', serif; font-weight: 400; }
+</style>
+<!-- scripts/render.mjs serves this URL from assets/vendor/rough.js; a browser opening the file loads it from the CDN -->
+<script src="https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.js"
+        integrity="sha384-1NLkwxMO2sOqcq7rQkFBhIAUJtbt8ziLxhVKVgKfFGMEU8pF+GEq5LVogviveup6"
+        crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="stage" id="stage">
+  <canvas id="c"></canvas>
+  <div id="labels"></div>
+</div>
+<script>
+// ============================================================
+//  CANVAS SIZE — the only place to set it. scripts/render.mjs reads the stage size.
+// ============================================================
+const W = 2300, H = 820;
+
+const stage = document.getElementById('stage');
+stage.style.width = W + 'px'; stage.style.height = H + 'px';
+const canvas = document.getElementById('c');
+const DPR = window.devicePixelRatio || 1;   // backing store at device resolution, so 2x exports stay crisp
+canvas.width = W * DPR; canvas.height = H * DPR;
+canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+const ctx = canvas.getContext('2d');
+ctx.scale(DPR, DPR);
+
+// Every rough.js call gets the next fixed seed, so the same main() always renders the same strokes.
+let SEED = 0;
+const rc = (() => {
+  const r = rough.canvas(canvas);
+  const seeded = (f) => (...a) => {
+    const last = a[a.length - 1];
+    if (last && typeof last === 'object' && !Array.isArray(last)) a[a.length - 1] = Object.assign({ seed: ++SEED }, last);
+    else a.push({ seed: ++SEED });
+    return f.apply(r, a);
+  };
+  return { line: seeded(r.line), rectangle: seeded(r.rectangle), path: seeded(r.path),
+           polygon: seeded(r.polygon), ellipse: seeded(r.ellipse), linearPath: seeded(r.linearPath) };
+})();
+
+// What the helpers drew, for scripts/render.mjs. Draw through the helpers so the check sees it.
+const G = window.__diagram = { boxes: [], frames: [], lines: [] };
+const addLine = (x1, y1, x2, y2, kind, route) => G.lines.push({ x1, y1, x2, y2, kind, route });
+let ROUTE = 0;
+
+// The kind of figure, first line of main(): 'architecture' | 'flow' | 'overview' | 'sequence' | 'lifecycle'.
+// In architecture, flow and overview figures, the check warns about slanted arrows.
+function kind(k) { G.kind = k; }
+
+const FONT_TI = `'Times New Roman', Times, 'Liberation Serif', 'STZhongsong', '华文中宋', 'Songti SC', 'SimSun', '宋体', 'Noto Serif SC', serif`;
+const FONT_BD = `'Times New Roman', Times, 'Liberation Serif', 'Songti SC', 'STSong', 'SimSun', '宋体', 'Noto Serif SC', serif`;
+
+// ============================================================
+//  PALETTE — 9 fixed roles, low-saturation warm colors on ivory.
+//  The same concept keeps the same color in every diagram of a set.
+//  stroke is also the text color inside the node; every pair is >= 4.5:1 against its fill.
+//  Contrast table and each slot's abstract meaning: references/palette.md
+// ============================================================
+const C = {
+  user:     { stroke: '#1f5582', fill: '#e3ebf2' },  // steel blue    6.5:1  people, callers, entry points
+  im:       { stroke: '#106668', fill: '#dde8e7' },  // ink teal      5.4:1  channels, gateways, queues
+  agent:    { stroke: '#a04a1f', fill: '#f3e2cf' },  // brick orange  4.7:1  the main subject, control plane
+  subagent: { stroke: '#7d4f0a', fill: '#f4eacd' },  // caramel       5.8:1  workers, runtimes, pipelines
+  llm:      { stroke: '#4a3f8c', fill: '#e6e2ef' },  // indigo        6.9:1  models, algorithms
+  tools:    { stroke: '#2f6b3c', fill: '#dfead9' },  // moss green    5.1:1  capabilities, sandboxes, isolation
+  memory:   { stroke: '#6e554a', fill: '#ede2d5' },  // chestnut      5.4:1  storage, data
+  external: { stroke: '#4f5359', fill: '#e9e7e3' },  // ink gray      6.3:1  third parties, outside the system
+  error:    { stroke: '#a52928', fill: '#f0d8d2' },  // brick red     5.2:1  denied, failed, degraded only
+  flow:     '#3a3530',                                // warm ink — every normal arrow
+  bg:       '#fdfdfa',                                // ivory — canvas background
+  title:    '#2a2520',
+  subtitle: '#5a544f',
+  caption:  '#7a746e',                                // 4.53:1 on the background; do not lighten
+};
+
+// rough.js baseline: bold stroke, visible roughness and bowing, solid light fill.
+// Hachure only on shapes with no text inside: opts(C.agent, { fillStyle: 'hachure', hachureGap: 9 })
+const opts = (color, o = {}) => Object.assign({
+  stroke: color.stroke,
+  fill:   color.fill,
+  fillStyle: 'solid',
+  strokeWidth: 2.4,
+  roughness: 1.6,
+  bowing: 1.4,
+}, o);
+
+// ============================================================
+//  ARROWS — always C.flow. Dashed: { strokeLineDash: [10, 7] }.
+//  Denied / failed path: { stroke: C.error.stroke, strokeLineDash: [10, 7] } (the RED constant below).
+// ============================================================
+const RED = { stroke: C.error.stroke, strokeLineDash: [10, 7] };
+
+function arrowHead(x1, y1, x2, y2, op) {
+  const a = Math.atan2(y2 - y1, x2 - x1), L = 14;
+  const head = Object.assign({}, op, { strokeLineDash: undefined });
+  rc.line(x2, y2, x2 - L * Math.cos(a - Math.PI / 6), y2 - L * Math.sin(a - Math.PI / 6), head);
+  rc.line(x2, y2, x2 - L * Math.cos(a + Math.PI / 6), y2 - L * Math.sin(a + Math.PI / 6), head);
+}
+
+function arrow(x1, y1, x2, y2, o = {}) {
+  const op = Object.assign({ stroke: C.flow, strokeWidth: 2, roughness: 1.4 }, o);
+  rc.line(x1, y1, x2, y2, op);
+  arrowHead(x1, y1, x2, y2, op);
+  addLine(x1, y1, x2, y2, 'arrow', ++ROUTE);
+}
+
+// Polyline with the arrowhead on the last segment. Use right-angle points to route around zones and nodes:
+//   route([[1225, 558], [1225, 195], [2600, 195], [2600, 543]])
+function route(pts, o = {}) {
+  const op = Object.assign({ stroke: C.flow, strokeWidth: 2, roughness: 1.4 }, o), id = ++ROUTE;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [x1, y1] = pts[i], [x2, y2] = pts[i + 1];
+    rc.line(x1, y1, x2, y2, op);
+    addLine(x1, y1, x2, y2, 'arrow', id);
+  }
+  const n = pts.length;
+  arrowHead(pts[n - 2][0], pts[n - 2][1], pts[n - 1][0], pts[n - 1][1], op);
+}
+
+// ============================================================
+//  SHAPES — each returns shape(): its box plus the anchors link() connects.
+// ============================================================
+// shape — { x, y, w, h, cx, cy } and top(t) / bottom(t) / left(t) / right(t): the point at fraction t (0–1) of that
+// side. span = the part of each side an arrow may meet: [x1, x2] for top and bottom, [y1, y2] for left and right.
+function shape(x, y, w, h, span = { x: [x, x + w], y: [y, y + h] }) {
+  const cl = (v, [lo, hi]) => Math.max(lo, Math.min(hi, v));
+  return { x, y, w, h, cx: x + w / 2, cy: y + h / 2, span,
+    top: (t = 0.5) => [cl(x + w * t, span.x), y], bottom: (t = 0.5) => [cl(x + w * t, span.x), y + h],
+    left: (t = 0.5) => [x, cl(y + h * t, span.y)], right: (t = 0.5) => [x + w, cl(y + h * t, span.y)] };
+}
+
+// Box — entity: service, component, store, resource
+function box(x, y, w, h, color, override = {}) {
+  rc.rectangle(x, y, w, h, opts(color, override));
+  G.boxes.push({ x, y, w, h });
+  return shape(x, y, w, h);
+}
+
+// Channel — flat strip: queue, bus, stream, topic
+function channel(x, y, w, h, color) {
+  rc.rectangle(x, y, w, h, opts(color, { strokeWidth: 2.2 }));
+  G.boxes.push({ x, y, w, h });
+  return shape(x, y, w, h);
+}
+
+// Task card — folded corner: job, task, message, file, work unit
+function taskCard(x, y, w, h, color) {
+  const fold = 14;
+  rc.path(`M${x} ${y} L${x + w - fold} ${y} L${x + w} ${y + fold} L${x + w} ${y + h} L${x} ${y + h} Z`,
+    opts(color, { strokeWidth: 1.8, roughness: 1.3 }));
+  rc.path(`M${x + w - fold} ${y} L${x + w - fold} ${y + fold} L${x + w} ${y + fold}`,
+    { stroke: color.stroke, strokeWidth: 1.6, roughness: 1.2 });
+  G.boxes.push({ x, y, w, h });
+  return shape(x, y, w, h);
+}
+
+// Bubble — status message or notification; the tail points at the sender
+function bubble(x, y, w, h, color, tailSide = 'left') {
+  rc.rectangle(x, y, w, h, opts(color, { strokeWidth: 2, roughness: 1.3 }));
+  const ty = y + h * 0.5, tx = tailSide === 'left' ? x : x + w, d = tailSide === 'left' ? -14 : 14;
+  rc.path(`M${tx} ${ty - 10} L${tx + d} ${ty} L${tx} ${ty + 10}`,
+    { stroke: color.stroke, fill: color.fill, fillStyle: 'solid', strokeWidth: 2, roughness: 1.2 });
+  G.boxes.push({ x, y, w, h });
+  return shape(x, y, w, h);
+}
+
+// Hexagon — decision, check, failure or end state; one short label only
+function hexagon(cx, cy, w, h, color) {
+  const dx = w / 2, dy = h / 2, ear = w * 0.18;
+  rc.polygon([[cx - dx + ear, cy - dy], [cx + dx - ear, cy - dy], [cx + dx, cy],
+              [cx + dx - ear, cy + dy], [cx - dx + ear, cy + dy], [cx - dx, cy]], opts(color));
+  G.boxes.push({ x: cx - dx, y: cy - dy, w, h });
+  // arrows meet the flat top and bottom, or the points at the ends
+  return shape(cx - dx, cy - dy, w, h, { x: [cx - dx + ear, cx + dx - ear], y: [cy, cy] });
+}
+
+// Stack — many isolated instances of the same thing (one per task, per tenant ...); front box at (x, y)
+function stack(x, y, w, h, color, o = {}) {
+  rc.rectangle(x + 28, y - 24, w, h, opts(color, Object.assign({ strokeWidth: 1.8 }, o)));
+  rc.rectangle(x + 14, y - 12, w, h, opts(color, Object.assign({ strokeWidth: 2 }, o)));
+  rc.rectangle(x, y, w, h, opts(color, o));
+  G.boxes.push({ x, y: y - 24, w: w + 28, h: h + 24 });
+  return shape(x, y, w, h);   // the front box
+}
+
+// Timeline — dashed axis with ticks; tick text goes through plain()
+function timeline(x1, y, x2, marks /* [{ x }] */) {
+  rc.line(x1, y, x2, y, { stroke: C.flow, strokeWidth: 1.6, roughness: 1, strokeLineDash: [6, 8] });
+  addLine(x1, y, x2, y, 'timeline');
+  marks.forEach(m => rc.line(m.x, y - 6, m.x, y + 6, { stroke: C.flow, strokeWidth: 1.6, roughness: 1 }));
+}
+
+// ============================================================
+//  TEXT — every word is an HTML label (not canvas fillText) so the serif fallback chain applies.
+//  Text is injected as HTML: <b>, <i>, <br>, <sub>, <sup> and <span> work; escape a literal '<' and '&'
+//  as &lt; and &amp;. Unescaped, <task-report> or List<T> is parsed as a tag and not drawn; the check reports it.
+// ============================================================
+const L = document.getElementById('labels');
+const LABEL_BG = 'rgba(253,253,250,.94)';   // ivory behind a label that sits on a line
+
+// Two-line label: bold title + regular sub-line, both in `color`
+function lbl({ text, sub, x, y, w, color, size = 24, subSize = 16, align = 'center' }) {
+  const div = document.createElement('div');
+  div.className = 'label';
+  Object.assign(div.style, { left: x + 'px', top: y + 'px', width: w + 'px', textAlign: align, color });
+  div.innerHTML = `<div class="ti" style="font-size:${size}px">${text}</div>` +
+    (sub ? `<div class="bd" style="font-size:${subSize}px;opacity:.85;margin-top:3px">${sub}</div>` : '');
+  L.appendChild(div);
+  return div;
+}
+
+// One-line or free-form label: arrow labels, captions, notes. `w: 'fit'` shrinks the box to the text,
+// so a `bg` only masks what the text covers; with `cx` instead of `x`, the label is centered on cx.
+function plain({ text, x, y, w, cx, color = C.flow, size = 18, weight = 400, bg = null, align = 'center' }) {
+  const div = document.createElement('div');
+  div.className = 'label bd';
+  Object.assign(div.style, { left: x + 'px', top: y + 'px', textAlign: align, color,
+                             fontSize: size + 'px', fontWeight: weight });
+  div.style.width = w === 'fit' ? 'max-content' : w + 'px';
+  if (x === undefined) div.style.left = '0px';
+  if (bg) { div.style.background = bg; div.style.padding = '1px 6px'; div.dataset.bg = '1'; }
+  div.innerHTML = text;
+  L.appendChild(div);
+  if (cx !== undefined) div.style.left = cx - div.offsetWidth / 2 + 'px';
+  return div;
+}
+
+// Bilingual text: primary language first and larger, secondary under it (pair) or after an em space (pairInline).
+// Use when the document is bilingual; otherwise pass plain strings.
+const pair = (primary, secondary, size = 13) =>
+  secondary ? `${primary}<br><span style="font-size:${size}px">${secondary}</span>` : primary;
+const pairInline = (primary, secondary, size = 14) =>
+  secondary ? `${primary}&emsp;<span style="font-size:${size}px">${secondary}</span>` : primary;
+
+// Titles on the canvas. Recorded so the layout check can see them.
+function title(text, x, y, size = 44) {
+  ctx.font = `700 ${size}px ${FONT_TI}`; ctx.fillStyle = C.title; ctx.fillText(text, x, y);
+  G.boxes.push({ x, y: y - size, w: ctx.measureText(text).width, h: size * 1.2, text: true, label: text, size });
+  return ctx.measureText(text).width;
+}
+function subtitle(text, x, y, size = 22) {
+  ctx.font = `400 ${size}px ${FONT_BD}`; ctx.fillStyle = C.subtitle; ctx.fillText(text, x, y);
+  G.boxes.push({ x, y: y - size, w: ctx.measureText(text).width, h: size * 1.2, text: true, label: text, size });
+}
+
+// ============================================================
+//  NODES
+// ============================================================
+// node — box + centered title and one sub-line in the box's stroke color. Text keeps o.pad (12px) from the sides.
+//   node(770, 195, 340, 150, C.agent, 'Scheduler', 'leases · retries', { box: { strokeWidth: 3 }, size: 30 })
+function node(x, y, w, h, color, text, sub, o = {}) {
+  const size = o.size || 23, subSize = o.subSize || 15, pad = o.pad ?? 12;
+  const s = box(x, y, w, h, color, o.box || {});
+  const d = lbl({ text, sub, x: x + pad, y, w: w - 2 * pad, color: color.stroke, size, subSize });
+  d.style.top = y + (h - d.offsetHeight) / 2 + 'px';
+  return s;
+}
+
+// bnode — box + title + a list of detail lines (responsibilities, endpoints, properties), measured and centered.
+//   title: 'API gateway' or ['API gateway', 'API 网关'] (primary, secondary)
+//   items: strings, [primary, secondary] pairs, or 'gap' for extra space
+//   o: { size, secSize, itemSize, itemSecSize, itemGap, pad (side padding, default 16), box }
+function bnode(x, y, w, h, color, t, items = [], o = {}) {
+  const s = box(x, y, w, h, color, o.box || {});
+  btext(x, y, w, h, color, t, items, o);
+  return s;
+}
+function btext(x, y, w, h, color, t, items = [], o = {}) {
+  const size = o.size || 22, secSize = o.secSize || Math.round(size * 0.68);
+  const itemSize = o.itemSize || 15, itemSecSize = o.itemSecSize || 13, itemGap = o.itemGap || 4, pad = o.pad ?? 16;
+  const [tp, ts] = Array.isArray(t) ? t : [t, null];
+  let html = `<div class="ti" style="font-size:${size}px">${tp}</div>`;
+  if (ts) html += `<div class="ti" style="font-size:${secSize}px;margin-top:1px">${ts}</div>`;
+  let pending = 0, first = true;
+  items.forEach((it) => {
+    if (it === 'gap') { pending += 12; return; }
+    const [p, s] = Array.isArray(it) ? it : [it, null];
+    html += `<div style="margin-top:${(first ? 8 : itemGap) + pending}px;opacity:.88">` +
+            `<div style="font-size:${itemSize}px">${p}</div>` +
+            (s ? `<div style="font-size:${itemSecSize}px">${s}</div>` : '') + `</div>`;
+    first = false; pending = 0;
+  });
+  const d = plain({ text: html, x: x + pad, y, w: w - 2 * pad, color: color.stroke, size: itemSize });
+  d.style.top = y + (h - d.offsetHeight) / 2 + 'px';
+}
+
+// frame — dashed boundary: zone, trust boundary, network, process, subsystem.
+// Four dashed lines, never rc.rectangle (a rough rectangle can paint its fill over the nodes inside).
+// The label sits on the top edge on LABEL_BG; o.labelX moves it along the edge (default 18).
+//   frame(340, 280, 1330, 210, C.tools, 'Isolated execution ④')
+function frame(x, y, w, h, color, label, o = {}) {
+  const labelX = o.labelX ?? 18;
+  const op = { stroke: color.stroke, strokeWidth: 1.6, roughness: 1.2, strokeLineDash: [10, 6] };
+  rc.line(x, y, x + w, y, op); rc.line(x + w, y, x + w, y + h, op);
+  rc.line(x + w, y + h, x, y + h, op); rc.line(x, y + h, x, y, op);
+  G.frames.push({ x, y, w, h });
+  [[x, y, x + w, y], [x + w, y, x + w, y + h], [x + w, y + h, x, y + h], [x, y + h, x, y]]
+    .forEach(([a, b, c, d]) => addLine(a, b, c, d, 'frame'));
+  if (label) plain({ text: label, x: x + labelX, y: y - 13, w: 'fit', color: color.stroke,
+                     size: 17, weight: 700, bg: LABEL_BG, align: 'left' }).dataset.frame = '1';
+}
+
+// ============================================================
+//  SEQUENCE DIAGRAMS
+// ============================================================
+// lifeline — participant box centered on x at the top, dashed line down to `bottom`.
+// o: { w, h, size, subSize, box } — the main subject gets { w: 230, box: { strokeWidth: 3 } }
+//   lifeline(200, 120, 980, C.user, 'Browser')
+function lifeline(x, top, bottom, color, text, sub, o = {}) {
+  const w = o.w || 190, h = o.h || 72;
+  const s = node(x - w / 2, top, w, h, color, text, sub, { size: o.size || 21, subSize: o.subSize || 14, box: o.box });
+  rc.line(x, top + h, x, bottom, { stroke: color.stroke, strokeWidth: 1.4, roughness: 0.8, strokeLineDash: [6, 7] });
+  addLine(x, top + h, x, bottom, 'lifeline');
+  return s;   // the participant box
+}
+
+// msg — message between two lifelines at height y, label centered above the arrow.
+//   msg(200, 620, 300, '① GET /authorize')            call
+//   msg(620, 200, 360, '302 → callback', { reply: true }) reply (dashed)
+//   msg(620, 620, 420, 'validate PKCE')                 self-call (loop on the right)
+//   msg(620, 900, 480, 'timeout', { error: true })      failure (red dashed)
+function msg(x1, x2, y, text, o = {}) {
+  const style = o.error ? RED : o.reply ? { strokeLineDash: [8, 6] } : {};
+  const size = o.size || 16;
+  if (x1 === x2) {
+    route([[x1, y], [x1 + 60, y], [x1 + 60, y + 34], [x1 + 4, y + 34]], style);
+    plain({ text, x: x1 + 72, y: y + 6, w: 'fit', color: o.error ? C.error.stroke : C.flow, size, align: 'left', bg: LABEL_BG });
+    return;
+  }
+  const dir = Math.sign(x2 - x1);
+  arrow(x1 + dir * 4, y, x2 - dir * 4, y, style);
+  // Fitted label on ivory, centered over the arrow: it masks only the lifelines it actually sits on
+  const d = plain({ text, cx: (x1 + x2) / 2, y: 0, w: 'fit', color: o.error ? C.error.stroke : C.flow, size, bg: LABEL_BG });
+  d.style.top = y - d.offsetHeight - 5 + 'px';
+}
+
+// fragment — an alt or opt box around messages: a dashed gray box, the operator in a tag at its top-left corner,
+// the guard beside it; o.else = { y, guard } adds the dashed line and guard of the alternative.
+// Leave about 40px between the top and the first message inside, and put x1 and x2 outside the lifelines it spans.
+//   fragment(80, 1300, 430, 690, 'alt', 'agent is mid-turn', { else: { y: 560, guard: 'agent idle' } })
+function fragment(x1, x2, y1, y2, operator, guard, o = {}) {
+  const color = C.external;
+  const op = { stroke: color.stroke, strokeWidth: 1.6, roughness: 1, strokeLineDash: [8, 6] };
+  const edge = (a, b, c, d) => { rc.line(a, b, c, d, op); addLine(a, b, c, d, 'frame'); };
+  edge(x1, y1, x2, y1); edge(x2, y1, x2, y2); edge(x2, y2, x1, y2); edge(x1, y2, x1, y1);
+  G.frames.push({ x: x1, y: y1, w: x2 - x1, h: y2 - y1 });
+  const tag = plain({ text: operator, x: x1 + 8, y: y1 + 4, w: 'fit', color: color.stroke, size: 15, weight: 700, align: 'left' });
+  const tw = tag.offsetWidth + 16, th = tag.offsetHeight + 8;
+  rc.path(`M${x1} ${y1} L${x1 + tw} ${y1} L${x1 + tw} ${y1 + th - 7} L${x1 + tw - 7} ${y1 + th} L${x1} ${y1 + th} Z`,
+    { stroke: color.stroke, fill: color.fill, fillStyle: 'solid', strokeWidth: 1.4, roughness: 0.8 });
+  G.boxes.push({ x: x1, y: y1, w: tw, h: th });
+  if (guard) plain({ text: `[${guard}]`, x: x1 + tw + 10, y: y1 + 5, w: 'fit', color: color.stroke, size: 15, align: 'left', bg: LABEL_BG });
+  if (o.else) {
+    edge(x1, o.else.y, x2, o.else.y);
+    if (o.else.guard) plain({ text: `[${o.else.guard}]`, x: x1 + 10, y: o.else.y + 5, w: 'fit', color: color.stroke, size: 15, align: 'left', bg: LABEL_BG });
+  }
+}
+
+// ============================================================
+//  LAYOUT — place shapes on a grid and join them without computing every point
+// ============================================================
+// grid — cells of a regular layout: grid(x, y, cols, rows, cellW, cellH, gapX, gapY) returns
+// cell(col, row, colSpan = 1, rowSpan = 1) → { x, y, w, h }. Sketch the layout as a text grid first, then place it.
+//   const cell = grid(120, 220, 4, 3, 260, 120, 140, 90);
+//   const c = cell(0, 1); const client = node(c.x, c.y, c.w, c.h, C.user, 'Client');
+function grid(x, y, cols, rows, cellW, cellH, gapX = 0, gapY = 0) {
+  return (col, row, colSpan = 1, rowSpan = 1) => ({
+    x: x + col * (cellW + gapX), y: y + row * (cellH + gapY),
+    w: colSpan * cellW + (colSpan - 1) * gapX, h: rowSpan * cellH + (rowSpan - 1) * gapY });
+}
+
+// link — right-angle arrow between two shapes, from the side of a that faces b to the side of b that faces a.
+// Facing sides that overlap get one straight arrow through the middle of the overlap; otherwise a Z through
+// the middle of the gap (o.mid moves that leg), an L when from and to are at right angles, or a C around the
+// outside when both are the same side. The label sits beside the longest leg, on ivory.
+//   link(client, service, { label: '① POST /orders' })
+//   link(service, db, { from: 'bottom', to: 'top', label: 'INSERT', style: RED })
+// o: { from, to: 'top' | 'bottom' | 'left' | 'right'; fromAt, toAt: fraction along that side (0–1);
+//      mid; label, labelSide: 'above' | 'below' (horizontal leg) | 'left' | 'right' (vertical leg),
+//      labelAt: fraction along that leg (default 0.5), size;
+//      style: arrow options such as RED or { strokeLineDash: [10, 7] } }. Returns the route's points.
+function link(a, b, o = {}) {
+  const opposite = { right: 'left', left: 'right', top: 'bottom', bottom: 'top' };
+  const out = { right: [1, 0], left: [-1, 0], bottom: [0, 1], top: [0, -1] };
+  const horiz = (side) => side === 'left' || side === 'right';
+  let from = o.from, to = o.to, fromAt = o.fromAt, toAt = o.toAt;
+  if (!from) {
+    const gaps = { right: b.x - (a.x + a.w), left: a.x - (b.x + b.w), bottom: b.y - (a.y + a.h), top: a.y - (b.y + b.h) };
+    from = Object.keys(gaps).reduce((m, k) => (gaps[k] > gaps[m] ? k : m), 'right');
+  }
+  if (!to) to = opposite[from];
+  if (to === opposite[from] && fromAt === undefined && toAt === undefined) {
+    const [sa, sb] = horiz(from) ? [a.span.y, b.span.y] : [a.span.x, b.span.x];
+    const lo = Math.max(sa[0], sb[0]), hi = Math.min(sa[1], sb[1]);
+    if (hi - lo > 8 || (hi >= lo && (sa[0] === sa[1] || sb[0] === sb[1]))) {
+      const m = (lo + hi) / 2;
+      [fromAt, toAt] = horiz(from) ? [(m - a.y) / a.h, (m - b.y) / b.h] : [(m - a.x) / a.w, (m - b.x) / b.w];
+    }
+  }
+  const p0 = a[from](fromAt ?? 0.5), q = b[to](toAt ?? 0.5);
+  const p1 = [q[0] + out[to][0] * 3, q[1] + out[to][1] * 3];   // the head stops short of the stroke
+  let pts;
+  if (horiz(from) === horiz(to)) {
+    const i = horiz(from) ? 0 : 1;   // the axis the arrow leaves along
+    let m = o.mid;
+    if (m === undefined) {
+      m = to === opposite[from] ? (p0[i] + p1[i]) / 2
+        : out[from][i] > 0 ? Math.max(p0[i], q[i]) + 40 : Math.min(p0[i], q[i]) - 40;
+    }
+    if (to === opposite[from] && Math.abs(p0[1 - i] - p1[1 - i]) < 1) pts = [p0, p1];
+    else pts = i === 0 ? [p0, [m, p0[1]], [m, p1[1]], p1] : [p0, [p0[0], m], [p1[0], m], p1];
+  } else {
+    pts = horiz(from) ? [p0, [p1[0], p0[1]], p1] : [p0, [p0[0], p1[1]], p1];
+  }
+  route(pts, o.style || {});
+  if (o.label) {
+    let k = 0, best = -1;
+    for (let j = 0; j < pts.length - 1; j++) {
+      const l = Math.abs(pts[j + 1][0] - pts[j][0]) + Math.abs(pts[j + 1][1] - pts[j][1]);
+      if (l > best) { best = l; k = j; }
+    }
+    const [[x1, y1], [x2, y2]] = [pts[k], pts[k + 1]];
+    const color = (o.style && o.style.stroke) || C.flow, f = o.labelAt ?? 0.5;
+    if (y1 === y2) {
+      const d = plain({ text: o.label, cx: x1 + (x2 - x1) * f, y: 0, w: 'fit', color, size: o.size || 16, bg: LABEL_BG });
+      d.style.top = (o.labelSide === 'below' ? y1 + 5 : y1 - d.offsetHeight - 5) + 'px';
+    } else {
+      const d = plain({ text: o.label, x: x1 + 10, y: 0, w: 'fit', color, size: o.size || 16, bg: LABEL_BG, align: 'left' });
+      d.style.top = y1 + (y2 - y1) * f - d.offsetHeight / 2 + 'px';
+      if (o.labelSide === 'left') { d.style.left = x1 - 10 - d.offsetWidth + 'px'; d.style.textAlign = 'right'; }
+    }
+  }
+  return pts;
+}
+
+// scaleBar — a bar split into segments proportional to their values, with marks for limits (soft line, hard line,
+// budget). A segment's label sits inside it when it fits, else under it; a mark's label sits above the bar.
+// When the segments add up to less than o.max, the rest is a dashed empty box, labelled o.rest.
+// Returns sx(value) → the x of that value, for arrows and notes that point at the bar.
+//   const sx = scaleBar(200, 420, 1600, 56,
+//     [{ value: 4, color: C.external, label: 'System' }, { value: 60, color: C.memory, label: 'Segments' }],
+//     { max: 200, unit: 'k', rest: 'free', marks: [{ at: 120, label: 'soft line 120k' }, { at: 180, color: C.error }] });
+function scaleBar(x, y, w, h, segments, o = {}) {
+  const max = o.max ?? segments.reduce((n, sg) => n + sg.value, 0), unit = o.unit ?? '', size = o.size || 15;
+  const sx = (v) => x + (w * v) / max;
+  let v = 0;
+  segments.forEach((sg) => {
+    const x1 = sx(v), x2 = sx(v + sg.value);
+    box(x1, y, x2 - x1, h, sg.color, { strokeWidth: 1.8 });
+    if (sg.label) {
+      const d = plain({ text: sg.label, cx: (x1 + x2) / 2, y: 0, w: 'fit', color: sg.color.stroke, size });
+      d.style.top = (d.offsetWidth <= x2 - x1 - 16 ? y + (h - d.offsetHeight) / 2 : y + h + 8) + 'px';
+    }
+    v += sg.value;
+  });
+  if (v < max) {
+    box(sx(v), y, sx(max) - sx(v), h, { stroke: C.caption, fill: C.bg }, { strokeWidth: 1.6, strokeLineDash: [6, 6] });
+    if (o.rest) {
+      const d = plain({ text: o.rest, cx: (sx(v) + sx(max)) / 2, y: 0, w: 'fit', color: C.caption, size });
+      d.style.top = y + (h - d.offsetHeight) / 2 + 'px';
+    }
+  }
+  (o.marks || []).forEach((mk) => {
+    const mx = sx(mk.at), stroke = (mk.color || { stroke: C.flow }).stroke;
+    rc.line(mx, y - 16, mx, y + h + 4, { stroke, strokeWidth: 2.2, roughness: 0.8, strokeLineDash: [6, 5] });
+    addLine(mx, y - 16, mx, y + h + 4, 'mark');
+    const d = plain({ text: mk.label ?? `${mk.at}${unit}`, cx: mx, y: 0, w: 'fit', color: stroke, size, weight: 700 });
+    d.style.top = y - 20 - d.offsetHeight + 'px';
+  });
+  return sx;
+}
+
+// decision — one check of a decision procedure: a hexagon holding its question. Returns its shape for branch().
+//   const ready = decision(700, 300, 'Ready result?')        o: { w: 240, h: 96, color: C.agent, size: 18 }
+function decision(cx, cy, text, o = {}) {
+  const w = o.w || 240, h = o.h || 96, color = o.color || C.agent;
+  const s = hexagon(cx, cy, w, h, color);
+  const d = plain({ text, x: cx - w * 0.31, y: 0, w: w * 0.62, color: color.stroke, size: o.size || 18, weight: 700 });
+  d.style.top = cy - d.offsetHeight / 2 + 'px';
+  return s;
+}
+
+// branch — one exit of a decision: link() labelled with the answer. o takes link()'s options;
+// o.degraded draws in red the branch that makes the user wait or lose something.
+//   branch(ready, commit, 'yes'); branch(ready, hard, 'no', { from: 'bottom' }); branch(hard, inline, '是', { degraded: true })
+function branch(d, target, answer, o = {}) {
+  return link(d, target, Object.assign({ label: answer }, o, o.degraded ? { style: RED } : {}));
+}
+
+// ============================================================
+//  KEYS AND NOTES
+// ============================================================
+// notes — numbered points under the diagram; the numbers match circled numbers on the diagram.
+//   notes(60, 1212, 2880, 'Security principles · numbers match the diagram',
+//         [{ title: '① Single entry', body: 'Only the gateways face the internet ...' }, ...], 4)
+function notes(x, y, w, heading, items, cols = 4, gap = 36) {
+  rc.line(x, y, x + w, y, { stroke: C.caption, strokeWidth: 1.2, roughness: 1.2 });
+  const hd = plain({ text: heading, x, y: y + 16, w: 'fit', color: C.title, size: 21, weight: 700, align: 'left' });
+  const colW = (w - gap * (cols - 1)) / cols;
+  let rowY = y + 16 + hd.offsetHeight + 18;
+  for (let r = 0; r < items.length; r += cols) {
+    let rowH = 0;
+    items.slice(r, r + cols).forEach((it, i) => {
+      const d = plain({ x: x + i * (colW + gap), y: rowY, w: colW, size: 16, align: 'left',
+        text: `<div class="ti" style="font-size:20px;color:${C.title}">${it.title}</div>` +
+              `<div style="margin-top:6px;line-height:1.45;color:${C.subtitle}">${it.body}</div>` });
+      rowH = Math.max(rowH, d.offsetHeight);
+    });
+    rowY += rowH + 26;
+  }
+  return rowY;   // y below the last row
+}
+
+// legend — color key, required when a diagram uses more than 5 colors; list only the colors used.
+//   legend(80, 1000, [{ c: C.user, n: 'Client', z: 'browser · CLI' }, ...], 3, 300)
+function legend(x, y, items, cols = 3, colW = 300, heading = 'Legend') {
+  plain({ text: heading, x, y: y - 30, w: 'fit', color: C.title, size: 20, weight: 700, align: 'left' });
+  items.forEach((it, i) => {
+    const ix = x + (i % cols) * colW, iy = y + Math.floor(i / cols) * 62;
+    rc.rectangle(ix, iy, 36, 26, opts(it.c, { strokeWidth: 2, roughness: 1.3 }));
+    plain({ text: it.n, x: ix + 48, y: iy - 1, w: colW - 60, color: it.c.stroke, size: 19, weight: 700, align: 'left' });
+    if (it.z) plain({ text: it.z, x: ix + 48, y: iy + 24, w: colW - 60, color: C.caption, size: 15, align: 'left' });
+  });
+}
+
+// ============================================================
+//  MAIN — replace with your diagram
+// ============================================================
+function main() {
+  // Sources: README.zh-CN.md「开发流程」（阶段表和其下的规则），以及各阶段入口
+  //   skills/repo-readiness、core-grill、core-spec、deliver、dev-feedback 的 SKILL.md。
+  // Concept color binding (diagram-binding.md):
+  //   C.agent = 每个阶段由 agent 运行的 Skill · C.user = 你（做决定的人）
+  //   C.external = B 阶段，两个 Skill 的分组
+  // 实线箭头：下一阶段从这一阶段的结果开始；虚线箭头：你在哪里介入。
+  kind('flow');
+
+  title('开发流程', 70, 76);
+  subtitle('从需求到可合入的 PR 分四个阶段，你在三处介入', 70, 114);
+
+  const Y = 250, H = 220, S = { size: 26, itemSize: 19, itemGap: 6 };
+  const a = bnode(70, Y, 360, H, C.agent, 'A · repo-readiness',
+    ['仓库准备', 'gap', '验证 Skill、功能地图、', '场景脚本、冒烟集'], S);
+  frame(540, 180, 720, 360, C.external, 'B · 定义');
+  const b1 = bnode(580, Y, 290, H, C.agent, 'core-grill',
+    ['逐轮追问，', '决定汇总'], S);
+  const b2 = bnode(930, Y, 290, H, C.agent, 'core-spec',
+    ['spec.md + verify.md，', '另一家模型查漏，', '冻结，Draft PR'], S);
+  const c = bnode(1360, Y, 460, H, C.agent, 'C · deliver',
+    ['交付', 'gap', '一个 owner，逐里程碑在应用里跑场景，', '另一家模型审代码和独立验证，', 'CI，做到可合入'], S);
+  const d = bnode(1890, Y, 340, H, C.agent, 'D · dev-feedback',
+    ['回流', 'gap', '缺口分流入台账，', '落地你批准的'], S);
+  link(a, b1); link(b1, b2); link(b2, c); link(c, d);
+
+  const HY = 640, HH = 120, dash = { style: { strokeLineDash: [10, 7] } };
+  const h1 = bnode(580, HY, 290, HH, C.user, '你', ['回答问题，', '确认决定汇总'], S);
+  const h2 = bnode(930, HY, 290, HH, C.user, '你', ['确认一次 spec 和 verify'], S);
+  const h3 = bnode(1360, HY, 460, HH, C.user, '你', ['看决定清单，合入'], S);
+  link(h1, b1, dash); link(h2, b2, dash); link(h3, c, dash);
+}
+
+main();
+window.__renderDone = true;
+</script>
+</body>
+</html>

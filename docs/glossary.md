@@ -11,7 +11,7 @@ The Skills in this repository use these terms with one meaning each. The Chinese
 | stage A: repository readiness | A 仓库准备 | Making a repository's app drivable by agents: control commands, feature map, smoke set, quality commands |
 | stage B: definition | B 定义 | core-grill and core-spec: from the request to a frozen spec and verify |
 | stage C: delivery | C 交付 | deliver: from the frozen spec and verify to a mergeable MR |
-| stage D: feedback | D 回流 | Gaps found during delivery go back into stage A or the Skills, run by [feedback](../skills/feedback/SKILL.md) |
+| stage D: feedback | D 回流 | Gaps found during delivery go back into stage A or the Skills, run by [dev-feedback](../skills/dev-feedback/SKILL.md) |
 | feedback ledger | 回流台账 | Where feedback records gaps: an index with one row per phenomenon, counting recurrences, and one file per run |
 | four inputs: goal, done criteria, authorization, scope | 四项输入：目标、完成条件、授权、范围 | What core-grill collects before asking questions |
 | decision summary | 决定汇总 | The file core-grill writes and the user confirms once: the four inputs, decisions the user answered, default decisions, the path |

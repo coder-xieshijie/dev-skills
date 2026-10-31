@@ -26,7 +26,7 @@ One row per phenomenon, not per event. A recurrence reopens its row.
 | Index ID | Phenomenon | Evidence in this run | Destination | State | New / recurrence |
 |---|---|---|---|---|---|
 
-Run: feedback session <id>; mining model <model>; confirmed by the user at <time>.
+Run: dev-feedback session <id>; mining model <model>; confirmed by the user at <time>.
 ```
 
 For a time window, add the numbers from `sessions.mjs stats` under the table, next to the previous window's.
