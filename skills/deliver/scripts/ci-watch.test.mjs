@@ -2,9 +2,13 @@
 // Each case puts a fake `glab` first on PATH. It answers `glab api` from a
 // fixture of rounds; every MR-pipelines call moves to the next round, so a
 // case can script a pipeline that runs, then fails or passes. MR notes come from
-// the fixture's notes.
+// the fixture's notes. A job's log comes from the round's logs, followed by
+// logPad bytes of padding, and is answered like GitLab does: with a weak ETag
+// (none when noEtag is set), and 304 to an If-None-Match that matches. The fake
+// appends every endpoint it is asked for to <fixture>.calls, and the line
+// "log body sent" once a whole log body has been written.
 import { execFileSync, spawnSync } from "node:child_process";
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
@@ -18,12 +22,27 @@ const FAKE_GLAB = `#!/usr/bin/env node
 const fs = require("fs");
 const fixture = JSON.parse(fs.readFileSync(process.env.FAKE_GLAB_FIXTURE, "utf8"));
 const counter = process.env.FAKE_GLAB_FIXTURE + ".round";
+const calls = process.env.FAKE_GLAB_FIXTURE + ".calls";
 let round = fs.existsSync(counter) ? Number(fs.readFileSync(counter, "utf8")) : -1;
-const endpoint = process.argv[3];
+const endpoint = process.argv[process.argv.length - 1];
+fs.appendFileSync(calls, process.argv.slice(2).join(" ") + "\\n");
 if (/merge_requests\\/\\d+\\/pipelines/.test(endpoint)) fs.writeFileSync(counter, String((round += 1)));
 const state = fixture.rounds[Math.min(Math.max(round, 0), fixture.rounds.length - 1)];
 let m;
 let out;
+if ((m = /jobs\\/(\\d+)\\/trace$/.exec(endpoint))) {
+  const body = ((state.logs ?? {})[m[1]] ?? "") + "x".repeat(fixture.logPad ?? 0);
+  const etag = 'W/"' + require("crypto").createHash("md5").update(body).digest("hex") + '"';
+  const asked = process.argv.find((a) => a.startsWith("If-None-Match: "));
+  if (!fixture.noEtag && asked === "If-None-Match: " + etag) {
+    process.stdout.write("HTTP/2.0 304 Not Modified\\nEtag: " + etag + "\\r\\n\\r\\n");
+    process.exitCode = 1;
+  } else {
+    process.stdout.write("HTTP/2.0 200 OK\\nContent-Type: text/plain\\r\\n" + (fixture.noEtag ? "" : "Etag: " + etag + "\\r\\n") + "\\r\\n");
+    process.stdout.write(body, () => fs.appendFileSync(calls, "log body sent\\n"));
+  }
+  return;
+}
 if (/merge_requests\\/\\d+\\/pipelines/.test(endpoint)) out = state.mrPipelines;
 else if (/merge_requests\\/\\d+\\/notes/.test(endpoint)) out = fixture.notes ?? [];
 else if ((m = /repository\\/commits\\/(\\w+)/.exec(endpoint))) out = { parent_ids: fixture.parents[m[1]] ?? [] };
@@ -53,7 +72,14 @@ function setup(makeFixture) {
     });
     return { code: r.status, out: r.stdout + r.stderr };
   };
-  return { head, watch };
+  const calls = () => {
+    try {
+      return readFileSync(`${fixture}.calls`, "utf8");
+    } catch {
+      return "";
+    }
+  };
+  return { head, watch, calls, reset: () => rmSync(`${fixture}.calls`, { force: true }) };
 }
 
 const MERGED = "f".repeat(40);
@@ -172,4 +198,78 @@ test("says so when no comment was posted since the pipeline started", () => {
   const { code, out } = watch();
   assert.equal(code, 1, out);
   assert.match(out, /no comments on the MR since 2026-10-17T13:35:00.000Z/);
+});
+
+const running = (id, name) => ({ id, name, status: "running", allow_failure: false, web_url: `https://ci/j/${id}` });
+
+test("returns 4 when a running job's log stops growing, without downloading the log", () => {
+  const { watch, calls } = setup((head) => ({
+    parents: {},
+    logPad: 16 * 1024 * 1024,
+    rounds: [{ mrPipelines: [{ id: 10, sha: head }], pipelines: { 10: { status: "running" } }, jobs: { 10: [job("lint", "success"), running(42, "e2e")] }, logs: { 42: "step 1\n" } }],
+  }));
+  const { code, out } = watch("--stall", "0.4s");
+  assert.equal(code, 4, out);
+  assert.match(out, /STALLED pipeline 10 \(running\) for \w+: a running job's log has not grown for 0\.4s https:\/\/ci\/p\/10/);
+  assert.match(out, /job 42 e2e stalled: log unchanged for \d+s, since \d{4}-\d\d-\d\dT[\d:.]+Z https:\/\/ci\/j\/42/);
+  assert.doesNotMatch(out, /job \d+ lint stalled/);
+  assert.match(calls(), /--header If-None-Match: W\/"\w+" projects\/:id\/jobs\/42\/trace/);
+  assert.doesNotMatch(calls(), /log body sent/);
+});
+
+test("a running job whose log keeps growing does not end the wait", () => {
+  const { watch } = setup((head) => {
+    const growing = Array.from({ length: 8 }, (_, i) => ({
+      mrPipelines: [{ id: 11, sha: head }],
+      pipelines: { 11: { status: "running" } },
+      jobs: { 11: [running(43, "build")] },
+      logs: { 43: "line\n".repeat(i + 1) },
+    }));
+    return { parents: {}, rounds: [...growing, { mrPipelines: [{ id: 11, sha: head }], pipelines: { 11: { status: "success" } }, jobs: { 11: [job("build", "success")] } }] };
+  });
+  const { code, out } = watch("--stall", "0.3s");
+  assert.equal(code, 0, out);
+  assert.doesNotMatch(out, /STALLED/);
+  assert.match(out, /PASSED pipeline 11/);
+});
+
+test("compares the log's length when the server sends no ETag", () => {
+  const { watch, calls } = setup((head) => ({
+    parents: {},
+    noEtag: true,
+    rounds: [{ mrPipelines: [{ id: 12, sha: head }], pipelines: { 12: { status: "running" } }, jobs: { 12: [running(44, "deploy-preview")] }, logs: { 44: "waiting\n" } }],
+  }));
+  const { code, out } = watch("--stall", "0.3s");
+  assert.equal(code, 4, out);
+  assert.match(out, /job 44 deploy-preview stalled/);
+  assert.match(calls(), /log body sent/);
+  assert.doesNotMatch(calls(), /If-None-Match/);
+});
+
+test("--stall takes a time like --timeout, minutes when it has no unit", () => {
+  const { watch } = setup((head) => ({
+    parents: {},
+    rounds: [{ mrPipelines: [{ id: 13, sha: head }], pipelines: { 13: { status: "running" } }, jobs: { 13: [running(45, "e2e")] }, logs: { 45: "step 1\n" } }],
+  }));
+  for (const bad of ["fast", "0", "-1m", "on"]) {
+    const { code, out } = watch("--stall", bad);
+    assert.equal(code, 2, out);
+    assert.match(out, /--stall takes a positive number with s, m or h, or off/);
+  }
+  const { code, out } = watch("--stall", "1", "--timeout", "2s");
+  assert.equal(code, 3, out);
+  assert.match(out, /timed out/);
+});
+
+test("the stall check is on by default, and --stall off turns it off", () => {
+  const { watch, calls, reset } = setup((head) => ({
+    parents: {},
+    rounds: [{ mrPipelines: [{ id: 14, sha: head }], pipelines: { 14: { status: "running" } }, jobs: { 14: [running(46, "e2e")] }, logs: { 46: "step 1\n" } }],
+  }));
+  assert.equal(watch("--timeout", "0.3s").code, 3);
+  assert.match(calls(), /jobs\/46\/trace/);
+  reset();
+  const { code, out } = watch("--stall", "off", "--timeout", "0.3s");
+  assert.equal(code, 3, out);
+  assert.doesNotMatch(calls(), /trace/);
 });
