@@ -18,7 +18,7 @@ Three rules hold throughout:
 
 The evidence directory holds the gate input, the ledger, every report, decisions and probes: the location the user names; otherwise `.merge-gate/<MR id>/` in your worktree, excluded through `.git/info/exclude`. The MR carries only product changes made through sub-MRs.
 
-Platform operations (read the MR, open, rebase and merge sub-MRs, update the description) use the platform's CLI or API, under the host and permission rules of the environment you run in. Wait for CI in the background: on GitLab with deliver's [ci-watch.mjs](../deliver/scripts/ci-watch.mjs), on GitHub with `gh pr checks <number> --watch --fail-fast --interval 60`.
+Platform operations (read the MR, open, rebase and merge sub-MRs, update the description) use the platform's CLI or API, under the host and permission rules of the environment you run in. Wait for CI in the background: on GitLab with deliver's [ci-watch.mjs](../deliver/scripts/ci-watch.mjs), on GitHub with `gh pr checks <number> --watch --fail-fast --interval 60`. When ci-watch returns stalled jobs (exit 4), handle them as deliver's [MR](../deliver/SKILL.md#mr) step says: cancel and retry each once, and start the watch again; a job that stalls again after its retry goes into `decisions.md` and the gate report, with how long it stalled.
 
 Choose subagent types by role. Reviewers, checkers and fixers need the same judgment as you: use a type that inherits your model and reasoning effort. Running scenarios and reading their evidence may go to a scenario-running type when the machine has one.
 

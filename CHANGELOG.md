@@ -15,6 +15,7 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 ### Changed
 
 - **deliver**: a stalled job is canceled and retried once, and the watch started again; when the retried job stalls too, it is handled as a part the owner cannot do, with the job and how long it stalled in the decision list and the report.
+- **merge-gate**: stalled jobs from ci-watch are handled as in deliver.
 - **docs/basis.md**: the CI watch row covers stalled jobs.
 
 ## [0.19.1] - 2026-10-31
