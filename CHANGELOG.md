@@ -6,6 +6,13 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-11-07
+
+### Changed
+
+- **dev-feedback**: the run answers four questions in order of value: whether the last fixes held, where the user had to step in, what was caught late, and where time went without producing anything. Topics the user adds after the target are tested against the material first and reported with a verdict, evidence, cause, change and closing condition. The report keeps at most three base gaps ranked by what they cost the user; the rest go to the ledger only, and product defects are listed in one line as found in passing. Number checks cover only the numbers a verdict or the ranking rests on. A session can be the target, and its scope stays with that session.
+- **dev-feedback** miner brief and default ledger format follow the four questions, with sections for topics, last fixes and found in passing.
+
 ## [0.20.0] - 2026-11-04
 
 ### Added
