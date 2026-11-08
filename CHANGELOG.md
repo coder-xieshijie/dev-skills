@@ -8,7 +8,12 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ### Changed
 
+- **core-grill**, **core-spec**: verification depth `light` covers a change inside one feature even when it touches persistence, concurrency or recovery within that feature; one feature includes its own UI, IPC and runtime layers and every client that offers the same action. `full` is for behavior across features or in modules other features share, default startup wiring, a migration or shared contract, metering, permissions or security, or a kind of change that has gone wrong before. When a requirement does not fit the quick path, the decision summary's path line says what core-spec adds over the quick path for that requirement.
 - **deliver**: before a round of independent verification, the owner judges its own decision list as the verifier will. A decision that relaxes acceptance is fixed in code where possible; where meeting the spec needs a change to spec or verify the owner cannot make, the owner finishes everything else and asks the user about all such decisions in one message before the round, then refreezes as answered and quotes the answers in the verification input. This is the one place deliver waits for the user before the end.
+
+### Fixed
+
+- **dev-feedback** `sessions.mjs` runs when called through a symlink, as clients install Skills; before, it exited 0 without output and wrote no file. It also keeps messages the user sent while the agent was working, which Claude Code records as queued commands inside the running turn; before, these were missing from the extract, including replies such as a change of path.
 
 ## [0.21.0] - 2026-11-07
 

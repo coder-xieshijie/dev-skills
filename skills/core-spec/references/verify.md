@@ -110,8 +110,8 @@ The document contains, in order:
 
 **Verification depth** sets how many intermediate checks delivery runs; both depths end with the same independent verification by another family against the same done criteria. At `full`, deliver also has another family preview the plan, checks milestones that later work builds on, and has another family review the code before verification. Such checks are worth their cost only where the model does not reliably get the work right on its own, so choose by that:
 
-- `full`: behavior across several entry points or modules; default startup wiring; persistence, concurrency, metering, recovery or security; a migration; or a kind of change that has gone wrong in this repository before.
-- `light`: a small, local change, or a behavior-preserving change whose touched code existing scenarios and tests already cover.
+- `full`: behavior across several features, or in modules other features share (a common runtime loop, a shared package's contract); default startup wiring; a migration, or a contract shared with another repository or service; metering, permissions or security; or a kind of change that has gone wrong in this repository before.
+- `light`: a change inside one feature, including one that touches persistence, concurrency or recovery within that feature; or a behavior-preserving change whose touched code existing scenarios and tests already cover. One feature includes its own layers (UI, IPC, its runtime service) and every client that offers the same action.
 
 When the user or the confirmed decision summary names the depth, use it; if the change has a trait above that calls for the other depth, say so in the reason. Otherwise, when in doubt, choose `full`. Write the line in English as shown, whatever the language of verify; deliver reads it.
 
