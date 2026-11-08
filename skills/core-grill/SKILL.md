@@ -41,8 +41,10 @@ Finding facts is your job; do not ask the user for them. When you need code, doc
 When every question is answered, choose how the requirement continues, and put the choice with its reason in the decision summary; the user confirms it with the summary. When the user named a path when starting (quick, light or full), take it; if the requirement does not meet that path's conditions below, say which condition and the risk in the summary, and still take the user's path unless the user changes it.
 
 - **Quick**: implement in this session right after confirmation, without spec, verify or plan.md. Only when all of these hold: the change stays inside one feature; every decision that changes user-visible results is answered; it touches none of persistence or data migration, concurrency, metering, permissions or security, or a contract shared with another repository or service; a mistake is cheap to find and to revert.
-- **core-spec at verification depth light**: a small, local change that does not fit the quick path, or should be verified independently against frozen acceptance requirements, and touches none of the areas that call for `full` in [how to write verify](../core-spec/references/verify.md).
-- **core-spec at verification depth full**: everything else, and whenever you are unsure.
+- **core-spec at verification depth light**: a change that stays inside one feature (its own UI, IPC and runtime layers, and every client that offers the same action) but does not fit the quick path, including one that touches persistence, concurrency or recovery within that feature, or one that should be verified independently against frozen acceptance requirements; and none of the traits that call for `full` in [how to write verify](../core-spec/references/verify.md).
+- **core-spec at verification depth full**: everything else, and whenever you are unsure between light and full.
+
+When the requirement does not fit the quick path, the path line in the summary also says, in one sentence, what core-spec adds over the quick path for this requirement: which acceptance requirement gets a gap check against the summary and an independent run by another family, where the quick path would leave it to your own checks. The user weighs that against the time when confirming. When the user still chooses quick, take it, as above.
 
 ## Finishing
 
