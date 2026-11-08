@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { extract, stats, kindOf, ownWords } from './sessions.mjs';
 
 const T = (m) => `2026-10-20T0${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}:00.000Z`;
@@ -125,4 +127,31 @@ test('kindOf and ownWords', () => {
   assert.equal(kindOf('  <heartbeat>'), 'automation');
   assert.equal(ownWords('<response-annotations>[{"text":"a b","annotation":"fix"}]</response-annotations>\n## My request for Codex:\nok'),
     '[annotation 1: «a b» → fix] ok');
+});
+
+test('extract keeps messages the user queued while the agent was working, and skips queued machine text', async () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'feedback-sessions-'));
+  const proj = path.join(home, '.claude', 'projects', '-repo');
+  fs.mkdirSync(proj, { recursive: true });
+  const queued = (prompt, kind, m) => ({ type: 'attachment', timestamp: T(m), attachment: { type: 'queued_command', prompt, origin: { kind }, timestamp: T(m) } });
+  fs.writeFileSync(path.join(proj, 'ddd.jsonl'), [
+    { type: 'user', timestamp: T(0), cwd: '/repo', message: { content: 'start the grill' } },
+    { type: 'assistant', message: { content: [{ type: 'text', text: 'Summary ready. Path: full.' }] } },
+    queued('直接实现, 不用 spec', 'human', 1),
+    queued('<task-notification>done</task-notification>', 'task-notification', 2),
+    { type: 'attachment', timestamp: T(3), isSidechain: true, attachment: { type: 'queued_command', prompt: 'side', origin: { kind: 'human' } } },
+  ].map((r) => JSON.stringify(r)).join('\n') + '\n');
+  const rows = await extract({ home, from: '2026-10-20', to: '2026-10-21' });
+  assert.deepEqual(rows.map((r) => `${r.kind}:${r.text}`), ['typed:start the grill', 'typed:直接实现, 不用 spec']);
+  assert.match(rows[1].prev, /Path: full/);
+});
+
+test('the CLI runs when called through a symlink, as clients install Skills', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'feedback-link-'));
+  const link = path.join(dir, 'sessions.mjs');
+  fs.symlinkSync(fileURLToPath(new URL('./sessions.mjs', import.meta.url)), link);
+  const input = path.join(dir, 'in.jsonl');
+  fs.writeFileSync(input, JSON.stringify({ platform: 'claude', sid: 'a', ms: 0, kind: 'typed', text: 'hi' }) + '\n');
+  const out = execFileSync(process.execPath, [link, 'stats', '--in', input], { encoding: 'utf8' });
+  assert.equal(JSON.parse(out).messages, 1);
 });

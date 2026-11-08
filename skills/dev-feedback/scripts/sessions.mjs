@@ -15,6 +15,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const PREV_TAIL = 900;
 const TEXT_MAX = 6000;
@@ -80,6 +81,14 @@ function claudeCode(home, add, fromMs) {
       if (o.type === 'summary' || o.type === 'ai-title') title = o.summary || o.aiTitle || title;
       if (o.isSidechain) continue;
       cwd = o.cwd || cwd;
+      // A message the user sends while the agent is working arrives as a queued command inside the running turn.
+      const q = o.type === 'attachment' ? o.attachment : null;
+      if (q?.type === 'queued_command' && q.origin?.kind === 'human') {
+        const text = Array.isArray(q.prompt) ? q.prompt.filter((b) => b?.type === 'text').map((b) => b.text).join('\n') : String(q.prompt ?? '');
+        add({ platform: 'claude', sid, ms: toMs(q.timestamp ?? o.timestamp), text, prev, cwd, title });
+        prev = '';
+        continue;
+      }
       if (o.type === 'assistant') {
         for (const b of o.message?.content ?? []) {
           if (b?.type === 'text' && b.text?.trim()) prev = b.text;
@@ -292,6 +301,7 @@ async function main() {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Clients install Skills through symlinks: compare real paths, or a call through the link silently does nothing.
+if (process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url))) {
   main().catch((e) => { console.log(JSON.stringify({ ok: false, error: e.message })); process.exit(1); });
 }
