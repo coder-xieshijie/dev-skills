@@ -6,6 +6,10 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ## [Unreleased]
 
+### Changed
+
+- **deliver**: before a round of independent verification, the owner judges its own decision list as the verifier will. A decision that relaxes acceptance is fixed in code where possible; where meeting the spec needs a change to spec or verify the owner cannot make, the owner finishes everything else and asks the user about all such decisions in one message before the round, then refreezes as answered and quotes the answers in the verification input. This is the one place deliver waits for the user before the end.
+
 ## [0.21.0] - 2026-11-07
 
 ### Changed
