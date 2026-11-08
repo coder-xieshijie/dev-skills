@@ -4,7 +4,7 @@
 
 | Client | Where | What is read |
 |---|---|---|
-| Claude Code | `~/.claude/projects/<project>/<session>.jsonl` | The main chain; subagent files, sidechain entries, meta and compact-summary entries are skipped. Answers to AskUserQuestion and plan approvals are kept as answers |
+| Claude Code | `~/.claude/projects/<project>/<session>.jsonl` | The main chain; subagent files, sidechain entries, meta and compact-summary entries are skipped. Answers to AskUserQuestion and plan approvals are kept as answers; a message the user sent while the agent was working (a queued command absorbed into the running turn) is kept as typed |
 | Codex app | `~/.codex/thread_history_<n>.sqlite`, with thread metadata in `state_<n>.sqlite` | User messages of top-level threads; subagent threads and threads imported from other agents are skipped |
 | Codex CLI | `sessions/` and `archived_sessions/` under `~/.codex` and any other Codex home such as `~/.codex-cli` | `user_message` events; `codex exec` runs and subagents are skipped. A requirement's `codex exec` runs (gap check, reviews, verification) are found from their reply files in the requirement directory |
 | MCode | `~/.minimax/v2/sqlite/runtime-state.sqlite` | User messages of top-level conversation sessions; scheduled, background and continuation turns are skipped |

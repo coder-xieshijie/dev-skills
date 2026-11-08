@@ -6,6 +6,10 @@ The version lives in [.claude-plugin/plugin.json](.claude-plugin/plugin.json), a
 
 ## [Unreleased]
 
+### Fixed
+
+- **dev-feedback** `sessions.mjs` runs when called through a symlink, as clients install Skills; before, it exited 0 without output and wrote no file. It also keeps messages the user sent while the agent was working, which Claude Code records as queued commands inside the running turn; before, these were missing from the extract, including replies such as a change of path.
+
 ## [0.21.0] - 2026-11-07
 
 ### Changed
