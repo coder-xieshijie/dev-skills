@@ -103,7 +103,7 @@ Older documents cite [agent-prompt-rules](../skills/agent-prompt-rules/SKILL.md)
 | 二-9 | 2.9 | Stop to ask only when the user must decide |
 | 二-10 | 2.10 | The runtime or a tool enforces what must happen every time |
 | 二-11 | 2.11 | Continue in the same session by default |
-| 三（第三节） | 3 | SKILL.md and the description |
+| 三（第三节） | 3 | SKILL.md, the description and instruction files |
 | 三-1 | 3.1 | The description says only what the Skill does and when to use it |
 | 三-2 | 3.2 | SKILL.md as a router |
 | 三-3 | 3.3 | Write only what the model does not know |

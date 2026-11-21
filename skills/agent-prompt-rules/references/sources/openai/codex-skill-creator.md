@@ -20,6 +20,15 @@
 
 ### UI Metadata and Invocation Policy
 
+Automatic skill selection is allowed by default. Change that default only when the user explicitly requests an explicit-only skill:
+
+```yaml
+policy:
+  allow_implicit_invocation: false
+```
+
+This keeps the skill available when explicitly invoked as `$skill-name` without adding it to the model context automatically. Preserve unrelated existing UI, policy, and dependency fields when updating `agents/openai.yaml`.
+
 ### What Not to Include
 
 ## Progressive Disclosure in Practice

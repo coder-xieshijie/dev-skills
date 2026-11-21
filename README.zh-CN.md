@@ -106,7 +106,7 @@ done
 | [explain-as-fool](skills/explain-as-fool/SKILL.md) | 面向对话题一无所知的人做解释；其他 Skill 复用它的写作要求 |
 | [design-for-review](skills/design-for-review/SKILL.md) | 把需求和设计材料整理成可独立阅读的技术评审文档，评审前先让全新读者预演追问 |
 | [plan-for-agents](skills/plan-for-agents/SKILL.md) | 创建、修订或检查供 agent 执行的完整计划，从需求和已确认决定落到步骤、产物和验收证据 |
-| [agent-prompt-rules](skills/agent-prompt-rules/SKILL.md) | 写和审查给 agent 的 prompt、多 agent pipeline 与 SKILL.md 的规则，每条都链接到 Anthropic、OpenAI 原文 |
+| [agent-prompt-rules](skills/agent-prompt-rules/SKILL.md) | 写和审查给 agent 的 prompt、多 agent pipeline、SKILL.md 与 AGENTS.md 这类指令文件的规则，每条都链接到 Anthropic、OpenAI 原文 |
 | [recon-to-contract](skills/recon-to-contract/SKILL.md) | 把两个以上外部参照物的对标调研收敛成一份有证据、有决定、有验收标准的可执行契约 |
 | [tech-diagram](skills/tech-diagram/SKILL.md) | 先规划一份文档需要哪些图，再按给定的材料画手绘风格的技术图（带信任分区的架构图、流程图、时序图、生命周期图），产出 HTML 源文件和经脚本检查布局的 PNG，并与正文逐项对照 |
 

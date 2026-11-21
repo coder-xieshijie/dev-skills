@@ -6,6 +6,10 @@
 
 ## Better skills
 
+People now default to packaging a lot of skills into their projects, and each skill comes with a name and description that are loaded into the model's context so it knows when to use them. But many descriptions are far too long, and when you add too many skills, Codex starts shortening their descriptions to fit. The model ends up seeing less of each description, making it harder to know which skill to pick.
+
+[…]
+
 First, skill descriptions should be as short as possible while making it clear when the model should use them:
 
 > Illustration: Skill descriptions. Bad: Create and validate Postgres schema migrations. Use when working with databases, queries, models, or persistence. Good: Create and validate Postgres schema migrations. Use when adding or changing a migration, or reviewing its rollout.

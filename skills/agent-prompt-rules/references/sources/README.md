@@ -83,7 +83,7 @@ When a vendor publishes a new model or a new prompting guide:
 
 1. Fetch the new version with the methods and normalization above.
 2. Commit the full text to the private repository: replace or add the file under `sources/`, update `SHA256SUMS`, and note the new commit.
-3. Re-check the rules in [SKILL.md](../../SKILL.md) that cite the changed document, and the design notes in `docs/` that link to it (search the repository for the file name). Change what conflicts with the new text; cite a new document where it supports a rule.
+3. Re-check the rules in [SKILL.md](../../SKILL.md) that [rule-sources.md](../rule-sources.md) lists the changed document under, and the design notes in `docs/` that link to it (search the repository for the file name). Change what conflicts with the new text; cite a new document in rule-sources.md where it supports a rule.
 4. Update the excerpt here: keep every heading of the new full text, keep verbatim the passages that the citing text relies on, and update the note's sha256 and fetch date. Update the document's row in the table above, or add a row for a new document.
 5. From the repository root, run `node scripts/check-links.mjs`. It checks every Markdown file in the repository, including the design notes in `docs/`, and confirms that every anchor pointing into these files still exists.
 6. Following section 4 of SKILL.md, review again the prompts, pipelines and Skills written according to these rules.
