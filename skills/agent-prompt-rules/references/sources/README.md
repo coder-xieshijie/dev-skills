@@ -13,7 +13,7 @@ Each excerpt file has:
 
 ## Full text
 
-The full text of every document, as fetched and normalized, is kept in the private repository `coder-xieshijie/dev-skills-sources` at commit `07e03e5`: the documents are under `sources/` with the same paths as here, and `SHA256SUMS` lists the sha256 of each one. The sha256 in each excerpt's note and in the tables below identifies that version. For public reading, use the official URL in each file.
+The full text of every document, as fetched and normalized, is kept in the private repository `coder-xieshijie/agent-references`, in `items/dev-skills-sources/` at commit `6561e32`: the documents are under `sources/` there with the same paths as here, and `SHA256SUMS` lists the sha256 of each one. The sha256 in each excerpt's note and in the tables below identifies that version. For public reading, use the official URL in each file.
 
 Most documents were fetched on 2026-09-28. On 2026-10-01, five were added and four that had changed were fetched again; on 2026-10-14, two more were added; the Fetched column gives the date of each. The Codex Prompting, Long-running work and Subagents pages have moved to `learn.chatgpt.com`, and the files and tables use the new address; the first two were checked on 2026-10-01, had not changed, and keep the version fetched on 2026-09-28.
 
